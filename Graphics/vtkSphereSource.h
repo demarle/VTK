@@ -31,7 +31,7 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-#define VTK_MAX_SPHERE_RESOLUTION 1024
+//#define VTK_MAX_SPHERE_RESOLUTION 1024
 
 class VTK_GRAPHICS_EXPORT vtkSphereSource : public vtkPolyDataAlgorithm 
 {
@@ -57,13 +57,15 @@ public:
   // Description:
   // Set the number of points in the longitude direction (ranging from
   // StartTheta to EndTheta).
-  vtkSetClampMacro(ThetaResolution,int,3,VTK_MAX_SPHERE_RESOLUTION);
+ // vtkSetClampMacro(ThetaResolution,int,3,VTK_MAX_SPHERE_RESOLUTION);
+  vtkSetMacro(ThetaResolution,int);
   vtkGetMacro(ThetaResolution,int);
 
   // Description:
   // Set the number of points in the latitude direction (ranging
   // from StartPhi to EndPhi).
-  vtkSetClampMacro(PhiResolution,int,3,VTK_MAX_SPHERE_RESOLUTION);
+  //vtkSetClampMacro(PhiResolution,int,3,VTK_MAX_SPHERE_RESOLUTION);
+  vtkSetMacro(PhiResolution,int);
   vtkGetMacro(PhiResolution,int);
 
   // Description:

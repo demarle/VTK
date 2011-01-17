@@ -145,6 +145,7 @@ vtkLinearSubdivisionFilter.cxx
 vtkLineSource.cxx
 vtkLinkEdgels.cxx
 vtkLoopSubdivisionFilter.cxx
+vtkMantaTestSource.cxx
 vtkMarchingContourFilter.cxx
 vtkMarchingCubes.cxx
 vtkMarchingSquares.cxx

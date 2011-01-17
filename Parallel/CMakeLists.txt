@@ -20,6 +20,7 @@ IF(VTK_HAS_EXODUS)
 ENDIF(VTK_HAS_EXODUS)
 
 SET ( Kit_SRCS
+vtkBinarySwapCompositer.cxx
 vtkBranchExtentTranslator.cxx
 vtkCachingInterpolatedVelocityField.cxx
 vtkCollectGraph.cxx
