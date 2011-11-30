@@ -1,0 +1,24 @@
+Kaapi1:
+* - Virer QT
+* - Utiliser un vtkTransformFilter
+* - Implémenter vtkSMPTransformFilter.*
+* - Enregistrer la création d'un vtkTransformFilter comme un vtkSMPTransformFilter dans vtkSMPObjectFactory
+o - Tests de performance
+
+Kaapi2:
+* - Virer QT
+* - Créer les classes vtkSMP*Tranform
+* - Les utiliser dans un vtkTransformFilter
+* - Trouver un moyen pour éviter de créer un vtkSMPTransformFilter* avec un vtkTransformFilter::New();
+o - Tests de performance
+
+Sequential:
+* - Virer QT
+* - Utiliser un vtkTransformFilter
+o - Tests de performance
+
+SequentialNoKaapi:
+* - Ne pas initialiser Kaapi
+* - Utiliser un vtkTransformFilter
+o - Tests de performance
+! - Trouver un moyen d'éviter une compil' totale pour ce bench
