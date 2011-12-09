@@ -15,7 +15,7 @@ set(Kit_SRCS
   vtkSMP.cxx
   vtkSMPObjectFactory.cxx
   vtkSMPTransform.cxx
-  vtkSMPTransformFilter.cxx
+#  vtkSMPTransformFilter.cxx
   vtkSMPWarpVector.cxx
 )
 
@@ -44,7 +44,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkSMP.h
     vtkSMPObjectFactory.h
     vtkSMPTransform.h
-    vtkSMPTransformFilter.h
+#    vtkSMPTransformFilter.h
     vtkSMPWarpVector.h
     )
 

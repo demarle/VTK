@@ -1,5 +1,4 @@
 #include "vtkTransform.h"
-#include "vtkTransformFilter.h"
 #include "vtkSMPTransform.h"
 #include "vtkSMPTransformFilter.h"
 #include "vtkRenderer.h"
@@ -11,48 +10,47 @@
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkPolyData.h"
 
+#include <numa.h>
+
 int main( int argc, char** argv )
 {
+  int cpu = numa_num_thread_cpus();
+  
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();
   polyReader->SetFileName("../../VTKData/Data/lucy.vtk");
 
-  vtkTransformFilter* filter_seq = vtkTransformFilter::New();
-  vtkTransform* t = vtkTransform::New();
-  t->Scale( -1., -1., -1. );
-  filter_seq->SetTransform( t );
-  filter_seq->SetInputConnection( polyReader->GetOutputPort() );
-  t->Delete();
-
-  vtkSMPTransformFilter* filter_1 = vtkSMPTransformFilter::New();
-  t = vtkTransform::New();
-  t->Scale( -1., -1., -1. );
-  filter_1->SetTransform( t );
-  filter_1->SetInputConnection( polyReader->GetOutputPort() );
-  t->Delete();
-
-  vtkTransformFilter* filter_2 = vtkTransformFilter::New();
-  vtkSMPTransform* tt = vtkSMPTransform::New();
-  tt->Scale( -1., -1., -1. );
-  filter_2->SetTransform( tt );
-  filter_2->SetInputConnection( polyReader->GetOutputPort() );
-  tt->Delete();
+  vtkTransformFilter* pre_filter = vtkTransformFilter::New();
+  pre_filter->SetInputConnection( polyReader->GetOutputPort() );
+  
+  vtkTransformFilter* filter = vtkTransformFilter::New();
+  filter->SetInputConnection( pre_filter->GetOutputPort() );
+  
+  pre_filter->Delete();
+  
+  if ( cpu == 1 )
+  {
+    vtkTransform* t = vtkTransform::New();
+    t->Scale( -1., -1., -1. );
+    pre_filter->SetTransform( t );
+    filter->SetTransform( t );
+    t->Delete();
+  }
+  else
+  {
+    vtkSMPTransform* t = vtkSMPTransform::New();
+    t->Scale( -1., -1., -1. );
+    pre_filter->SetTransform( t );
+    filter->SetTransform( t );
+    t->Delete();
+  }
 
 /* */
   // Simulate a call to vtkRenderWindow::Render()
-  if ( argc != 1 )
-  {
-    cout << endl << "Sequential" << endl;
-    filter_seq->Update();
-  }
-  filter_seq->Delete();
-  cout << endl << "Kaapi1" << endl;
-  filter_1->Update();
-  cout << endl << "Kaapi2" << endl;
-  filter_2->Update();
-  filter_2->Delete();
+  cout << cpu << "cores" << endl;
+  filter->Update();
 /*/
   vtkPolyDataMapper* map = vtkPolyDataMapper::New();
-  map->SetInputConnection( filter_1->GetOutputPort() );
+  map->SetInputConnection( filter->GetOutputPort() );
 
   vtkActor* object = vtkActor::New();
   object->SetMapper( map );
@@ -86,7 +84,7 @@ int main( int argc, char** argv )
   mapper->Delete();
   map->Delete();
 /* */
-  filter_1->Delete();
+  filter->Delete();
   polyReader->Delete();
 
 #if defined(NO_FILTER) || defined(NO_TRANSFORM)
