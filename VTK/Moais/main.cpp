@@ -15,18 +15,18 @@
 int main( int argc, char** argv )
 {
   int cpu = numa_num_thread_cpus();
-  
+
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();
   polyReader->SetFileName("../../VTKData/Data/lucy.vtk");
 
   vtkTransformFilter* pre_filter = vtkTransformFilter::New();
   pre_filter->SetInputConnection( polyReader->GetOutputPort() );
-  
+
   vtkTransformFilter* filter = vtkTransformFilter::New();
   filter->SetInputConnection( pre_filter->GetOutputPort() );
-  
+
   pre_filter->Delete();
-  
+
   if ( cpu == 1 )
   {
     vtkTransform* t = vtkTransform::New();
@@ -44,7 +44,7 @@ int main( int argc, char** argv )
     t->Delete();
   }
 
-/* */
+/* *
   // Simulate a call to vtkRenderWindow::Render()
   cout << cpu << "cores" << endl;
   filter->Update();

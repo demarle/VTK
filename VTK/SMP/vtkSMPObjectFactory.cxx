@@ -2,7 +2,7 @@
 #include "vtkVersion.h"
 
 #include "vtkSMPWarpVector.h"
-//#include "vtkSMPTransformFilter.h"
+#include "vtkSMPContourFilter.h"
 #include "vtkSMPTransform.h"
 
 vtkStandardNewMacro(vtkSMPObjectFactory);
@@ -26,7 +26,7 @@ const char* vtkSMPObjectFactory::GetDescription()
 
 
 VTK_CREATE_CREATE_FUNCTION(vtkSMPWarpVector);
-//VTK_CREATE_CREATE_FUNCTION(vtkSMPTransformFilter);
+VTK_CREATE_CREATE_FUNCTION(vtkSMPContourFilter);
 VTK_CREATE_CREATE_FUNCTION(vtkSMPTransform);
 
 vtkSMPObjectFactory::vtkSMPObjectFactory()
@@ -36,11 +36,11 @@ vtkSMPObjectFactory::vtkSMPObjectFactory()
                          "SMP",
                          1,
                          vtkObjectFactoryCreatevtkSMPWarpVector);
-/*  this->RegisterOverride("vtkTransformFilter",
-                         "vtkSMPTransformFilter",
+  this->RegisterOverride("vtkContourFilter",
+                         "vtkSMPContourFilter",
                          "SMP",
                          1,
-                         vtkObjectFactoryCreatevtkSMPTransformFilter);*/
+                         vtkObjectFactoryCreatevtkSMPContourFilter);
   this->RegisterOverride("vtkTransform",
                          "vtkSMPTransform",
                          "SMP",
