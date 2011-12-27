@@ -2,6 +2,7 @@
 
 #include "vtkPoints.h"
 #include "vtkFloatArray.h"
+#include "vtkObjectFactory.h"
 
 namespace vtkSMP
 {
@@ -10,20 +11,72 @@ namespace vtkSMP
     InternalForEach( first, last, &op );
     }
 
-//  void ForEachCoordinates(vtkPoints* data, void(*op)(float&))
+  void InitialiseThreadLocal( const vtkFunctorInitialisable& f )
+    {
+    InternalInit( &f );
+    }
+
+  void VTK_SMP_EXPORT FillThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result )
+    {
+    result.clear();
+    InternalGetThreadsIDs( result );
+    }
+
+  //--------------------------------------------------------------------------------
+//  vtkMutexLocker::vtkMutexLocker(vtkMutexLock* lock)
 //    {
-//    float* ptr = vtkFloatArray::SafeDownCast( data->GetData() )->GetPointer( 0 );
-//    InternalForEach( ptr, ptr + (data->GetNumberOfPoints() * 3), op );
+//    this->Lock = lock;
+//    this->Lock->Lock();
+//    }
+//  vtkMutexLocker::~vtkMutexLocker()
+//    {
+//    this->Lock->Unlock();
 //    }
 
-  vtkMutexLocker::vtkMutexLocker(vtkMutexLock* lock)
+  //--------------------------------------------------------------------------------
+  vtkStandardNewMacro(vtkThreadLocal);
+
+  vtkThreadLocal::vtkThreadLocal() : vtkObject() { }
+
+  vtkThreadLocal::~vtkThreadLocal()
     {
-    this->Lock = lock;
-    this->Lock->Lock();
+    for ( typename vtkstd::map<vtkSMPThreadID, vtkObject*>::iterator it = this->ThreadLocalStorage.begin();
+          it != this->ThreadLocalStorage.end(); ++it )
+      {
+      it->second->UnRegister(this);
+      it->second = 0;
+      }
+    this->ThreadLocalStorage.clear();
     }
-  vtkMutexLocker::~vtkMutexLocker()
+
+  void vtkThreadLocal::PrintSelf(ostream &os, vtkIndent indent)
     {
-    this->Lock->Unlock();
+    this->Superclass::PrintSelf( os, indent );
+    os << indent << "Class stored: ";
+    if (this->ThreadLocalStorage.size())
+      cout << this->ThreadLocalStorage[0]->GetClassName() << endl;
+    else
+      cout << "unknown" << endl;
+    os << indent << "Local storage: " << endl;
+    for ( vtkstd::map<vtkSMPThreadID, vtkObject*>::iterator it = this->ThreadLocalStorage.begin();
+          it != this->ThreadLocalStorage.end(); ++it )
+      {
+      os << indent.GetNextIndent() << "id " << it->first << ": (" << it->second << ")" << endl;
+      it->second->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
+      }
+    }
+
+  void vtkThreadLocal::SetLocal ( vtkSMPThreadID tid, vtkObject* item )
+    {
+    if (this->ThreadLocalStorage[tid])
+      this->ThreadLocalStorage[tid]->UnRegister(this);
+    item->Register(this);
+    this->ThreadLocalStorage[tid] = item;
+    }
+
+  vtkObject* vtkThreadLocal::GetLocal(vtkSMPThreadID tid)
+    {
+    return this->ThreadLocalStorage[tid];
     }
 
 }

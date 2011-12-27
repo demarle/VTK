@@ -2,68 +2,55 @@
 #define __vtkSMP_h__
 
 #include "vtkSMPImplementation.h"
-#include "vtkMultiThreader.h"
+#include "vtkObject.h"
 #include "vtkMutexLock.h"
 
 #include <map>
 
 class vtkPoints;
+class vtkMutexLock;
 
 namespace vtkSMP
 {
 
   // vtkMutexLocker
-  class VTK_SMP_EXPORT vtkMutexLocker
+//  class VTK_SMP_EXPORT vtkMutexLocker : public vtkObjectBase
+//    {
+//    public :
+//      vtkMutexLocker(vtkMutexLock* lock);
+//      ~vtkMutexLocker();
+
+//    protected :
+//      vtkMutexLock* Lock;
+//    };
+
+  class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
     {
-    public :
-      vtkMutexLocker(vtkMutexLock* lock);
-      ~vtkMutexLocker();
-
     protected :
-      vtkMutexLock* Lock;
-    };
+      vtkThreadLocal();
+      ~vtkThreadLocal();
 
-  // vtkThreadLocal
-  template <class T>
-  class VTK_SMP_EXPORT vtkThreadLocal
-    {
-    public :
-      vtkThreadLocal() { this->Lock = vtkMutexLock::New(); }
+    public:
+      vtkTypeMacro(vtkThreadLocal, vtkObject)
+      static vtkThreadLocal* New();
+      void PrintSelf(ostream &os, vtkIndent indent);
 
-      ~vtkThreadLocal() { this->ThreadLocalStorage.clear(); this->Lock->Delete(); }
+      void SetLocal ( vtkSMPThreadID tid, vtkObject* item );
 
-      // Description:
-      // Store a thread-local item.
-      vtkThreadLocal<T>& operator = (T item)
-        {
-        vtkMutexLocker(this->Lock);
-        this->ThreadLocalStorage[vtkMultiThreader::GetCurrentThreadID()] = item;
-        return *this;
-        }
+      vtkObject* GetLocal(vtkSMPThreadID tid);
 
-      // Description :
-      // convert this vtkThreadLocal to the stored item
-      operator T&()
-        {
-        vtkMutexLocker(this->Lock);
-        return this->ThreadLocalStorage[vtkMultiThreader::GetCurrentThreadID()];
-        }
-
-    protected :
+    protected:
       // the __thread c++Ox modifier cannot be used because this is not static
       // create an explicit map and use the thread id key instead.
-      vtkstd::map<vtkMultiThreaderIDType, T> ThreadLocalStorage;
-
-      //TODO : using a mutexlock is safe but inefficent,
-      // replace this by a read/write lock
-      vtkMutexLock* Lock;
+      vtkstd::map<vtkSMPThreadID, vtkObject*> ThreadLocalStorage;
     };
 
   // ForEach template : parallel loop over an iterator
-  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctor& op);
+  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctor& op );
 
-//  void VTK_SMP_EXPORT ForEachCoordinates(vtkPoints* data, void(*op)(float&));
+  void VTK_SMP_EXPORT InitialiseThreadLocal( const vtkFunctorInitialisable& f );
 
+  void VTK_SMP_EXPORT FillThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result );
 }
 
 #endif //__vtkSMP_h__

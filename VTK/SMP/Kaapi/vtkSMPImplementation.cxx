@@ -1,19 +1,25 @@
 #include "vtkSMPImplementation.h"
+#include <kaapi++>
+
+ka::Community* com;
 
 void smpInit(void)
 {
-  kaapic_init(1);
+  com = new ka::Community(ka::System::join_community());
 }
 void smpFini(void)
 {
-  kaapic_finalize();
+  cout << "entering fini" << endl;
+  com->leave();
+  ka::System::terminate();
+  cout << "exiting fini" << endl;
 }
 
 void functor( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdType f )
 {
   for ( int32_t k = b; k < e; ++k )
   {
-    (*o)( f + k );
+    (*o)( f + k, tid );
   }
 }
 

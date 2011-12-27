@@ -23,13 +23,6 @@
 #include "vtkPointData.h"
 #include "vtkPointSet.h"
 
-#include <time.h>
-#include <sys/time.h>
-#include <numa.h>
-#include <numaif.h>
-const int vtKaapiRuns = 500;
-const int PAGE_SIZE = numa_pagesize();
-
 vtkStandardNewMacro(vtkTransformFilter);
 vtkCxxSetObjectMacro(vtkTransformFilter,Transform,vtkAbstractTransform);
 
@@ -48,8 +41,6 @@ int vtkTransformFilter::RequestData(
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
 {
-  struct timespec t0, t1;
-
   // get the info objects
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
@@ -119,140 +110,9 @@ int vtkTransformFilter::RequestData(
     }
 
   this->UpdateProgress (.2);
-/*  // Move pages so that the ith part of each array belongs to the ith numanode
-  void* p_inpts_s = inPts->GetData()->GetVoidPointer( 0 );
-  void* p_inpts_e = inPts->GetData()->GetVoidPointer( numPts );
-  void* page_start = 0;
-  while (p_inpts_s > page_start) page_start += PAGE_SIZE;
-  page_start -= PAGE_SIZE;
-  cout << p_inpts_s << " / " << page_start << endl;
-  std::vector<void*> pages_array;
-  while (page_start < p_inpts_e) {
-    pages_array.push_back(page_start);
-    page_start += PAGE_SIZE;
-  }
-  std::vector<int> node_array(pages_array.size(), 0);
-  int chunk_size = pages_array.size() / 8;
-  int remains = pages_array.size() % 8;
-  for (int j = 0; j < remains; ++j) {
-    for (int i = 0; i <= chunk_size; ++i) {
-      node_array[j*chunk_size + j + i] = j;
-    }
-  }
-  for (int j = remains; j < 8; ++j) {
-    for (int i = 0; i < chunk_size; ++i) {
-      node_array[j*chunk_size + i] = j;
-    }
-  }
-  std::vector<int> status_array(pages_array.size());
-  if (numa_move_pages(0, pages_array.size(), &pages_array[0], &node_array[0], &status_array[0], MPOL_MF_MOVE))
-    cout << "Move pages failed" << endl;
-  else
-  {
-    cout << "[" << status_array[0];
-    for (int i = 1; i < status_array.size(); ++i)
-      cout << ", " << status_array[i];
-    cout << "]" << endl;
-  }
-  page_start = 0;
-  for (vtkIdType i = 0; i < numPts; ++i)
-    newPts->SetPoint( i, 0.0, 0.0, 0.0 );
-  void* p_newpts_s = newPts->GetData()->GetVoidPointer( 0 );
-  while(p_newpts_s > page_start) page_start += PAGE_SIZE;
-  page_start -= PAGE_SIZE;
-  cout << p_newpts_s << " / " << page_start << endl;
-  for (int i = 0; i < pages_array.size(); ++i, page_start += PAGE_SIZE)
-	  pages_array[i] = page_start;
-  if (numa_move_pages(0, pages_array.size(), &pages_array[0], &node_array[0], &status_array[0], MPOL_MF_MOVE))
-    cout << "Move pages failed" << endl;
-  else
-  {
-    cout << "[" << status_array[0];
-    for (int i = 1; i < status_array.size(); ++i)
-      cout << ", " << status_array[i];
-    cout << "]" << endl;
-  }
- 
-  double zero[3] = {0.0, 0.0, 0.0};
-  if (inNormals) {
-  page_start = 0;
-  void* p_invec_s = inNormals->GetVoidPointer( 0 );
-  while(p_invec_s > page_start) page_start += PAGE_SIZE;
-  page_start -= PAGE_SIZE;
-  cout << p_invec_s << " / " << page_start << endl;
-  for (int i = 0; i < pages_array.size(); ++i, page_start += PAGE_SIZE)
-	  pages_array[i] = page_start;
-  if (numa_move_pages(0, pages_array.size(), &pages_array[0], &node_array[0], &status_array[0], MPOL_MF_MOVE))
-    cout << "Move pages failed" << endl;
-  else
-  {
-    cout << "[" << status_array[0];
-    for (int i = 1; i < status_array.size(); ++i)
-      cout << ", " << status_array[i];
-    cout << "]" << endl;
-  }
-  page_start = 0;
-  for (vtkIdType i = 0; i < numPts; ++i)
-    newNormals->SetTuple( i, zero );
-  void* p_newvec_s = newNormals->GetVoidPointer( 0 );
-  while(p_newvec_s > page_start) page_start += PAGE_SIZE;
-  page_start -= PAGE_SIZE;
-  cout << p_newvec_s << " / " << page_start << endl;
-  for (int i = 0; i < pages_array.size(); ++i, page_start += PAGE_SIZE)
-	  pages_array[i] = page_start;
-  if (numa_move_pages(0, pages_array.size(), &pages_array[0], &node_array[0], &status_array[0], MPOL_MF_MOVE))
-    cout << "Move pages failed" << endl;
-  else
-  {
-    cout << "[" << status_array[0];
-    for (int i = 1; i < status_array.size(); ++i)
-      cout << ", " << status_array[i];
-    cout << "]" << endl;
-  }
-  }
-  
-  if (inVectors) {
-  page_start = 0;
-  void* p_invec_s = inVectors->GetVoidPointer( 0 );
-  while(p_invec_s > page_start) page_start += PAGE_SIZE;
-  page_start -= PAGE_SIZE;
-  cout << p_invec_s << " / " << page_start << endl;
-  for (int i = 0; i < pages_array.size(); ++i, page_start += PAGE_SIZE)
-	  pages_array[i] = page_start;
-  if (numa_move_pages(0, pages_array.size(), &pages_array[0], &node_array[0], &status_array[0], MPOL_MF_MOVE))
-    cout << "Move pages failed" << endl;
-  else
-  {
-    cout << "[" << status_array[0];
-    for (int i = 1; i < status_array.size(); ++i)
-      cout << ", " << status_array[i];
-    cout << "]" << endl;
-  }
-  page_start = 0;
-  for (vtkIdType i = 0; i < numPts; ++i)
-    newVectors->SetTuple( i, zero );
-  void* p_newvec_s = newVectors->GetVoidPointer( 0 );
-  while(p_newvec_s > page_start) page_start += PAGE_SIZE;
-  page_start -= PAGE_SIZE;
-  cout << p_newvec_s << " / " << page_start << endl;
-  for (int i = 0; i < pages_array.size(); ++i, page_start += PAGE_SIZE)
-	  pages_array[i] = page_start;
-  if (numa_move_pages(0, pages_array.size(), &pages_array[0], &node_array[0], &status_array[0], MPOL_MF_MOVE))
-    cout << "Move pages failed" << endl;
-  else
-  {
-    cout << "[" << status_array[0];
-    for (int i = 1; i < status_array.size(); ++i)
-      cout << ", " << status_array[i];
-    cout << "]" << endl;
-  }
-  }
-*/
+
   // Loop over all points, updating position
   //
-  for (int i = 0; i < vtKaapiRuns; ++i)
-  {
-  clock_gettime(CLOCK_REALTIME, &t0);
   if ( inVectors || inNormals )
     {
     this->Transform->TransformPointsNormalsVectors(inPts,newPts,
@@ -263,15 +123,6 @@ int vtkTransformFilter::RequestData(
     {
     this->Transform->TransformPoints(inPts,newPts);
     }
-  clock_gettime(CLOCK_REALTIME, &t1);
-
-  int s = t1.tv_sec - t0.tv_sec;
-  int ns = t1.tv_nsec - t0.tv_nsec;
-  if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-  if (s) cout << s;
-  cout << ns << " ";
-  }
-  cout << endl;
 
   this->UpdateProgress (.6);
 

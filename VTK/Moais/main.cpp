@@ -9,87 +9,111 @@
 #include "vtkPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkPolyData.h"
+#include "vtkSMPContourFilter.h"
+#include "vtkPointData.h"
+#include "vtkDoubleArray.h"
 
-#include <numa.h>
+#include "vtkCellArray.h"
 
 int main( int argc, char** argv )
 {
-  int cpu = numa_num_thread_cpus();
+  bool parallel = argc == 1 || std::string(argv[1]) != "1";
+
+  /* === Reading 3D model === */
 
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();
-  polyReader->SetFileName("../../VTKData/Data/lucy.vtk");
+  polyReader->SetFileName("../../VTKData/Data/bunny.vtk");
 
-  vtkTransformFilter* pre_filter = vtkTransformFilter::New();
-  pre_filter->SetInputConnection( polyReader->GetOutputPort() );
+  /* === Testing transform filter === */
 
-  vtkTransformFilter* filter = vtkTransformFilter::New();
-  filter->SetInputConnection( pre_filter->GetOutputPort() );
+  vtkTransformFilter* pre_transform = vtkTransformFilter::New();
+  pre_transform->SetInputConnection( polyReader->GetOutputPort() );
 
-  pre_filter->Delete();
+  vtkTransformFilter* transform = vtkTransformFilter::New();
+  transform->SetInputConnection( pre_transform->GetOutputPort() );
 
-  if ( cpu == 1 )
+  pre_transform->Delete();
+
+  if ( parallel )
   {
-    vtkTransform* t = vtkTransform::New();
+    vtkSMPTransform* t = vtkSMPTransform::New();
     t->Scale( -1., -1., -1. );
-    pre_filter->SetTransform( t );
-    filter->SetTransform( t );
+    pre_transform->SetTransform( t );
+    transform->SetTransform( t );
     t->Delete();
   }
   else
   {
-    vtkSMPTransform* t = vtkSMPTransform::New();
+    vtkTransform* t = vtkTransform::New();
     t->Scale( -1., -1., -1. );
-    pre_filter->SetTransform( t );
-    filter->SetTransform( t );
+    pre_transform->SetTransform( t );
+    transform->SetTransform( t );
     t->Delete();
   }
 
+  /* === Testing contour filter === */
+  transform->Update();
+  vtkDataArray* s = vtkDoubleArray::New();
+  s->SetNumberOfComponents(1);
+  s->SetNumberOfTuples(transform->GetOutput()->GetNumberOfPoints());
+  s->SetName("scalars");
+  for (vtkIdType i = 0; i < transform->GetOutput()->GetNumberOfPoints(); ++i)
+  {
+    double* h = transform->GetOutput()->GetPoint(i);
+    s->SetTuple(i,&h[2]);
+  }
+  transform->GetOutput()->GetPointData()->SetScalars( s );
+  s->Delete();
+
+  vtkContourFilter* isosurface = parallel ? vtkSMPContourFilter::New() : vtkContourFilter::New();
+  isosurface->SetInputConnection( transform->GetOutputPort() );
+  isosurface->GenerateValues(2, 0.0, 1.0);
+  isosurface->UseScalarTreeOff();
+  transform->Delete();
+
 /* *
   // Simulate a call to vtkRenderWindow::Render()
-  cout << cpu << "cores" << endl;
-  filter->Update();
+  polyReader->Delete();
+  isosurface->Update();
+  isosurface->Delete();
 /*/
   vtkPolyDataMapper* map = vtkPolyDataMapper::New();
-  map->SetInputConnection( filter->GetOutputPort() );
+  map->SetInputConnection( isosurface->GetOutputPort() );
+  isosurface->Delete();
 
   vtkActor* object = vtkActor::New();
   object->SetMapper( map );
+  map->Delete();
 
   vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
   mapper->SetInputConnection( polyReader->GetOutputPort() );
+  polyReader->Delete();
 
   vtkActor* reference = vtkActor::New();
   reference->SetMapper( mapper );
   reference->AddPosition( .2, 0., 0. );
+  mapper->Delete();
 
   vtkRenderer* viewport = vtkRenderer::New();
   viewport->SetBackground( .5, .5, .5 );
   viewport->AddActor( object );
   viewport->AddActor( reference );
+  object->Delete();
+  reference->Delete();
 
   vtkRenderWindow* window = vtkRenderWindow::New();
   window->AddRenderer( viewport );
+  viewport->Delete();
 
   vtkRenderWindowInteractor* eventsCatcher = vtkRenderWindowInteractor::New();
   eventsCatcher->SetRenderWindow( window );
+  window->Delete();
 
   eventsCatcher->Initialize();
   eventsCatcher->Start();
 
   eventsCatcher->Delete();
-  window->Delete();
-  viewport->Delete();
-  reference->Delete();
-  object->Delete();
-  mapper->Delete();
-  map->Delete();
 /* */
-  filter->Delete();
-  polyReader->Delete();
-
-#if defined(NO_FILTER) || defined(NO_TRANSFORM)
-  vtkObjectFactory::UnRegisterFactory( of );
-  of->Delete();
-#endif
+  cout << "should exit" << endl;
   return 0;
 }
