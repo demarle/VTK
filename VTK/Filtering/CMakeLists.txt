@@ -3,7 +3,7 @@ SET(UKIT FILTERING)
 SET(KIT_TCL_LIBS vtkCommonTCL)
 SET(KIT_PYTHON_LIBS vtkCommonPythonD)
 SET(KIT_JAVA_LIBS vtkCommonJava)
-SET(KIT_INTERFACE_LIBRARIES vtkCommon)
+SET(KIT_INTERFACE_LIBRARIES vtkCommon "rt")
 
 SET( Kit_SRCS
 vtkAbstractCellLocator.cxx

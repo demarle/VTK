@@ -14,7 +14,7 @@ include_directories("include" ${VTK_TDX_INCLUDE_PATH})
 
 IF(VTK_USE_SMP)
   add_executable(KaapiBench MACOSX_BUNDLE ${HDRS} "main.cpp")
-  target_link_libraries(KaapiBench vtkIO vtkRendering vtkSMP "numa")
+  target_link_libraries(KaapiBench vtkIO vtkRendering vtkSMP)
 
   install(TARGETS KaapiBench RUNTIME DESTINATION bin)
 ELSE(VTK_USE_SMP)

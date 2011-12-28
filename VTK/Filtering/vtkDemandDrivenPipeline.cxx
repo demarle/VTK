@@ -280,24 +280,31 @@ int vtkDemandDrivenPipeline::ProcessRequest(vtkInformation* request,
         return 0;
         }
 
-      struct timespec t0, t1;
-
-      // Request data from the algorithm.
-      for (int i = 0; i < vtKaapiRuns; ++i)
+      if (this->Algorithm->IsA("vtkDataReader"))
         {
-        clock_gettime(CLOCK_REALTIME, &t0);
-        /* *** Filter execution *** */
         result = this->ExecuteData(request,inInfoVec,outInfoVec);
-        /* *** Filter execution *** */
-        clock_gettime(CLOCK_REALTIME, &t1);
-
-        int s = t1.tv_sec - t0.tv_sec;
-        int ns = t1.tv_nsec - t0.tv_nsec;
-        if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-        if (s) cout << s;
-        cout << ns << " ";
         }
-      cout << endl;
+      else
+        {
+        struct timespec t0, t1;
+
+        // Request data from the algorithm.
+        for (int i = 0; i < vtKaapiRuns; ++i)
+          {
+          clock_gettime(CLOCK_REALTIME, &t0);
+          /* *** Filter execution *** */
+          result = this->ExecuteData(request,inInfoVec,outInfoVec);
+          /* *** Filter execution *** */
+          clock_gettime(CLOCK_REALTIME, &t1);
+
+          int s = t1.tv_sec - t0.tv_sec;
+          int ns = t1.tv_nsec - t0.tv_nsec;
+          if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+          if (s) cout << s;
+          cout << ns << " ";
+          }
+        cout << endl;
+        }
 
       // Data are now up to date.
       this->DataTime.Modified();
