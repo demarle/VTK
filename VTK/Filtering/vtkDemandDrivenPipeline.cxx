@@ -280,7 +280,7 @@ int vtkDemandDrivenPipeline::ProcessRequest(vtkInformation* request,
         return 0;
         }
 
-      if (this->Algorithm->IsA("vtkDataReader"))
+      if (this->Algorithm->IsA("vtkDataReader") || this->Algorithm->IsA("vtkContourFilter"))
         {
         result = this->ExecuteData(request,inInfoVec,outInfoVec);
         }

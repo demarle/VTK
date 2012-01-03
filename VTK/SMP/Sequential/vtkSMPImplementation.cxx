@@ -1,13 +1,13 @@
-#include "vtkSMPImplementation.h"
+#include "vtkSMP.h"
 
 void InternalForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op)
 {
   vtkIdType i = first;
   while ( i < last )
-  {
+    {
     (*op)( i, 0 );
     ++i;
-  }
+    }
 }
 
 void InternalInit( const vtkFunctorInitialisable* f )

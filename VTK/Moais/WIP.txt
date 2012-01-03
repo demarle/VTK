@@ -1,24 +1,13 @@
-Kaapi1:
-* - Virer QT
-* - Utiliser un vtkTransformFilter
-* - Implémenter vtkSMPTransformFilter.*
-* - Enregistrer la création d'un vtkTransformFilter comme un vtkSMPTransformFilter dans vtkSMPObjectFactory
-o - Tests de performance
+vtkDemandDrivenPipeline:
+ - Avoir une meilleure gestion des benchs : différencier les
+   sources proprement au lieu d'un simple this->Algorithm->IsA("vtkDataReader");
 
-Kaapi2:
-* - Virer QT
-* - Créer les classes vtkSMP*Tranform
-* - Les utiliser dans un vtkTransformFilter
-* - Trouver un moyen pour éviter de créer un vtkSMPTransformFilter* avec un vtkTransformFilter::New();
-o - Tests de performance
+vtkSMPContourFilter:
+ - Protéger les données en entrée pour éviter les segfaults
+   Si possible, éviter de modifier tous les vtkCell.
+ - Améliorer le merge (// ?)
 
-Sequential:
-* - Virer QT
-* - Utiliser un vtkTransformFilter
-o - Tests de performance
+Kaapi:
+ - Réaliser une initialisation non séquentielle avec une meilleure maîtrise
+   (Données créées au plus près du cœur le plus susceptible de les utiliser)
 
-SequentialNoKaapi:
-* - Ne pas initialiser Kaapi
-* - Utiliser un vtkTransformFilter
-o - Tests de performance
-! - Trouver un moyen d'éviter une compil' totale pour ce bench

@@ -10,19 +10,32 @@
 class vtkPoints;
 class vtkMutexLock;
 
+class VTK_SMP_EXPORT vtkFunctor
+{
+public:
+  virtual void operator () ( vtkIdType, vtkSMPThreadID ) const = 0;
+
+protected:
+  vtkFunctor();
+  ~vtkFunctor();
+};
+
+class VTK_SMP_EXPORT vtkFunctorInitialisable : public vtkFunctor
+{
+public:
+  virtual void init ( vtkSMPThreadID ) const = 0;
+  bool CheckAndSetInitialized() const;
+
+protected:
+  vtkFunctorInitialisable();
+  ~vtkFunctorInitialisable();
+
+private:
+  mutable bool IsInitialized;
+};
+
 namespace vtkSMP
 {
-
-  // vtkMutexLocker
-//  class VTK_SMP_EXPORT vtkMutexLocker : public vtkObjectBase
-//    {
-//    public :
-//      vtkMutexLocker(vtkMutexLock* lock);
-//      ~vtkMutexLocker();
-
-//    protected :
-//      vtkMutexLock* Lock;
-//    };
 
   class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
     {
@@ -48,7 +61,7 @@ namespace vtkSMP
   // ForEach template : parallel loop over an iterator
   void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctor& op );
 
-  void VTK_SMP_EXPORT InitialiseThreadLocal( const vtkFunctorInitialisable& f );
+  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable& f );
 
   void VTK_SMP_EXPORT FillThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result );
 }

@@ -62,10 +62,10 @@ struct ThreadsFunctor : public vtkFunctorInitialisable {
 
   vtkMutexLock* Lock;
 
-  void InitNonThreaded ( vtkDataSet* _input, vtkCellData* _incd,
-                         vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
-                         vtkIdType& _size, double* _values, int _number,
-                         vtkDataArray* _scalars, int _compute )
+  ThreadsFunctor ( vtkDataSet* _input, vtkCellData* _incd,
+                   vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
+                   vtkIdType& _size, double* _values, int _number,
+                   vtkDataArray* _scalars, int _compute )
   {
     Locator = vtkSMP::vtkThreadLocal::New();
     newPts = vtkSMP::vtkThreadLocal::New();
@@ -98,7 +98,9 @@ struct ThreadsFunctor : public vtkFunctorInitialisable {
     pts->Allocate(estimatedSize,estimatedSize);
     newPts->SetLocal( tid, pts );
 
+    this->Lock->Lock();
     vtkIncrementalPointLocator* l = refLocator->NewInstance();
+    this->Lock->Unlock();
     l->InitPointInsertion( pts, input->GetBounds(), estimatedSize );
     Locator->SetLocal( tid, l );
     l->Delete();
@@ -135,7 +137,9 @@ struct ThreadsFunctor : public vtkFunctorInitialisable {
     Cells->SetLocal( tid, cell );
     cell->Delete();
 
+    this->Lock->Lock();
     vtkDataArray* cScalars = inScalars->NewInstance();
+    this->Lock->Unlock();
     cScalars->SetNumberOfComponents(inScalars->GetNumberOfComponents());
     cScalars->Allocate(cScalars->GetNumberOfComponents()*VTK_CELL_SIZE);
     CellsScalars->SetLocal( tid, cScalars );
@@ -150,7 +154,7 @@ struct ThreadsFunctor : public vtkFunctorInitialisable {
     this->Lock->Unlock();
     if (cellType >= VTK_NUMBER_OF_CELL_TYPES)
       { // Protect against new cell types added.
-      //vtkErrorMacro("Unknown cell type " << cellType);
+//      vtkErrorMacro("Unknown cell type " << cellType);
       return;
       }
     if (cellTypeDimensions[cellType] != dimensionality)
@@ -505,12 +509,11 @@ int vtkSMPContourFilter::RequestData(
     //
     if ( !this->UseScalarTree )
       {
-      ThreadsFunctor my_contour;
-      my_contour.InitNonThreaded( input, inCd, inPd, this->Locator,
-                                  estimatedSize, values, numContours,
-                                  inScalars, this->ComputeScalars );
+      ThreadsFunctor my_contour( input, inCd, inPd, this->Locator,
+                                 estimatedSize, values, numContours,
+                                 inScalars, this->ComputeScalars );
 
-      vtkSMP::InitialiseThreadLocal( my_contour );
+//      vtkSMP::InitialiseThreadLocal( my_contour );
       for ( my_contour.dimensionality = 1; my_contour.dimensionality <= 3; ++(my_contour.dimensionality) )
       {
         vtkSMP::ForEach( 0, numCells, my_contour );

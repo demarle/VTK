@@ -1,4 +1,4 @@
-#include "vtkSMPImplementation.h"
+#include "vtkSMP.h"
 #include <omp.h>
 
 void InternalForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op)
@@ -28,6 +28,6 @@ void InternalGetThreadsIDs(vtkstd::vector<vtkSMPThreadID>& result)
     }
   }
 
-  for (vtkSMPThreadID i = 0; i < numThreads; ++i)
+  for ( vtkSMPThreadID i = 0; i < numThreads; ++i )
     result.push_back(i);
 }

@@ -4,34 +4,48 @@
 #include "vtkFloatArray.h"
 #include "vtkObjectFactory.h"
 
+//--------------------------------------------------------------------------------
+vtkFunctor::vtkFunctor() { }
+
+vtkFunctor::~vtkFunctor() { }
+
+//--------------------------------------------------------------------------------
+vtkFunctorInitialisable::vtkFunctorInitialisable() : vtkFunctor()
+  {
+  IsInitialized = false;
+  }
+
+vtkFunctorInitialisable::~vtkFunctorInitialisable() { }
+
+bool vtkFunctorInitialisable::CheckAndSetInitialized() const
+  {
+  bool ret = IsInitialized;
+  IsInitialized = true;
+  return ret;
+  }
+
 namespace vtkSMP
 {
+  //--------------------------------------------------------------------------------
   void ForEach(vtkIdType first, vtkIdType last, const vtkFunctor& op)
     {
     InternalForEach( first, last, &op );
     }
 
-  void InitialiseThreadLocal( const vtkFunctorInitialisable& f )
+  void ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable& f )
     {
-    InternalInit( &f );
+    if (!f.CheckAndSetInitialized())
+      {
+      InternalInit( &f );
+      }
+    InternalForEach( first, last, &f );
     }
 
-  void VTK_SMP_EXPORT FillThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result )
+  void FillThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result )
     {
     result.clear();
     InternalGetThreadsIDs( result );
     }
-
-  //--------------------------------------------------------------------------------
-//  vtkMutexLocker::vtkMutexLocker(vtkMutexLock* lock)
-//    {
-//    this->Lock = lock;
-//    this->Lock->Lock();
-//    }
-//  vtkMutexLocker::~vtkMutexLocker()
-//    {
-//    this->Lock->Unlock();
-//    }
 
   //--------------------------------------------------------------------------------
   vtkStandardNewMacro(vtkThreadLocal);

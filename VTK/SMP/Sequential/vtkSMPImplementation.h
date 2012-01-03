@@ -7,14 +7,8 @@
 
 typedef int vtkSMPThreadID;
 
-struct vtkFunctor {
-  virtual void operator () ( vtkIdType, vtkSMPThreadID ) const = 0;
-};
-
-struct vtkFunctorInitialisable : public vtkFunctor
-{
-  virtual void init ( vtkSMPThreadID ) const = 0;
-};
+class vtkFunctor;
+class vtkFunctorInitialisable;
 
 void InternalForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op);
 void InternalInit( const vtkFunctorInitialisable* f );
