@@ -280,31 +280,30 @@ int vtkDemandDrivenPipeline::ProcessRequest(vtkInformation* request,
         return 0;
         }
 
+      int stopThis = vtKaapiRuns;
       if (this->Algorithm->IsA("vtkDataReader") || this->Algorithm->IsA("vtkContourFilter"))
         {
-        result = this->ExecuteData(request,inInfoVec,outInfoVec);
+        stopThis = 1;
         }
-      else
+
+      // Starting bench
+      struct timespec t0, t1;
+      for (int i = 0; i < stopThis; ++i)
         {
-        struct timespec t0, t1;
-
+        clock_gettime(CLOCK_REALTIME, &t0);
+        /* *** Filter execution *** */
         // Request data from the algorithm.
-        for (int i = 0; i < vtKaapiRuns; ++i)
-          {
-          clock_gettime(CLOCK_REALTIME, &t0);
-          /* *** Filter execution *** */
-          result = this->ExecuteData(request,inInfoVec,outInfoVec);
-          /* *** Filter execution *** */
-          clock_gettime(CLOCK_REALTIME, &t1);
+        result = this->ExecuteData(request,inInfoVec,outInfoVec);
+        /* *** Filter execution *** */
+        clock_gettime(CLOCK_REALTIME, &t1);
 
-          int s = t1.tv_sec - t0.tv_sec;
-          int ns = t1.tv_nsec - t0.tv_nsec;
-          if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-          if (s) cout << s;
-          cout << ns << " ";
-          }
-        cout << endl;
+        int s = t1.tv_sec - t0.tv_sec;
+        int ns = t1.tv_nsec - t0.tv_nsec;
+        if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+        if (s) cout << s;
+        cout << ns << " ";
         }
+      cout << endl;
 
       // Data are now up to date.
       this->DataTime.Modified();
