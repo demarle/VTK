@@ -15,7 +15,17 @@ void InternalInit( const vtkFunctorInitialisable* f )
   f->init( 0 );
 }
 
-void InternalGetThreadsIDs(vtkstd::vector<vtkSMPThreadID>& result)
+void InternalGetThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result )
 {
   result.push_back( 0 );
+}
+
+void InternalMerge( const vtkMergeable *f )
+{
+  f->merge( 0 );
+}
+
+void InternalPreMerge( const vtkMergeableInitialisable *f )
+{
+  f->pre_merge( 0 );
 }

@@ -31,3 +31,19 @@ void InternalGetThreadsIDs(vtkstd::vector<vtkSMPThreadID>& result)
   for ( vtkSMPThreadID i = 0; i < numThreads; ++i )
     result.push_back(i);
 }
+
+void InternalMerge( const vtkMergeable* f )
+{
+  #pragma omp parallel
+  {
+    f->merge( omp_get_thread_num() );
+  }
+}
+
+void InternalPreMerge( const vtkMergeableInitialisable* f )
+{
+  #pragma omp parallel
+  {
+    f->pre_merge( omp_get_thread_num() );
+  }
+}

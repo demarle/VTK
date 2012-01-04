@@ -34,6 +34,26 @@ private:
   mutable bool IsInitialized;
 };
 
+class VTK_SMP_EXPORT vtkMergeable
+{
+public:
+  virtual void merge ( vtkSMPThreadID ) const = 0;
+
+protected:
+  vtkMergeable();
+  ~vtkMergeable();
+};
+
+class VTK_SMP_EXPORT vtkMergeableInitialisable : public vtkMergeable
+{
+public:
+  virtual void pre_merge ( vtkSMPThreadID ) const = 0;
+
+protected:
+  vtkMergeableInitialisable();
+  ~vtkMergeableInitialisable();
+};
+
 namespace vtkSMP
 {
 
@@ -64,6 +84,10 @@ namespace vtkSMP
   void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable& f );
 
   void VTK_SMP_EXPORT FillThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result );
+
+  void VTK_SMP_EXPORT Merge( const vtkMergeable& f );
+
+  void VTK_SMP_EXPORT PreMerge( const vtkMergeableInitialisable& f );
 }
 
 #endif //__vtkSMP_h__

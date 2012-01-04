@@ -48,3 +48,34 @@ void InternalGetThreadsIDs(vtkstd::vector<vtkSMPThreadID>& result)
   for (vtkSMPThreadID i = 0; i < numThreads; ++i)
     result.push_back(i);
 }
+
+void my_merge ( int32_t b, int32_t e, int32_t tid, const vtkMergeable* f )
+{
+  for ( int32_t k = b; k < e; ++k )
+    f->merge( k );
+}
+
+void InternalMerge(const vtkMergeable *f)
+{
+  kaapic_foreach_attr_t attr;
+  kaapic_foreach_attr_init(&attr);
+  kaapic_foreach_attr_set_grains(&attr, 1, 1);
+  kaapic_foreach( 0, kaapic_get_concurrency(), &attr, 1, my_merge, f );
+  kaapic_foreach_attr_destroy(&attr);
+}
+
+
+void my_pre_merge ( int32_t b, int32_t e, int32_t tid, const vtkMergeableInitialisable* f )
+{
+  for ( int32_t k = b; k < e; ++k )
+    f->pre_merge( k );
+}
+
+void InternalPreMerge(const vtkMergeableInitialisable *f)
+{
+  kaapic_foreach_attr_t attr;
+  kaapic_foreach_attr_init(&attr);
+  kaapic_foreach_attr_set_grains(&attr, 1, 1);
+  kaapic_foreach( 0, kaapic_get_concurrency(), &attr, 1, my_pre_merge, f );
+  kaapic_foreach_attr_destroy(&attr);
+}

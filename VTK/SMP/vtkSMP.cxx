@@ -24,6 +24,17 @@ bool vtkFunctorInitialisable::CheckAndSetInitialized() const
   return ret;
   }
 
+//--------------------------------------------------------------------------------
+vtkMergeable::vtkMergeable() { }
+
+vtkMergeable::~vtkMergeable() { }
+
+//--------------------------------------------------------------------------------
+vtkMergeableInitialisable::vtkMergeableInitialisable() { }
+
+vtkMergeableInitialisable::~vtkMergeableInitialisable() { }
+
+
 namespace vtkSMP
 {
   //--------------------------------------------------------------------------------
@@ -46,6 +57,16 @@ namespace vtkSMP
     result.clear();
     InternalGetThreadsIDs( result );
     }
+
+  void Merge( const vtkMergeable &f )
+  {
+    InternalMerge( &f );
+  }
+
+  void PreMerge( const vtkMergeableInitialisable &f )
+  {
+    InternalPreMerge( &f );
+  }
 
   //--------------------------------------------------------------------------------
   vtkStandardNewMacro(vtkThreadLocal);
