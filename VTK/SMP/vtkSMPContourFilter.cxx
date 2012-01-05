@@ -205,8 +205,7 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
   void init ( vtkSMPThreadID tid ) const
   {
     this->Lock->Lock();
-    cout << tid << endl;
-    vtkPoints::New();
+
     vtkPoints* pts = newPts->NewLocal<vtkPoints>( tid );
     pts->Allocate(estimatedSize,estimatedSize);
 //    this->Lock->Lock();
@@ -243,7 +242,6 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
     cScalars->SetNumberOfComponents(inScalars->GetNumberOfComponents());
     cScalars->Allocate(cScalars->GetNumberOfComponents()*VTK_CELL_SIZE);
 
-    cout << -tid << endl;
     this->Lock->Unlock();
   }
 

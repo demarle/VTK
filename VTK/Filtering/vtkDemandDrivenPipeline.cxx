@@ -40,7 +40,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-const int vtKaapiRuns = 500;
+const int vtKaapiRuns = 1;
 
 vtkStandardNewMacro(vtkDemandDrivenPipeline);
 
