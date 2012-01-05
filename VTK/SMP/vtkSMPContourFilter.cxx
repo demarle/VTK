@@ -58,9 +58,9 @@ public:
 
   void IncrementValue ( vtkIdType v )
   {
-    this->Lock->Lock();
+//    this->Lock->Lock();
     value += v;
-    this->Lock->Unlock();
+//    this->Lock->Unlock();
   }
 
   vtkIdType GetValue() { return value; }
@@ -204,56 +204,47 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
 
   void init ( vtkSMPThreadID tid ) const
   {
-    vtkPoints* pts = vtkPoints::New();
-    pts->Allocate(estimatedSize,estimatedSize);
-    newPts->SetLocal( tid, pts );
-
     this->Lock->Lock();
-    vtkIncrementalPointLocator* l = refLocator->NewInstance();
-    this->Lock->Unlock();
+    cout << tid << endl;
+    vtkPoints::New();
+    vtkPoints* pts = newPts->NewLocal<vtkPoints>( tid );
+    pts->Allocate(estimatedSize,estimatedSize);
+//    this->Lock->Lock();
+    vtkIncrementalPointLocator* l = Locator->NewLocal<vtkIncrementalPointLocator>( tid, refLocator );
+//    this->Lock->Unlock();
     l->InitPointInsertion( pts, input->GetBounds(), estimatedSize );
-    Locator->SetLocal( tid, l );
-    l->Delete();
-    pts->Delete();
 
-    vtkCellArray* c = vtkCellArray::New();
+    vtkCellArray* c = newVerts->NewLocal<vtkCellArray>( tid );
     c->Allocate(estimatedSize,estimatedSize);
-    newVerts->SetLocal( tid, c );
-    c->Delete();
-    c = vtkCellArray::New();
-    c->Allocate(estimatedSize,estimatedSize);
-    newLines->SetLocal( tid, c );
-    c->Delete();
-    c = vtkCellArray::New();
-    c->Allocate(estimatedSize,estimatedSize);
-    newPolys->SetLocal( tid, c );
-    c->Delete();
 
-    vtkPointData* pd = vtkPointData::New();
+    c = newLines->NewLocal<vtkCellArray>( tid );
+    c->Allocate(estimatedSize,estimatedSize);
+
+    c = newPolys->NewLocal<vtkCellArray>( tid );
+    c->Allocate(estimatedSize,estimatedSize);
+
+    vtkPointData* pd = outPd->NewLocal<vtkPointData>( tid );
     if (!computeScalars)
       {
       pd->CopyScalarsOff();
       }
+//    this->Lock->Lock();
     pd->InterpolateAllocate( inPd, estimatedSize, estimatedSize );
-    outPd->SetLocal( tid, pd );
-    pd->Delete();
+//    this->Lock->Unlock();
 
-    vtkCellData* cd = vtkCellData::New();
+    vtkCellData* cd = outCd->NewLocal<vtkCellData>( tid );
+//    this->Lock->Lock();
     cd->CopyAllocate( inCd, estimatedSize, estimatedSize );
-    outCd->SetLocal( tid, cd );
-    cd->Delete();
+//    this->Lock->Unlock();
 
-    vtkGenericCell* cell = vtkGenericCell::New();
-    Cells->SetLocal( tid, cell );
-    cell->Delete();
+    Cells->NewLocal<vtkGenericCell>( tid );
 
-    this->Lock->Lock();
-    vtkDataArray* cScalars = inScalars->NewInstance();
-    this->Lock->Unlock();
+    vtkDataArray* cScalars = CellsScalars->NewLocal<vtkDataArray>( tid, inScalars );
     cScalars->SetNumberOfComponents(inScalars->GetNumberOfComponents());
     cScalars->Allocate(cScalars->GetNumberOfComponents()*VTK_CELL_SIZE);
-    CellsScalars->SetLocal( tid, cScalars );
-    cScalars->Delete();
+
+    cout << -tid << endl;
+    this->Lock->Unlock();
   }
 
   void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
@@ -271,18 +262,14 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
       {
       return;
       }
-    this->Lock->Lock();
     input->GetCell(cellId,cell);
-    this->Lock->Unlock();
     vtkIdList* cellPts = cell->GetPointIds();
     vtkDataArray* cellScalars = vtkDataArray::SafeDownCast(this->CellsScalars->GetLocal( tid ));
     if (cellScalars->GetSize()/cellScalars->GetNumberOfComponents() < cellPts->GetNumberOfIds())
       {
       cellScalars->Allocate(cellScalars->GetNumberOfComponents()*cellPts->GetNumberOfIds());
       }
-    this->Lock->Lock();
     inScalars->GetTuples(cellPts,cellScalars);
-    this->Lock->Unlock();
 
     for (int i = 0; i < numContours; i++)
       {
@@ -613,6 +600,7 @@ int vtkSMPContourFilter::RequestData(
     //
     if ( !this->UseScalarTree )
       {
+      input->ComputeBounds();
       ThreadsFunctor my_contour( input, inCd, inPd, this->Locator,
                                  estimatedSize, values, numContours,
                                  inScalars, this->ComputeScalars,

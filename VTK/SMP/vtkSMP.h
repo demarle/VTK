@@ -68,9 +68,46 @@ namespace vtkSMP
       static vtkThreadLocal* New();
       void PrintSelf(ostream &os, vtkIndent indent);
 
-      void SetLocal ( vtkSMPThreadID tid, vtkObject* item );
+      template<class T>
+      T* NewLocal ( vtkSMPThreadID tid )
+        {
+        if (this->ThreadLocalStorage[tid])
+          {
+          this->ThreadLocalStorage[tid]->UnRegister(this);
+          }
 
-      vtkObject* GetLocal(vtkSMPThreadID tid);
+        T* item = T::New();
+        if (item)
+          {
+          item->Register(this);
+          item->Delete();
+          }
+        this->ThreadLocalStorage[tid] = item;
+
+        return item;
+        }
+
+      template<class T>
+      T* NewLocal ( vtkSMPThreadID tid, T* specificImpl )
+        {
+        if (this->ThreadLocalStorage[tid])
+          {
+          this->ThreadLocalStorage[tid]->UnRegister(this);
+          }
+
+        T* item = specificImpl->NewInstance();
+        if (item)
+          {
+          item->Register(this);
+          item->Delete();
+          }
+        this->ThreadLocalStorage[tid] = item;
+
+        return item;
+        }
+
+      void SetLocal ( vtkSMPThreadID tid, vtkObject* item );
+      vtkObject* GetLocal( vtkSMPThreadID tid );
 
     protected:
       // the __thread c++Ox modifier cannot be used because this is not static

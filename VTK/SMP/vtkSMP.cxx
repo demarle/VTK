@@ -104,8 +104,14 @@ namespace vtkSMP
   void vtkThreadLocal::SetLocal ( vtkSMPThreadID tid, vtkObject* item )
     {
     if (this->ThreadLocalStorage[tid])
+      {
       this->ThreadLocalStorage[tid]->UnRegister(this);
-    item->Register(this);
+      }
+
+    if (item)
+      {
+      item->Register(this);
+      }
     this->ThreadLocalStorage[tid] = item;
     }
 
