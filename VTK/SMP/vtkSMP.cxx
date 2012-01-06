@@ -48,6 +48,7 @@ namespace vtkSMP
     if (!f.CheckAndSetInitialized())
       {
       InternalInit( &f );
+      cout << "Init ended" << endl;
       }
     InternalForEach( first, last, &f );
     }

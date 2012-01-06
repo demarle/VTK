@@ -18,7 +18,7 @@
 // in a standard fashion. This includes properly treating modified time
 // and printing out debug information.
 //
-// Macros are available for built-in types; for character strings; 
+// Macros are available for built-in types; for character strings;
 // vector arrays of built-in types size 2,3,4; for setting objects; and
 // debug, warning, and error printout information.
 
@@ -60,7 +60,7 @@
 (((type) == VTK_VARIANT) ? "variant" : \
 (((type) == VTK_OBJECT) ? "object" : \
 "Undefined"))))))))))))))))))))))
-  
+
 //
 // Set built-in type.  Creates member Set"name"() (e.g., SetVisibility());
 //
@@ -73,7 +73,7 @@ virtual void Set##name (type _arg) \
     this->name = _arg; \
     this->Modified(); \
     } \
-  } 
+  }
 
 //
 // Get built-in type.  Creates member Get"name"() (e.g., GetVisibility());
@@ -82,11 +82,11 @@ virtual void Set##name (type _arg) \
 virtual type Get##name () { \
   vtkDebugMacro(<< this->GetClassName() << " (" << this << "): returning " << #name " of " << this->name ); \
   return this->name; \
-  } 
+  }
 
 
 //
-// Set character string.  Creates member Set"name"() 
+// Set character string.  Creates member Set"name"()
 // (e.g., SetFilename(char *));
 //
 #define vtkSetStringMacro(name) \
@@ -109,21 +109,21 @@ virtual void Set##name (const char* _arg) \
     this->name = NULL; \
     } \
   this->Modified(); \
-  } 
+  }
 
 //
-// Get character string.  Creates member Get"name"() 
+// Get character string.  Creates member Get"name"()
 // (e.g., char *GetFilename());
 //
 #define vtkGetStringMacro(name) \
 virtual char* Get##name () { \
   vtkDebugMacro(<< this->GetClassName() << " (" << this << "): returning " << #name " of " << (this->name?this->name:"(null)")); \
   return this->name; \
-  } 
+  }
 
 //
 // Set built-in type where value is constrained between min/max limits.
-// Create member Set"name"() (eg., SetRadius()). #defines are 
+// Create member Set"name"() (eg., SetRadius()). #defines are
 // convenience for clamping open-ended values.
 // The Get"name"MinValue() and Get"name"MaxValue() members return the
 // min and max limits.
@@ -148,10 +148,10 @@ virtual type Get##name##MaxValue () \
   }
 
 //
-// This macro defines a body of set object macro. It can be used either in 
+// This macro defines a body of set object macro. It can be used either in
 // the header file vtkSetObjectMacro or in the implementation one
-// vtkSetObjectMacro. It sets the pointer to object; uses vtkObject 
-// reference counting methodology. Creates method 
+// vtkSetObjectMacro. It sets the pointer to object; uses vtkObject
+// reference counting methodology. Creates method
 // Set"name"() (e.g., SetPoints()).
 //
 #define vtkSetObjectBodyMacro(name,type,args)                   \
@@ -221,8 +221,8 @@ virtual type *Get##name ()                                              \
   virtual void name##Off () { this->Set##name(static_cast<type>(0));}
 
 //
-// Following set macros for vectors define two members for each macro.  The first 
-// allows setting of individual components (e.g, SetColor(float,float,float)), 
+// Following set macros for vectors define two members for each macro.  The first
+// allows setting of individual components (e.g, SetColor(float,float,float)),
 // the second allows setting from an array (e.g., SetColor(float* rgb[3])).
 // The macros vary in the size of the vector they deal with.
 //
@@ -240,7 +240,7 @@ virtual void Set##name (type _arg1, type _arg2) \
 void Set##name (type _arg[2]) \
   { \
   this->Set##name (_arg[0], _arg[1]); \
-  } 
+  }
 
 #define vtkGetVector2Macro(name,type) \
 virtual type *Get##name () \
@@ -257,7 +257,7 @@ virtual void Get##name (type &_arg1, type &_arg2) \
 virtual void Get##name (type _arg[2]) \
   { \
   this->Get##name (_arg[0], _arg[1]);\
-  } 
+  }
 
 #define vtkSetVector3Macro(name,type) \
 virtual void Set##name (type _arg1, type _arg2, type _arg3) \
@@ -274,7 +274,7 @@ virtual void Set##name (type _arg1, type _arg2, type _arg3) \
 virtual void Set##name (type _arg[3]) \
   { \
   this->Set##name (_arg[0], _arg[1], _arg[2]);\
-  } 
+  }
 
 #define vtkGetVector3Macro(name,type) \
 virtual type *Get##name () \
@@ -292,7 +292,7 @@ virtual void Get##name (type &_arg1, type &_arg2, type &_arg3) \
 virtual void Get##name (type _arg[3]) \
   { \
   this->Get##name (_arg[0], _arg[1], _arg[2]);\
-  } 
+  }
 
 #define vtkSetVector4Macro(name,type) \
 virtual void Set##name (type _arg1, type _arg2, type _arg3, type _arg4) \
@@ -310,7 +310,7 @@ virtual void Set##name (type _arg1, type _arg2, type _arg3, type _arg4) \
 virtual void Set##name (type _arg[4]) \
   { \
   this->Set##name (_arg[0], _arg[1], _arg[2], _arg[3]);\
-  } 
+  }
 
 
 #define vtkGetVector4Macro(name,type) \
@@ -330,7 +330,7 @@ virtual void Get##name (type &_arg1, type &_arg2, type &_arg3, type &_arg4) \
 virtual void Get##name (type _arg[4]) \
   { \
   this->Get##name (_arg[0], _arg[1], _arg[2], _arg[3]);\
-  } 
+  }
 
 #define vtkSetVector6Macro(name,type) \
 virtual void Set##name (type _arg1, type _arg2, type _arg3, type _arg4, type _arg5, type _arg6) \
@@ -350,7 +350,7 @@ virtual void Set##name (type _arg1, type _arg2, type _arg3, type _arg4, type _ar
 virtual void Set##name (type _arg[6]) \
   { \
   this->Set##name (_arg[0], _arg[1], _arg[2], _arg[3], _arg[4], _arg[5]);\
-  } 
+  }
 
 #define vtkGetVector6Macro(name,type) \
 virtual type *Get##name () \
@@ -371,7 +371,7 @@ virtual void Get##name (type &_arg1, type &_arg2, type &_arg3, type &_arg4, type
 virtual void Get##name (type _arg[6]) \
   { \
   this->Get##name (_arg[0], _arg[1], _arg[2], _arg[3], _arg[4], _arg[5]);\
-  } 
+  }
 
 //
 // General set vector macro creates a single method that copies specified
@@ -391,7 +391,7 @@ virtual void Set##name(type data[]) \
 }
 
 //
-// Get vector macro defines two methods. One returns pointer to type 
+// Get vector macro defines two methods. One returns pointer to type
 // (i.e., array of type). This is for efficiency. The second copies data
 // into user provided array. This is more object-oriented.
 // Examples: float *GetColor() and void GetColor(float c[count]).
@@ -687,10 +687,10 @@ virtual double *Get##name() \
 // switch statement case lists.
 //
 // This version of the macro allows the template to take any number of
-// arguments.  
+// arguments.
 //
 // Note that in this macro VTK_TT is defined to be the type of the iterator
-// for the given type of array. One must include the 
+// for the given type of array. One must include the
 // vtkArrayIteratorIncludes.h header file to provide for extending of this macro
 // by addition of new iterators.
 //
@@ -701,7 +701,7 @@ virtual double *Get##name() \
 //   vtkArrayIteratorTemplateMacro(myFunc(static_cast<VTK_TT*>(iter), arg2));
 //   }
 // iter->Delete();
-// 
+//
 #define vtkArrayIteratorTemplateMacroCase(typeN, type, call)  \
   vtkTemplateMacroCase(typeN, vtkArrayIteratorTemplate<type>, call)
 #define vtkArrayIteratorTemplateMacro(call)                                 \
@@ -743,7 +743,7 @@ virtual double *Get##name() \
              vtkArrayIteratorTemplateMacroCase(typeN, type, call)
 #else
 # define vtkTemplateMacroCase_si64(typeN, type, call)
-# define vtkArrayIteratorTemplateMacroCase_si64(typeN, type, call) 
+# define vtkArrayIteratorTemplateMacroCase_si64(typeN, type, call)
 #endif
 
 // Add "unsigned __int64" to the template macro if it is enabled and
@@ -755,7 +755,7 @@ virtual double *Get##name() \
              vtkArrayIteratorTemplateMacroCase(typeN, type, call);
 #else
 # define vtkTemplateMacroCase_ui64(typeN, type, call)
-# define vtkArrayIteratorTemplateMacroCase_ui64(typeN, type, call) 
+# define vtkArrayIteratorTemplateMacroCase_ui64(typeN, type, call)
 #endif
 
 // Legacy versions of vtkTemplateMacro:

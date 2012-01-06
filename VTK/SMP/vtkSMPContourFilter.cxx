@@ -159,6 +159,32 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
 
   vtkMutexLock* Lock;
 
+//  void print() const
+//  {
+//    for (int i = 0; i < 8; ++i)
+//    {
+//      cout << "Id " << i << endl;
+//      cout << this->newPts->GetLocal( i ) << endl;
+//      this->newPts->GetLocal( i )->Print( cout );
+//      cout << this->Locator->GetLocal( i ) << endl;
+//      this->Locator->GetLocal( i )->Print( cout );
+//      cout << this->newVerts->GetLocal( i ) << endl;
+//      this->newVerts->GetLocal( i )->Print( cout );
+//      cout << this->newLines->GetLocal( i ) << endl;
+//      this->newLines->GetLocal( i )->Print( cout );
+//      cout << this->newPolys->GetLocal( i ) << endl;
+//      this->newPolys->GetLocal( i )->Print( cout );
+//      cout << this->outPd->GetLocal( i ) << endl;
+//      this->outPd->GetLocal( i )->Print( cout );
+//      cout << this->outCd->GetLocal( i ) << endl;
+//      this->outCd->GetLocal( i )->Print( cout );
+//      cout << this->Cells->GetLocal( i ) << endl;
+//      this->Cells->GetLocal( i )->Print( cout );
+//      cout << this->CellsScalars->GetLocal( i ) << endl;
+//      this->CellsScalars->GetLocal( i )->Print( cout );
+//    }
+//  }
+
   ThreadsFunctor ( vtkDataSet* _input, vtkCellData* _incd,
                    vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
                    vtkIdType& _size, double* _values, int _number,
@@ -210,8 +236,8 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
     pts->Allocate(estimatedSize,estimatedSize);
 //    this->Lock->Lock();
     vtkIncrementalPointLocator* l = Locator->NewLocal<vtkIncrementalPointLocator>( tid, refLocator );
-//    this->Lock->Unlock();
     l->InitPointInsertion( pts, input->GetBounds(), estimatedSize );
+    this->Lock->Unlock();
 
     vtkCellArray* c = newVerts->NewLocal<vtkCellArray>( tid );
     c->Allocate(estimatedSize,estimatedSize);
@@ -237,12 +263,13 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
 //    this->Lock->Unlock();
 
     Cells->NewLocal<vtkGenericCell>( tid );
+    cout << Cells->GetLocal( tid ) << endl;
 
     vtkDataArray* cScalars = CellsScalars->NewLocal<vtkDataArray>( tid, inScalars );
     cScalars->SetNumberOfComponents(inScalars->GetNumberOfComponents());
     cScalars->Allocate(cScalars->GetNumberOfComponents()*VTK_CELL_SIZE);
 
-    this->Lock->Unlock();
+//    this->Lock->Unlock();
   }
 
   void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
