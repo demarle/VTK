@@ -33,6 +33,11 @@
 
 #include "vtkCompositeDataPipeline.h"
 
+#include <time.h>
+#include <sys/time.h>
+
+const int vtKaapiRuns = 5;
+
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_AFTER_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_BEFORE_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_DIRECTION, Integer);
@@ -744,7 +749,34 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
 
   // Invoke the request on the algorithm.
   this->InAlgorithm = 1;
-  int result = this->Algorithm->ProcessRequest(request, inInfo, outInfo);
+
+  int result = 0;
+  if ( request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()) && !this->Algorithm->IsA("vtkDataReader"))// || this->Algorithm->IsA("vtkContourFilter"))
+    {
+
+    struct timespec t0, t1;
+    for (int i = 0; i < vtKaapiRuns; ++i)
+      {
+      int ret_value = clock_gettime(CLOCK_REALTIME, &t0);
+      /* *** Filter execution *** */
+      result = this->Algorithm->ProcessRequest(request, inInfo, outInfo);
+      /* *** Filter execution *** */
+      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
+
+      int s = t1.tv_sec - t0.tv_sec;
+      int ns = t1.tv_nsec - t0.tv_nsec;
+      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+      if (s) cout << s;
+      if (ret_value) cout << "!";
+      cout << ns << " ";
+      }
+    cout << endl;
+    }
+  else
+    {
+    result = this->Algorithm->ProcessRequest( request, inInfo, outInfo );
+    }
+
   this->InAlgorithm = 0;
 
   // If the algorithm failed report it now.
