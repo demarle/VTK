@@ -40,7 +40,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-const int vtKaapiRuns = 1;
+const int vtKaapiRuns = 5;
 
 vtkStandardNewMacro(vtkDemandDrivenPipeline);
 
@@ -281,7 +281,7 @@ int vtkDemandDrivenPipeline::ProcessRequest(vtkInformation* request,
         }
 
       int stopThis = vtKaapiRuns;
-      if (this->Algorithm->IsA("vtkDataReader") || this->Algorithm->IsA("vtkContourFilter"))
+      if (this->Algorithm->IsA("vtkDataReader"))// || this->Algorithm->IsA("vtkContourFilter"))
         {
         stopThis = 1;
         }
