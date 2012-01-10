@@ -26,7 +26,6 @@ class VTK_SMP_EXPORT vtkFunctorInitialisable : public vtkFunctor
 public:
   virtual void init ( vtkSMPThreadID ) const = 0;
   bool CheckAndSetInitialized() const;
-  virtual void print() const = 0;
 
 protected:
   vtkFunctorInitialisable();

@@ -162,32 +162,6 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
 
   vtkMutexLock* Lock;
 
-  void print() const
-  {
-    for (int i = 0; i < 8; ++i)
-    {
-      cout << "Id " << i << endl;
-      cout << this->newPts->GetLocal( i ) << endl;
-      this->newPts->GetLocal( i )->Print( cout );
-      cout << this->Locator->GetLocal( i ) << endl;
-      this->Locator->GetLocal( i )->Print( cout );
-      cout << this->newVerts->GetLocal( i ) << endl;
-      this->newVerts->GetLocal( i )->Print( cout );
-      cout << this->newLines->GetLocal( i ) << endl;
-      this->newLines->GetLocal( i )->Print( cout );
-      cout << this->newPolys->GetLocal( i ) << endl;
-      this->newPolys->GetLocal( i )->Print( cout );
-      cout << this->outPd->GetLocal( i ) << endl;
-      this->outPd->GetLocal( i )->Print( cout );
-      cout << this->outCd->GetLocal( i ) << endl;
-      this->outCd->GetLocal( i )->Print( cout );
-      cout << this->Cells->GetLocal( i ) << endl;
-      this->Cells->GetLocal( i )->Print( cout );
-      cout << this->CellsScalars->GetLocal( i ) << endl;
-      this->CellsScalars->GetLocal( i )->Print( cout );
-    }
-  }
-
   ThreadsFunctor ( vtkDataSet* _input, vtkCellData* _incd,
                    vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
                    vtkIdType& _size, double* _values, int _number,
@@ -269,9 +243,9 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
   void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
   {
     vtkGenericCell *cell = this->Cells->GetLocal( tid );
-    this->Lock->Lock();
+//    this->Lock->Lock();
     int cellType = input->GetCellType(cellId);
-    this->Lock->Unlock();
+//    this->Lock->Unlock();
     if (cellType >= VTK_NUMBER_OF_CELL_TYPES)
       { // Protect against new cell types added.
 //      vtkErrorMacro("Unknown cell type " << cellType);
@@ -616,6 +590,7 @@ int vtkSMPContourFilter::RequestData(
     if ( !this->UseScalarTree )
       {
       input->ComputeBounds();
+      input->GetCellType( 0 );
       ThreadsFunctor my_contour( input, inCd, inPd, this->Locator,
                                  estimatedSize, values, numContours,
                                  inScalars, this->ComputeScalars,
