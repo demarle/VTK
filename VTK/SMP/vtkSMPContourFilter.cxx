@@ -26,6 +26,9 @@
 
 #include "vtkSMP.h"
 
+#include <time.h>
+#include <sys/time.h>
+
 vtkStandardNewMacro(vtkSMPContourFilter);
 
 vtkSMPContourFilter::vtkSMPContourFilter() : vtkContourFilter() { }
@@ -630,13 +633,31 @@ int vtkSMPContourFilter::RequestData(
                                  estimatedSize, values, numContours,
                                  inScalars, this->ComputeScalars,
                                  newVerts, newLines, newPolys, outCd, outPd  );
+      struct timespec t0, t1;
+      int ret_value = clock_gettime(CLOCK_REALTIME, &t0);
 
       for ( my_contour.dimensionality = 1; my_contour.dimensionality <= 3; ++(my_contour.dimensionality) )
         {
         vtkSMP::ForEach( 0, numCells, my_contour );
         }
 
+      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
+      int s = t1.tv_sec - t0.tv_sec;
+      int ns = t1.tv_nsec - t0.tv_nsec;
+      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+      if (s) cout << s;
+      if (ret_value) cout << "!";
+      cout << ns << " ";
+
+      ret_value = clock_gettime(CLOCK_REALTIME, &t0);
       vtkSMP::PreMerge( my_contour );
+      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
+      s = t1.tv_sec - t0.tv_sec;
+      ns = t1.tv_nsec - t0.tv_nsec;
+      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+      if (s) cout << s;
+      if (ret_value) cout << "!";
+      cout << ns << " ";
 
       vtkIdType numberOfCells = my_contour.vertOffset->GetNumberOfCells() +
           my_contour.lineOffset->GetNumberOfCells() + my_contour.polyOffset->GetNumberOfCells();
@@ -648,7 +669,15 @@ int vtkSMPContourFilter::RequestData(
       outPd->InterpolateAllocate( inPd, my_contour.numberOfPoints->GetValue(), my_contour.numberOfPoints->GetValue() );
       outCd->CopyAllocate( inCd, numberOfCells, numberOfCells );
 
+      ret_value = clock_gettime(CLOCK_REALTIME, &t0);
       vtkSMP::Merge( my_contour );
+      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
+      s = t1.tv_sec - t0.tv_sec;
+      ns = t1.tv_nsec - t0.tv_nsec;
+      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+      if (s) cout << s;
+      if (ret_value) cout << "!";
+      cout << ns << " ";
 
       // Correcting size of arrays
       outPd->SetNumberOfTuples( my_contour.numberOfPoints->GetValue() );
