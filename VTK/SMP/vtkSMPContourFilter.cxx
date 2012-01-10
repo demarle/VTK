@@ -126,15 +126,15 @@ public:
 vtkStandardNewMacro(OffsetManager);
 
 struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableInitialisable {
-  vtkSMP::vtkThreadLocal* Locator;
-  vtkSMP::vtkThreadLocal* newPts;
-  vtkSMP::vtkThreadLocal* newVerts;
-  vtkSMP::vtkThreadLocal* newLines;
-  vtkSMP::vtkThreadLocal* newPolys;
-  vtkSMP::vtkThreadLocal* outPd;
-  vtkSMP::vtkThreadLocal* outCd;
-  vtkSMP::vtkThreadLocal* Cells;
-  vtkSMP::vtkThreadLocal* CellsScalars;
+  vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
+  vtkSMP::vtkThreadLocal<vtkPoints>* newPts;
+  vtkSMP::vtkThreadLocal<vtkCellArray>* newVerts;
+  vtkSMP::vtkThreadLocal<vtkCellArray>* newLines;
+  vtkSMP::vtkThreadLocal<vtkCellArray>* newPolys;
+  vtkSMP::vtkThreadLocal<vtkPointData>* outPd;
+  vtkSMP::vtkThreadLocal<vtkCellData>* outCd;
+  vtkSMP::vtkThreadLocal<vtkGenericCell>* Cells;
+  vtkSMP::vtkThreadLocal<vtkDataArray>* CellsScalars;
 
   unsigned char cellTypeDimensions[VTK_NUMBER_OF_CELL_TYPES];
   int dimensionality;
@@ -195,15 +195,15 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
                    vtkCellArray* _outputLines, vtkCellArray* _outputPolys,
                    vtkCellData* _outputCd, vtkPointData* _outputPd )
   {
-    Locator = vtkSMP::vtkThreadLocal::New();
-    newPts = vtkSMP::vtkThreadLocal::New();
-    newVerts = vtkSMP::vtkThreadLocal::New();
-    newLines = vtkSMP::vtkThreadLocal::New();
-    newPolys = vtkSMP::vtkThreadLocal::New();
-    outPd = vtkSMP::vtkThreadLocal::New();
-    outCd = vtkSMP::vtkThreadLocal::New();
-    Cells = vtkSMP::vtkThreadLocal::New();
-    CellsScalars = vtkSMP::vtkThreadLocal::New();
+    Locator = vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>::New();
+    newPts = vtkSMP::vtkThreadLocal<vtkPoints>::New();
+    newVerts = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
+    newLines = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
+    newPolys = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
+    outPd = vtkSMP::vtkThreadLocal<vtkPointData>::New();
+    outCd = vtkSMP::vtkThreadLocal<vtkCellData>::New();
+    Cells = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
+    CellsScalars = vtkSMP::vtkThreadLocal<vtkDataArray>::New();
 
     vtkCutter::GetCellTypeDimensions(cellTypeDimensions);
 
@@ -235,49 +235,40 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
   {
     this->Lock->Lock();
 
-    vtkPoints* pts = newPts->NewLocal<vtkPoints>( tid );
-    pts->Allocate(estimatedSize,estimatedSize);
-//    this->Lock->Lock();
-    vtkIncrementalPointLocator* l = Locator->NewLocal<vtkIncrementalPointLocator>( tid, refLocator );
+    vtkPoints* pts = newPts->NewLocal( tid );
+    pts->Allocate( estimatedSize, estimatedSize );
+    vtkIncrementalPointLocator* l = Locator->NewLocal( tid, refLocator );
     l->InitPointInsertion( pts, input->GetBounds(), estimatedSize );
 
     this->Lock->Unlock();
 
-    vtkCellArray* c = newVerts->NewLocal<vtkCellArray>( tid );
-    c->Allocate(estimatedSize,estimatedSize);
+    vtkCellArray* c = newVerts->NewLocal( tid );
+    c->Allocate( estimatedSize, estimatedSize );
+    c = newLines->NewLocal( tid );
+    c->Allocate( estimatedSize, estimatedSize );
+    c = newPolys->NewLocal( tid );
+    c->Allocate( estimatedSize, estimatedSize );
 
-    c = newLines->NewLocal<vtkCellArray>( tid );
-    c->Allocate(estimatedSize,estimatedSize);
-
-    c = newPolys->NewLocal<vtkCellArray>( tid );
-    c->Allocate(estimatedSize,estimatedSize);
-
-    vtkPointData* pd = outPd->NewLocal<vtkPointData>( tid );
-    if (!computeScalars)
+    vtkPointData* pd = outPd->NewLocal( tid );
+    if ( !computeScalars )
       {
       pd->CopyScalarsOff();
       }
-//    this->Lock->Lock();
     pd->InterpolateAllocate( inPd, estimatedSize, estimatedSize );
-//    this->Lock->Unlock();
 
-    vtkCellData* cd = outCd->NewLocal<vtkCellData>( tid );
-//    this->Lock->Lock();
+    vtkCellData* cd = outCd->NewLocal( tid );
     cd->CopyAllocate( inCd, estimatedSize, estimatedSize );
-//    this->Lock->Unlock();
 
-    Cells->NewLocal<vtkGenericCell>( tid );
+    Cells->NewLocal( tid );
 
-    vtkDataArray* cScalars = CellsScalars->NewLocal<vtkDataArray>( tid, inScalars );
-    cScalars->SetNumberOfComponents(inScalars->GetNumberOfComponents());
-    cScalars->Allocate(cScalars->GetNumberOfComponents()*VTK_CELL_SIZE);
-
-//    this->Lock->Unlock();
+    vtkDataArray* cScalars = CellsScalars->NewLocal( tid, inScalars );
+    cScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
+    cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
   }
 
   void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
   {
-    vtkGenericCell *cell = vtkGenericCell::SafeDownCast(this->Cells->GetLocal( tid ));
+    vtkGenericCell *cell = this->Cells->GetLocal( tid );
     this->Lock->Lock();
     int cellType = input->GetCellType(cellId);
     this->Lock->Unlock();
@@ -292,7 +283,7 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
       }
     input->GetCell(cellId,cell);
     vtkIdList* cellPts = cell->GetPointIds();
-    vtkDataArray* cellScalars = vtkDataArray::SafeDownCast(this->CellsScalars->GetLocal( tid ));
+    vtkDataArray* cellScalars = this->CellsScalars->GetLocal( tid );
     if (cellScalars->GetSize()/cellScalars->GetNumberOfComponents() < cellPts->GetNumberOfIds())
       {
       cellScalars->Allocate(cellScalars->GetNumberOfComponents()*cellPts->GetNumberOfIds());
@@ -302,13 +293,9 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
     for (int i = 0; i < numContours; i++)
       {
       double v = values[i];
-      cell->Contour(v, cellScalars,
-                    vtkIncrementalPointLocator::SafeDownCast(this->Locator->GetLocal( tid )),
-                    vtkCellArray::SafeDownCast(newVerts->GetLocal( tid )),
-                    vtkCellArray::SafeDownCast(newLines->GetLocal( tid )),
-                    vtkCellArray::SafeDownCast(newPolys->GetLocal( tid )),
-                    inPd, vtkPointData::SafeDownCast(outPd->GetLocal( tid )),
-                    inCd, cellId, vtkCellData::SafeDownCast(outCd->GetLocal( tid )));
+      cell->Contour( v, cellScalars, this->Locator->GetLocal( tid ),
+                     newVerts->GetLocal( tid ), newLines->GetLocal( tid ), newPolys->GetLocal( tid ),
+                     inPd, outPd->GetLocal( tid ), inCd, cellId, outCd->GetLocal( tid ) );
       }
   }
 
@@ -334,19 +321,19 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
 
   void pre_merge ( vtkSMPThreadID tid ) const
   {
-    vertOffset->ManageValues( tid, vtkCellArray::SafeDownCast(this->newVerts->GetLocal( tid )) );
-    lineOffset->ManageValues( tid, vtkCellArray::SafeDownCast(this->newLines->GetLocal( tid )) );
-    polyOffset->ManageValues( tid, vtkCellArray::SafeDownCast(this->newPolys->GetLocal( tid )) );
+    vertOffset->ManageValues( tid, this->newVerts->GetLocal( tid ) );
+    lineOffset->ManageValues( tid, this->newLines->GetLocal( tid ) );
+    polyOffset->ManageValues( tid, this->newPolys->GetLocal( tid ) );
 
-    numberOfPoints->IncrementValue(vtkPoints::SafeDownCast( this->newPts->GetLocal( tid ) )->GetNumberOfPoints());
+    numberOfPoints->IncrementValue( this->newPts->GetLocal( tid )->GetNumberOfPoints() );
   }
 
   void merge( vtkSMPThreadID tid ) const
     {
-    vtkPointData* ptData = vtkPointData::SafeDownCast(this->outPd->GetLocal( tid ));
-    vtkCellData* clData = vtkCellData::SafeDownCast(this->outCd->GetLocal( tid ));
+    vtkPointData* ptData = this->outPd->GetLocal( tid );
+    vtkCellData* clData = this->outCd->GetLocal( tid );
 
-    vtkPoints* computedPoints = vtkPoints::SafeDownCast(this->newPts->GetLocal( tid ));
+    vtkPoints* computedPoints = this->newPts->GetLocal( tid );
     vtkIdType n = computedPoints->GetNumberOfPoints(), newId, clIndex = -1;
     vtkstd::vector<vtkIdType> map( n );
     for ( vtkIdType i = 0; i < n; ++i )
@@ -361,7 +348,7 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
       }
 
     vtkIdType *pts, totalNumber;
-    vtkCellArray* computedCells = vtkCellArray::SafeDownCast(this->newVerts->GetLocal( tid ));
+    vtkCellArray* computedCells = this->newVerts->GetLocal( tid );
     computedCells->InitTraversal();
     totalNumber = vertOffset->GetTuplesOffset( tid );
     newId = vertOffset->GetCellsOffset( tid ) - 1; // usage of ++newId instead of newId++
@@ -378,7 +365,7 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
       totalNumber += n + 1;
       }
 
-    computedCells = vtkCellArray::SafeDownCast(this->newLines->GetLocal( tid ));
+    computedCells = this->newLines->GetLocal( tid );
     computedCells->InitTraversal();
     totalNumber = lineOffset->GetTuplesOffset( tid );
     newId = lineOffset->GetCellsOffset( tid ) - 1 + vertOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
@@ -395,7 +382,7 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
       totalNumber += n + 1;
       }
 
-    computedCells = vtkCellArray::SafeDownCast(this->newPolys->GetLocal( tid ));
+    computedCells = this->newPolys->GetLocal( tid );
     computedCells->InitTraversal();
     totalNumber = polyOffset->GetTuplesOffset( tid );
     newId = polyOffset->GetCellsOffset( tid ) - 1 + lineOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
@@ -684,9 +671,9 @@ int vtkSMPContourFilter::RequestData(
       vtkIdType numberOfCells = my_contour.vertOffset->GetNumberOfCells() +
           my_contour.lineOffset->GetNumberOfCells() + my_contour.polyOffset->GetNumberOfCells();
 
-      newVerts->GetData()->SetNumberOfTuples(my_contour.vertOffset->GetNumberOfTuples());
-      newLines->GetData()->SetNumberOfTuples(my_contour.lineOffset->GetNumberOfTuples());
-      newPolys->GetData()->SetNumberOfTuples(my_contour.polyOffset->GetNumberOfTuples());
+      newVerts->GetData()->SetNumberOfTuples( my_contour.vertOffset->GetNumberOfTuples() );
+      newLines->GetData()->SetNumberOfTuples( my_contour.lineOffset->GetNumberOfTuples() );
+      newPolys->GetData()->SetNumberOfTuples( my_contour.polyOffset->GetNumberOfTuples() );
 
       outPd->InterpolateAllocate( inPd, my_contour.numberOfPoints->GetValue(), my_contour.numberOfPoints->GetValue() );
       outCd->CopyAllocate( inCd, numberOfCells, numberOfCells );

@@ -6,6 +6,7 @@
 #include "vtkMutexLock.h"
 
 #include <map>
+#include <typeinfo>  //for 'typeid'
 
 class vtkPoints;
 class vtkMutexLock;
@@ -58,37 +59,42 @@ protected:
 namespace vtkSMP
 {
 
+  template<class T>
   class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
     {
     protected :
-      vtkThreadLocal();
-      ~vtkThreadLocal();
+      vtkThreadLocal() : vtkObject() { }
+      ~vtkThreadLocal()
+        {
+        for ( typename vtkstd::map<vtkSMPThreadID, T*>::iterator it = ThreadLocalStorage.begin();
+              it != ThreadLocalStorage.end(); ++it )
+          {
+          it->second->UnRegister( this );
+          it->second = 0;
+          }
+        ThreadLocalStorage.clear();
+        }
 
     public:
       vtkTypeMacro(vtkThreadLocal, vtkObject)
-      static vtkThreadLocal* New();
-      void PrintSelf(ostream &os, vtkIndent indent);
-
-      template<class T>
-      T* NewLocal ( vtkSMPThreadID tid )
+      static vtkThreadLocal<T>* New()
         {
-        if (this->ThreadLocalStorage[tid])
-          {
-          this->ThreadLocalStorage[tid]->UnRegister(this);
-          }
-
-        T* item = T::New();
-        if (item)
-          {
-          item->Register(this);
-          item->Delete();
-          }
-        this->ThreadLocalStorage[tid] = item;
-
-        return item;
+        return new vtkThreadLocal<T>();
         }
 
-      template<class T>
+      void PrintSelf(ostream &os, vtkIndent indent)
+        {
+        this->Superclass::PrintSelf( os, indent );
+        os << indent << "Class stored: " << typeid(T).name() << endl;
+        os << indent << "Local storage: " << endl;
+        for ( typename vtkstd::map<vtkSMPThreadID, T*>::iterator it = this->ThreadLocalStorage.begin();
+              it != this->ThreadLocalStorage.end(); ++it )
+          {
+          os << indent.GetNextIndent() << "id " << it->first << ": (" << it->second << ")" << endl;
+          it->second->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
+          }
+        }
+
       T* NewLocal ( vtkSMPThreadID tid, T* specificImpl )
         {
         if (this->ThreadLocalStorage[tid])
@@ -107,13 +113,33 @@ namespace vtkSMP
         return item;
         }
 
-      void SetLocal ( vtkSMPThreadID tid, vtkObject* item );
-      vtkObject* GetLocal( vtkSMPThreadID tid );
+      T* NewLocal ( vtkSMPThreadID tid )
+        {
+        if (this->ThreadLocalStorage[tid])
+          {
+          this->ThreadLocalStorage[tid]->UnRegister(this);
+          }
+
+        T* item = T::New();
+        if (item)
+          {
+          item->Register(this);
+          item->Delete();
+          }
+        this->ThreadLocalStorage[tid] = item;
+
+        return item;
+        }
+
+      T* GetLocal( vtkSMPThreadID tid )
+        {
+        return this->ThreadLocalStorage[tid];
+        }
 
     protected:
       // the __thread c++Ox modifier cannot be used because this is not static
       // create an explicit map and use the thread id key instead.
-      vtkstd::map<vtkSMPThreadID, vtkObject*> ThreadLocalStorage;
+      vtkstd::map<vtkSMPThreadID, T*> ThreadLocalStorage;
     };
 
   // ForEach template : parallel loop over an iterator
