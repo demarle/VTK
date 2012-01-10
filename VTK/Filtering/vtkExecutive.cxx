@@ -770,8 +770,19 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
       int ns = t1.tv_nsec - t0.tv_nsec;
       if ( ns < 0 ) { s -= 1; ns += 1000000000; }
       cout << this->Algorithm->GetClassName() << i << " ";
-      if (s) cout << s;
       if (ret_value) cout << "!";
+      if (s)
+        {
+        cout << s;
+        if ( ns < 100000000 ) cout << 0;
+        if ( ns < 10000000 ) cout << 0;
+        if ( ns < 1000000 ) cout << 0;
+        if ( ns < 100000 ) cout << 0;
+        if ( ns < 10000 ) cout << 0;
+        if ( ns < 1000 ) cout << 0;
+        if ( ns < 100 ) cout << 0;
+        if ( ns < 10 ) cout << 0;
+        }
       cout << ns << endl;
       }
     cout << endl;

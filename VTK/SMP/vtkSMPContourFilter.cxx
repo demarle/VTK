@@ -645,8 +645,19 @@ int vtkSMPContourFilter::RequestData(
       int s = t1.tv_sec - t0.tv_sec;
       int ns = t1.tv_nsec - t0.tv_nsec;
       if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      if (s) cout << s;
       if (ret_value) cout << "!";
+      if (s)
+        {
+        cout << s;
+        if ( ns < 100000000 ) cout << 0;
+        if ( ns < 10000000 ) cout << 0;
+        if ( ns < 1000000 ) cout << 0;
+        if ( ns < 100000 ) cout << 0;
+        if ( ns < 10000 ) cout << 0;
+        if ( ns < 1000 ) cout << 0;
+        if ( ns < 100 ) cout << 0;
+        if ( ns < 10 ) cout << 0;
+        }
       cout << ns << " ";
 
       ret_value = clock_gettime(CLOCK_REALTIME, &t0);
@@ -655,8 +666,19 @@ int vtkSMPContourFilter::RequestData(
       s = t1.tv_sec - t0.tv_sec;
       ns = t1.tv_nsec - t0.tv_nsec;
       if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      if (s) cout << s;
       if (ret_value) cout << "!";
+      if (s)
+        {
+        cout << s;
+        if ( ns < 100000000 ) cout << 0;
+        if ( ns < 10000000 ) cout << 0;
+        if ( ns < 1000000 ) cout << 0;
+        if ( ns < 100000 ) cout << 0;
+        if ( ns < 10000 ) cout << 0;
+        if ( ns < 1000 ) cout << 0;
+        if ( ns < 100 ) cout << 0;
+        if ( ns < 10 ) cout << 0;
+        }
       cout << ns << " ";
 
       vtkIdType numberOfCells = my_contour.vertOffset->GetNumberOfCells() +
@@ -675,8 +697,19 @@ int vtkSMPContourFilter::RequestData(
       s = t1.tv_sec - t0.tv_sec;
       ns = t1.tv_nsec - t0.tv_nsec;
       if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      if (s) cout << s;
       if (ret_value) cout << "!";
+      if (s)
+        {
+        cout << s;
+        if ( ns < 100000000 ) cout << 0;
+        if ( ns < 10000000 ) cout << 0;
+        if ( ns < 1000000 ) cout << 0;
+        if ( ns < 100000 ) cout << 0;
+        if ( ns < 10000 ) cout << 0;
+        if ( ns < 1000 ) cout << 0;
+        if ( ns < 100 ) cout << 0;
+        if ( ns < 10 ) cout << 0;
+        }
       cout << ns << " ";
 
       // Correcting size of arrays
