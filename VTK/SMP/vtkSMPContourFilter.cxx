@@ -26,8 +26,8 @@
 
 #include "vtkSMP.h"
 
-#include <time.h>
-#include <sys/time.h>
+//#include <time.h>
+//#include <sys/time.h>
 
 vtkStandardNewMacro(vtkSMPContourFilter);
 
@@ -125,7 +125,8 @@ public:
 
 vtkStandardNewMacro(OffsetManager);
 
-struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableInitialisable {
+class ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableInitialisable
+{
   vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
   vtkSMP::vtkThreadLocal<vtkPoints>* newPts;
   vtkSMP::vtkThreadLocal<vtkCellArray>* newVerts;
@@ -137,7 +138,6 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
   vtkSMP::vtkThreadLocal<vtkDataArray>* CellsScalars;
 
   unsigned char cellTypeDimensions[VTK_NUMBER_OF_CELL_TYPES];
-  int dimensionality;
 
   vtkDataArray* inScalars;
   vtkDataSet* input;
@@ -162,23 +162,19 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
 
   vtkMutexLock* Lock;
 
-  ThreadsFunctor ( vtkDataSet* _input, vtkCellData* _incd,
-                   vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
-                   vtkIdType& _size, double* _values, int _number,
-                   vtkDataArray* _scalars, int _compute, vtkCellArray* _outputVerts,
-                   vtkCellArray* _outputLines, vtkCellArray* _outputPolys,
-                   vtkCellData* _outputCd, vtkPointData* _outputPd )
-  {
-    Locator = vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>::New();
-    newPts = vtkSMP::vtkThreadLocal<vtkPoints>::New();
-    newVerts = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    newLines = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    newPolys = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    outPd = vtkSMP::vtkThreadLocal<vtkPointData>::New();
-    outCd = vtkSMP::vtkThreadLocal<vtkCellData>::New();
-    Cells = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
-    CellsScalars = vtkSMP::vtkThreadLocal<vtkDataArray>::New();
+  ThreadsFunctor( const ThreadsFunctor& );
+  void operator =( const ThreadsFunctor& );
 
+public:
+  int dimensionality;
+
+  ThreadsFunctor( vtkDataSet* _input, vtkCellData* _incd,
+                  vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
+                  vtkIdType& _size, double* _values, int _number,
+                  vtkDataArray* _scalars, int _compute, vtkCellArray* _outputVerts,
+                  vtkCellArray* _outputLines, vtkCellArray* _outputPolys,
+                  vtkCellData* _outputCd, vtkPointData* _outputPd )
+    {
     vtkCutter::GetCellTypeDimensions(cellTypeDimensions);
 
     this->inCd = _incd;
@@ -191,22 +187,60 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
     this->inScalars = _scalars;
     this->computeScalars = _compute;
 
-    this->Lock = vtkMutexLock::New();
-
     outputVerts = _outputVerts;
     outputLines = _outputLines;
     outputPolys = _outputPolys;
     outputCd = _outputCd;
     outputPd = _outputPd;
 
+    Locator = vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>::New();
+    newPts = vtkSMP::vtkThreadLocal<vtkPoints>::New();
+    newVerts = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
+    newLines = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
+    newPolys = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
+    outPd = vtkSMP::vtkThreadLocal<vtkPointData>::New();
+    outCd = vtkSMP::vtkThreadLocal<vtkCellData>::New();
+    Cells = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
+    CellsScalars = vtkSMP::vtkThreadLocal<vtkDataArray>::New();
+
+    Lock = vtkMutexLock::New();
+
     numberOfPoints = Reducer::New();
     vertOffset = OffsetManager::New();
     lineOffset = OffsetManager::New();
     polyOffset = OffsetManager::New();
-  }
+    }
+
+  ~ThreadsFunctor()
+    {
+    Locator->Delete();
+    newPts->Delete();
+    newVerts->Delete();
+    newLines->Delete();
+    newPolys->Delete();
+    outPd->Delete();
+    outCd->Delete();
+    Cells->Delete();
+    CellsScalars->Delete();
+
+    Lock->Delete();
+
+    vertOffset->Delete();
+    lineOffset->Delete();
+    polyOffset->Delete();
+    numberOfPoints->Delete();
+    }
+
+  vtkIdType GetNumberOfPoints() { return numberOfPoints->GetValue(); }
+  vtkIdType GetNumberOfVerts() { return vertOffset->GetNumberOfCells(); }
+  vtkIdType GetNumberOfLines() { return lineOffset->GetNumberOfCells(); }
+  vtkIdType GetNumberOfPolys() { return polyOffset->GetNumberOfCells(); }
+  vtkIdType GetNumberOfVertTuples() { return vertOffset->GetNumberOfTuples(); }
+  vtkIdType GetNumberOfLineTuples() { return lineOffset->GetNumberOfTuples(); }
+  vtkIdType GetNumberOfPolyTuples() { return polyOffset->GetNumberOfTuples(); }
 
   void init ( vtkSMPThreadID tid ) const
-  {
+    {
     this->Lock->Lock();
 
     vtkPoints* pts = newPts->NewLocal( tid );
@@ -238,14 +272,12 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
     vtkDataArray* cScalars = CellsScalars->NewLocal( tid, inScalars );
     cScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
     cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
-  }
+    }
 
   void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
-  {
+    {
     vtkGenericCell *cell = this->Cells->GetLocal( tid );
-//    this->Lock->Lock();
     int cellType = input->GetCellType(cellId);
-//    this->Lock->Unlock();
     if (cellType >= VTK_NUMBER_OF_CELL_TYPES)
       { // Protect against new cell types added.
 //      vtkErrorMacro("Unknown cell type " << cellType);
@@ -271,36 +303,16 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
                      newVerts->GetLocal( tid ), newLines->GetLocal( tid ), newPolys->GetLocal( tid ),
                      inPd, outPd->GetLocal( tid ), inCd, cellId, outCd->GetLocal( tid ) );
       }
-  }
-
-  void Delete()
-  {
-    Locator->Delete();
-    newPts->Delete();
-    newVerts->Delete();
-    newLines->Delete();
-    newPolys->Delete();
-    outPd->Delete();
-    outCd->Delete();
-    Cells->Delete();
-    CellsScalars->Delete();
-
-    Lock->Delete();
-
-    vertOffset->Delete();
-    lineOffset->Delete();
-    polyOffset->Delete();
-    numberOfPoints->Delete();
-  }
+    }
 
   void pre_merge ( vtkSMPThreadID tid ) const
-  {
+    {
     vertOffset->ManageValues( tid, this->newVerts->GetLocal( tid ) );
     lineOffset->ManageValues( tid, this->newLines->GetLocal( tid ) );
     polyOffset->ManageValues( tid, this->newPolys->GetLocal( tid ) );
 
     numberOfPoints->IncrementValue( this->newPts->GetLocal( tid )->GetNumberOfPoints() );
-  }
+    }
 
   void merge( vtkSMPThreadID tid ) const
     {
@@ -375,6 +387,7 @@ struct ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableIniti
 
     }
 };
+
 
 // General contouring filter.  Handles arbitrary input.
 //
@@ -594,106 +607,106 @@ int vtkSMPContourFilter::RequestData(
       ThreadsFunctor my_contour( input, inCd, inPd, this->Locator,
                                  estimatedSize, values, numContours,
                                  inScalars, this->ComputeScalars,
-                                 newVerts, newLines, newPolys, outCd, outPd  );
-      struct timespec t0, t1;
-      int ret_value = clock_gettime(CLOCK_REALTIME, &t0);
+                                 newVerts, newLines, newPolys, outCd, outPd );
+//      struct timespec t0, t1;
+//      int ret_value = clock_gettime(CLOCK_REALTIME, &t0);
 
       for ( my_contour.dimensionality = 1; my_contour.dimensionality <= 3; ++(my_contour.dimensionality) )
         {
         vtkSMP::ForEach( 0, numCells, my_contour );
         }
 
-      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
-      int s = t1.tv_sec - t0.tv_sec;
-      int ns = t1.tv_nsec - t0.tv_nsec;
-      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      if (ret_value) cout << "!";
-      if (s)
-        {
-        cout << s;
-        if ( ns < 100000000 ) cout << 0;
-        if ( ns < 10000000 ) cout << 0;
-        if ( ns < 1000000 ) cout << 0;
-        if ( ns < 100000 ) cout << 0;
-        if ( ns < 10000 ) cout << 0;
-        if ( ns < 1000 ) cout << 0;
-        if ( ns < 100 ) cout << 0;
-        if ( ns < 10 ) cout << 0;
-        }
-      cout << ns << " ";
+//      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
+//      int s = t1.tv_sec - t0.tv_sec;
+//      int ns = t1.tv_nsec - t0.tv_nsec;
+//      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+//      if (ret_value) cout << "!";
+//      if (s)
+//        {
+//        cout << s;
+//        if ( ns < 100000000 ) cout << 0;
+//        if ( ns < 10000000 ) cout << 0;
+//        if ( ns < 1000000 ) cout << 0;
+//        if ( ns < 100000 ) cout << 0;
+//        if ( ns < 10000 ) cout << 0;
+//        if ( ns < 1000 ) cout << 0;
+//        if ( ns < 100 ) cout << 0;
+//        if ( ns < 10 ) cout << 0;
+//        }
+//      cout << ns << " ";
 
-      ret_value = clock_gettime(CLOCK_REALTIME, &t0);
+//      ret_value = clock_gettime(CLOCK_REALTIME, &t0);
       vtkSMP::PreMerge( my_contour );
-      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
-      s = t1.tv_sec - t0.tv_sec;
-      ns = t1.tv_nsec - t0.tv_nsec;
-      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      if (ret_value) cout << "!";
-      if (s)
-        {
-        cout << s;
-        if ( ns < 100000000 ) cout << 0;
-        if ( ns < 10000000 ) cout << 0;
-        if ( ns < 1000000 ) cout << 0;
-        if ( ns < 100000 ) cout << 0;
-        if ( ns < 10000 ) cout << 0;
-        if ( ns < 1000 ) cout << 0;
-        if ( ns < 100 ) cout << 0;
-        if ( ns < 10 ) cout << 0;
-        }
-      cout << ns << " ";
+//      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
+//      s = t1.tv_sec - t0.tv_sec;
+//      ns = t1.tv_nsec - t0.tv_nsec;
+//      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+//      if (ret_value) cout << "!";
+//      if (s)
+//        {
+//        cout << s;
+//        if ( ns < 100000000 ) cout << 0;
+//        if ( ns < 10000000 ) cout << 0;
+//        if ( ns < 1000000 ) cout << 0;
+//        if ( ns < 100000 ) cout << 0;
+//        if ( ns < 10000 ) cout << 0;
+//        if ( ns < 1000 ) cout << 0;
+//        if ( ns < 100 ) cout << 0;
+//        if ( ns < 10 ) cout << 0;
+//        }
+//      cout << ns << " ";
 
-      vtkIdType numberOfCells = my_contour.vertOffset->GetNumberOfCells() +
-          my_contour.lineOffset->GetNumberOfCells() + my_contour.polyOffset->GetNumberOfCells();
+      vtkIdType numberOfCells = my_contour.GetNumberOfVerts() +
+          my_contour.GetNumberOfLines() + my_contour.GetNumberOfPolys();
 
-      newVerts->GetData()->SetNumberOfTuples( my_contour.vertOffset->GetNumberOfTuples() );
-      newLines->GetData()->SetNumberOfTuples( my_contour.lineOffset->GetNumberOfTuples() );
-      newPolys->GetData()->SetNumberOfTuples( my_contour.polyOffset->GetNumberOfTuples() );
+      newVerts->GetData()->SetNumberOfTuples( my_contour.GetNumberOfVertTuples() );
+      newLines->GetData()->SetNumberOfTuples( my_contour.GetNumberOfLineTuples() );
+      newPolys->GetData()->SetNumberOfTuples( my_contour.GetNumberOfPolyTuples() );
 
-      outPd->InterpolateAllocate( inPd, my_contour.numberOfPoints->GetValue(), my_contour.numberOfPoints->GetValue() );
+      outPd->InterpolateAllocate( inPd, my_contour.GetNumberOfPoints(), my_contour.GetNumberOfPoints() );
       outCd->CopyAllocate( inCd, numberOfCells, numberOfCells );
 
-      ret_value = clock_gettime(CLOCK_REALTIME, &t0);
+//      ret_value = clock_gettime(CLOCK_REALTIME, &t0);
       vtkSMP::Merge( my_contour );
-      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
-      s = t1.tv_sec - t0.tv_sec;
-      ns = t1.tv_nsec - t0.tv_nsec;
-      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      if (ret_value) cout << "!";
-      if (s)
-        {
-        cout << s;
-        if ( ns < 100000000 ) cout << 0;
-        if ( ns < 10000000 ) cout << 0;
-        if ( ns < 1000000 ) cout << 0;
-        if ( ns < 100000 ) cout << 0;
-        if ( ns < 10000 ) cout << 0;
-        if ( ns < 1000 ) cout << 0;
-        if ( ns < 100 ) cout << 0;
-        if ( ns < 10 ) cout << 0;
-        }
-      cout << ns << " ";
+//      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
+//      s = t1.tv_sec - t0.tv_sec;
+//      ns = t1.tv_nsec - t0.tv_nsec;
+//      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
+//      if (ret_value) cout << "!";
+//      if (s)
+//        {
+//        cout << s;
+//        if ( ns < 100000000 ) cout << 0;
+//        if ( ns < 10000000 ) cout << 0;
+//        if ( ns < 1000000 ) cout << 0;
+//        if ( ns < 100000 ) cout << 0;
+//        if ( ns < 10000 ) cout << 0;
+//        if ( ns < 1000 ) cout << 0;
+//        if ( ns < 100 ) cout << 0;
+//        if ( ns < 10 ) cout << 0;
+//        }
+//      cout << ns << " ";
 
       // Correcting size of arrays
-      outPd->SetNumberOfTuples( my_contour.numberOfPoints->GetValue() );
+      outPd->SetNumberOfTuples( my_contour.GetNumberOfPoints() );
       outCd->SetNumberOfTuples( numberOfCells );
-      newVerts->SetNumberOfCells( my_contour.vertOffset->GetNumberOfCells() );
-      newLines->SetNumberOfCells( my_contour.lineOffset->GetNumberOfCells() );
-      newPolys->SetNumberOfCells( my_contour.polyOffset->GetNumberOfCells() );
+      newVerts->SetNumberOfCells( my_contour.GetNumberOfVerts() );
+      newLines->SetNumberOfCells( my_contour.GetNumberOfLines() );
+      newPolys->SetNumberOfCells( my_contour.GetNumberOfPolys() );
 
-      my_contour.Delete();
+//      my_contour.Delete();
 
       } //if using scalar tree
     else
       {
       // Move of previously deleted Allocations
-      newVerts->Allocate(estimatedSize,estimatedSize);
-      newLines->Allocate(estimatedSize,estimatedSize);
-      newPolys->Allocate(estimatedSize,estimatedSize);
-      outPd->InterpolateAllocate(inPd,estimatedSize,estimatedSize);
-      outCd->CopyAllocate(inCd,estimatedSize,estimatedSize);
-      cellScalars->SetNumberOfComponents(inScalars->GetNumberOfComponents());
-      cellScalars->Allocate(cellScalars->GetNumberOfComponents()*VTK_CELL_SIZE);
+      newVerts->Allocate( estimatedSize, estimatedSize );
+      newLines->Allocate( estimatedSize, estimatedSize );
+      newPolys->Allocate( estimatedSize, estimatedSize );
+      outPd->InterpolateAllocate( inPd, estimatedSize, estimatedSize );
+      outCd->CopyAllocate( inCd, estimatedSize, estimatedSize );
+      cellScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
+      cellScalars->Allocate( cellScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
 
       vtkCell *cell;
       if ( this->ScalarTree == NULL )
@@ -709,7 +722,7 @@ int vtkSMPContourFilter::RequestData(
       // Loop over all contour values.  Then for each contour value,
       // loop over all cells.
       //
-      for (i=0; i < numContours; i++)
+      for ( i=0; i < numContours; i++ )
         {
         for ( this->ScalarTree->InitTraversal(values[i]);
               (cell=this->ScalarTree->GetNextCell(cellId,cellPts,cellScalars)) != NULL; )

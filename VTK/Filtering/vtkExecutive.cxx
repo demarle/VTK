@@ -758,6 +758,7 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
     {
 
     struct timespec t0, t1;
+    cout << this->Algorithm->GetClassName() << endl;
     for (int i = 0; i < vtKaapiRuns; ++i)
       {
       int ret_value = clock_gettime(CLOCK_REALTIME, &t0);
@@ -769,7 +770,6 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
       int s = t1.tv_sec - t0.tv_sec;
       int ns = t1.tv_nsec - t0.tv_nsec;
       if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      cout << this->Algorithm->GetClassName() << i << " ";
       if (ret_value) cout << "!";
       if (s)
         {
@@ -783,7 +783,7 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
         if ( ns < 100 ) cout << 0;
         if ( ns < 10 ) cout << 0;
         }
-      cout << ns << endl;
+      cout << ns << " ";
       }
     cout << endl;
     }

@@ -81,7 +81,7 @@ namespace vtkSMP
         return new vtkThreadLocal<T>();
         }
 
-      void PrintSelf(ostream &os, vtkIndent indent)
+      void PrintSelf( ostream &os, vtkIndent indent )
         {
         this->Superclass::PrintSelf( os, indent );
         os << indent << "Class stored: " << typeid(T).name() << endl;
