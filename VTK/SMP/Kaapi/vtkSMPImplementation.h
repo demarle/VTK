@@ -3,7 +3,6 @@
 
 #include "vtkObject.h"
 #include <kaapic.h>
-#include <vector>
 
 void __attribute__ ((constructor)) smpInit(void);
 void __attribute__ ((destructor)) smpFini(void);
@@ -17,7 +16,7 @@ class vtkMergeableInitialisable;
 
 void InternalForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op);
 void InternalInit( const vtkFunctorInitialisable* f );
-void InternalGetThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result );
+vtkSMPThreadID InternalGetNumberOfThreads( );
 void InternalMerge( const vtkMergeable* f );
 void InternalPreMerge( const vtkMergeableInitialisable* f );
 

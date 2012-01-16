@@ -13,7 +13,7 @@ class vtkMergeableInitialisable;
 
 void InternalForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op );
 void InternalInit( const vtkFunctorInitialisable* f );
-void InternalGetThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result );
+vtkSMPThreadID InternalGetNumberOfThreads( );
 void InternalMerge( const vtkMergeable* f );
 void InternalPreMerge( const vtkMergeableInitialisable* f );
 

@@ -146,7 +146,7 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable& f );
 
-  void VTK_SMP_EXPORT FillThreadsIDs( vtkstd::vector<vtkSMPThreadID>& result );
+  vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
 
   void VTK_SMP_EXPORT Merge( const vtkMergeable& f );
 

@@ -17,7 +17,7 @@ void InternalInit( const vtkFunctorInitialisable* f )
   }
 }
 
-void InternalGetThreadsIDs(vtkstd::vector<vtkSMPThreadID>& result)
+vtkSMPThreadID InternalGetNumberOfThreads( )
 {
   int numThreads = 1;
   #pragma omp parallel shared(numThreads)
@@ -28,8 +28,7 @@ void InternalGetThreadsIDs(vtkstd::vector<vtkSMPThreadID>& result)
     }
   }
 
-  for ( vtkSMPThreadID i = 0; i < numThreads; ++i )
-    result.push_back(i);
+  return numThreads;
 }
 
 void InternalMerge( const vtkMergeable* f )

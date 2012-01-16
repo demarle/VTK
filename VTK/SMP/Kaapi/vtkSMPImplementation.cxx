@@ -3,7 +3,7 @@
 
 void smpInit(void)
 {
-  kaapic_init( 1 );
+  kaapic_init( 0 );
 }
 void smpFini(void)
 {
@@ -19,10 +19,12 @@ void func_call ( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdTy
 
 void InternalForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op )
 {
+  kaapic_begin_parallel();
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
   kaapic_foreach_attr_set_grains(&attr, 32, 32);
   kaapic_foreach( 0, last - first, &attr, 2, func_call, op, first );
+  kaapic_end_parallel( 0 );
   kaapic_foreach_attr_destroy(&attr);
 }
 
@@ -34,19 +36,18 @@ void my_init ( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable*
 
 void InternalInit( const vtkFunctorInitialisable* f )
 {
+  kaapic_begin_parallel();
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
   kaapic_foreach_attr_set_grains(&attr, 1, 1);
   kaapic_foreach( 0, kaapic_get_concurrency(), &attr, 1, my_init, f );
+  kaapic_end_parallel( 0 );
   kaapic_foreach_attr_destroy(&attr);
 }
 
-void InternalGetThreadsIDs(vtkstd::vector<vtkSMPThreadID>& result)
+vtkSMPThreadID InternalGetNumberOfThreads()
 {
-  vtkSMPThreadID numThreads = kaapic_get_concurrency();
-
-  for (vtkSMPThreadID i = 0; i < numThreads; ++i)
-    result.push_back(i);
+  return kaapic_get_concurrency();
 }
 
 void my_merge ( int32_t b, int32_t e, int32_t tid, const vtkMergeable* f )
@@ -57,10 +58,12 @@ void my_merge ( int32_t b, int32_t e, int32_t tid, const vtkMergeable* f )
 
 void InternalMerge(const vtkMergeable *f)
 {
+  kaapic_begin_parallel();
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
   kaapic_foreach_attr_set_grains(&attr, 1, 1);
   kaapic_foreach( 0, kaapic_get_concurrency(), &attr, 1, my_merge, f );
+  kaapic_end_parallel( 0 );
   kaapic_foreach_attr_destroy(&attr);
 }
 
@@ -73,9 +76,11 @@ void my_pre_merge ( int32_t b, int32_t e, int32_t tid, const vtkMergeableInitial
 
 void InternalPreMerge(const vtkMergeableInitialisable *f)
 {
+  kaapic_begin_parallel();
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
   kaapic_foreach_attr_set_grains(&attr, 1, 1);
   kaapic_foreach( 0, kaapic_get_concurrency(), &attr, 1, my_pre_merge, f );
+  kaapic_end_parallel( 0 );
   kaapic_foreach_attr_destroy(&attr);
 }

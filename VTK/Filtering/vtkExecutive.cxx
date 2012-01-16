@@ -754,8 +754,8 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
   if ( request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()) &&
        !this->Algorithm->IsA("vtkDataReader") &&
        !this->Algorithm->IsA("vtkWriter") &&
-       !this->Algorithm->IsA("vtkAbstractMapper") )// || this->Algorithm->IsA("vtkContourFilter"))
-    {
+       !this->Algorithm->IsA("vtkAbstractMapper") )
+    { // We want to monitor all but these
 
     struct timespec t0, t1;
     cout << this->Algorithm->GetClassName() << endl;
@@ -770,7 +770,6 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
       int s = t1.tv_sec - t0.tv_sec;
       int ns = t1.tv_nsec - t0.tv_nsec;
       if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      if (ret_value) cout << "!";
       if (s)
         {
         cout << s;
@@ -783,6 +782,7 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
         if ( ns < 100 ) cout << 0;
         if ( ns < 10 ) cout << 0;
         }
+      if (ret_value) cout << "!";
       cout << ns << " ";
       }
     cout << endl;
