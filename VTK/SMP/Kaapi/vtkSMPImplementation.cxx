@@ -3,7 +3,7 @@
 
 void smpInit(void)
 {
-  kaapic_init( 0 );
+  kaapic_init( 1 );
 }
 void smpFini(void)
 {

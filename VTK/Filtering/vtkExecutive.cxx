@@ -36,7 +36,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-const int vtKaapiRuns = 5;
+const int vtKaapiRuns = 50;
 
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_AFTER_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_BEFORE_FORWARD, Integer);

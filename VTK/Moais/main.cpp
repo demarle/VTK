@@ -67,7 +67,7 @@ int main( int argc, char** argv )
 
   vtkContourFilter* isosurface = parallel ? vtkSMPContourFilter::New() : vtkContourFilter::New();
   isosurface->SetInputConnection( transform->GetOutputPort() );
-  isosurface->GenerateValues(2, 0.0, 1.0);
+  isosurface->GenerateValues( 11, 0.0, 1.0 );
   isosurface->UseScalarTreeOff();
   transform->Delete();
 
