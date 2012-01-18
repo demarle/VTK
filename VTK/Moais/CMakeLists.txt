@@ -13,13 +13,15 @@ set(HDRS
 include_directories("include" ${VTK_TDX_INCLUDE_PATH})
 
 IF(VTK_USE_SMP)
-  add_executable(KaapiBench MACOSX_BUNDLE ${HDRS} "main.cpp")
-  target_link_libraries(KaapiBench vtkIO vtkRendering vtkSMP)
+  string(TOLOWER ${VTK_SMP_IMPLEMENTATION_TYPE} SMP_NAME)
 
-  install(TARGETS KaapiBench RUNTIME DESTINATION bin)
+  add_executable(${SMP_NAME}Bench MACOSX_BUNDLE ${HDRS} "main.cpp")
+  target_link_libraries(${SMP_NAME}Bench vtkIO vtkRendering vtkSMP)
+
+  install(TARGETS ${SMP_NAME}Bench RUNTIME DESTINATION bin)
 ELSE(VTK_USE_SMP)
-  add_executable(SequentialBench MACOSX_BUNDLE ${HDRS} "main_seq.cpp")
-  target_link_libraries(SequentialBench vtkIO vtkRendering vtkGraphics)
+  add_executable(purevtkBench MACOSX_BUNDLE ${HDRS} "main_seq.cpp")
+  target_link_libraries(purevtkBench vtkIO vtkRendering vtkGraphics)
 
-  install(TARGETS SequentialBench RUNTIME DESTINATION bin)
+  install(TARGETS purevtkBench RUNTIME DESTINATION bin)
 ENDIF(VTK_USE_SMP)
