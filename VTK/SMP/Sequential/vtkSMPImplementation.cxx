@@ -20,12 +20,8 @@ vtkSMPThreadID InternalGetNumberOfThreads( )
   return 1;
 }
 
-void InternalMerge( const vtkMergeable *f )
+void InternalParallel( const vtkFunctor *f, int whichOne, vtkSMPThreadID skipThreads )
 {
-  f->merge( 0 );
-}
-
-void InternalPreMerge( const vtkMergeableInitialisable *f )
-{
-  f->pre_merge( 0 );
+  if (!skipThreads)
+    f->Parallel( 0, whichOne );
 }

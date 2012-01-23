@@ -15,10 +15,22 @@ class VTK_SMP_EXPORT vtkFunctor
 {
 public:
   virtual void operator () ( vtkIdType, vtkSMPThreadID ) const = 0;
+  void Parallel( vtkSMPThreadID, int) const;
 
 protected:
   vtkFunctor();
   ~vtkFunctor();
+
+  virtual void Parallel0( vtkSMPThreadID ) const { };
+  virtual void Parallel1( vtkSMPThreadID ) const { };
+  virtual void Parallel2( vtkSMPThreadID ) const { };
+  virtual void Parallel3( vtkSMPThreadID ) const { };
+  virtual void Parallel4( vtkSMPThreadID ) const { };
+  virtual void Parallel5( vtkSMPThreadID ) const { };
+  virtual void Parallel6( vtkSMPThreadID ) const { };
+  virtual void Parallel7( vtkSMPThreadID ) const { };
+  virtual void Parallel8( vtkSMPThreadID ) const { };
+  virtual void Parallel9( vtkSMPThreadID ) const { };
 };
 
 class VTK_SMP_EXPORT vtkFunctorInitialisable : public vtkFunctor
@@ -33,26 +45,6 @@ protected:
 
 private:
   mutable bool IsInitialized;
-};
-
-class VTK_SMP_EXPORT vtkMergeable
-{
-public:
-  virtual void merge ( vtkSMPThreadID ) const = 0;
-
-protected:
-  vtkMergeable();
-  ~vtkMergeable();
-};
-
-class VTK_SMP_EXPORT vtkMergeableInitialisable : public vtkMergeable
-{
-public:
-  virtual void pre_merge ( vtkSMPThreadID ) const = 0;
-
-protected:
-  vtkMergeableInitialisable();
-  ~vtkMergeableInitialisable();
 };
 
 namespace vtkSMP
@@ -130,6 +122,21 @@ namespace vtkSMP
         return item;
         }
 
+      void SetLocal ( vtkSMPThreadID tid, T* item )
+        {
+        if ( this->ThreadLocalStorage[tid] )
+          {
+          this->ThreadLocalStorage[tid]->UnRegister(this);
+          }
+
+        if ( item )
+          {
+          item->Register( this );
+          }
+
+        this->ThreadLocalStorage[tid] = item;
+        }
+
       T* GetLocal( vtkSMPThreadID tid )
         {
         return this->ThreadLocalStorage[tid];
@@ -146,11 +153,10 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable& f );
 
+  void VTK_SMP_EXPORT Parallel( const vtkFunctor& op, int whichMethod, vtkSMPThreadID skipThreads = 1 );
+
   vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
 
-  void VTK_SMP_EXPORT Merge( const vtkMergeable& f );
-
-  void VTK_SMP_EXPORT PreMerge( const vtkMergeableInitialisable& f );
 }
 
 #endif //__vtkSMP_h__

@@ -752,6 +752,7 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
 
   int result = 0;
   if ( request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()) &&
+       !this->Algorithm->IsA("vtkImageReader2") &&
        !this->Algorithm->IsA("vtkDataReader") &&
        !this->Algorithm->IsA("vtkWriter") &&
        !this->Algorithm->IsA("vtkAbstractMapper") )

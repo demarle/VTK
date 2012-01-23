@@ -61,9 +61,9 @@ public:
 
   void IncrementValue ( vtkIdType v )
   {
-    this->Lock->Lock();
+//    this->Lock->Lock();
     value += v;
-    this->Lock->Unlock();
+//    this->Lock->Unlock();
   }
 
   vtkIdType GetValue() { return value; }
@@ -112,12 +112,12 @@ public:
   {
     vtkIdType c = ca->GetNumberOfCells();
     vtkIdType t = ca->GetData()->GetNumberOfTuples();
-    this->Lock->Lock();
+//    this->Lock->Lock();
     cells[tid] = CellsOffset;
     tuples[tid] = TuplesOffset;
     CellsOffset += c;
     TuplesOffset += t;
-    this->Lock->Unlock();
+//    this->Lock->Unlock();
   }
 
   vtkIdType GetNumberOfCells() { return CellsOffset; }
@@ -128,7 +128,7 @@ public:
 
 vtkStandardNewMacro(OffsetManager);
 
-class ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableInitialisable
+class ThreadsFunctor : public vtkFunctor//Initialisable
 {
   vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
   vtkSMP::vtkThreadLocal<vtkPoints>* newPts;
@@ -140,9 +140,6 @@ class ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableInitia
   vtkSMP::vtkThreadLocal<vtkGenericCell>* Cells;
   vtkSMP::vtkThreadLocal<vtkDataArray>* CellsScalars;
 
-//public:
-//  unsigned char cellTypeDimensions[VTK_NUMBER_OF_CELL_TYPES];
-//private:
   vtkDataArray* inScalars;
   vtkDataSet* input;
   vtkPointData* inPd;
@@ -170,17 +167,13 @@ class ThreadsFunctor : public vtkFunctorInitialisable, public vtkMergeableInitia
   void operator =( const ThreadsFunctor& );
 
 public:
-//  int dimensionality;
-
-  ThreadsFunctor( vtkDataSet* _input, vtkCellData* _incd,
+  ThreadsFunctor( vtkDataSet* _input, vtkPoints* _inPts, vtkCellData* _incd,
                   vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
                   vtkIdType& _size, double* _values, int _number,
                   vtkDataArray* _scalars, int _compute, vtkCellArray* _outputVerts,
                   vtkCellArray* _outputLines, vtkCellArray* _outputPolys,
                   vtkCellData* _outputCd, vtkPointData* _outputPd )
     {
-//    vtkCutter::GetCellTypeDimensions(cellTypeDimensions);
-
     this->inCd = _incd;
     this->inPd = _inpd;
     this->input = _input;
@@ -213,6 +206,19 @@ public:
     vertOffset = OffsetManager::New();
     lineOffset = OffsetManager::New();
     polyOffset = OffsetManager::New();
+
+    Locator->SetLocal( 0, _locator );
+    newPts->SetLocal( 0, _inPts );
+    newVerts->SetLocal( 0, _outputVerts );
+    newLines->SetLocal( 0, _outputLines );
+    newPolys->SetLocal( 0, _outputPolys );
+    outPd->SetLocal( 0, _outputPd );
+    outCd->SetLocal( 0, _outputCd );
+    Cells->NewLocal( 0 );
+
+    vtkDataArray* cScalars = CellsScalars->NewLocal( 0, inScalars );
+    cScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
+    cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
     }
 
   ~ThreadsFunctor()
@@ -243,7 +249,41 @@ public:
   vtkIdType GetNumberOfLineTuples() { return lineOffset->GetNumberOfTuples(); }
   vtkIdType GetNumberOfPolyTuples() { return polyOffset->GetNumberOfTuples(); }
 
-  void init ( vtkSMPThreadID tid ) const
+  void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
+    {
+    vtkGenericCell *cell = this->Cells->GetLocal( tid );
+//    int cellType = input->GetCellType(cellId);
+//    if (cellType == VTK_VERTEX || cellType == VTK_POLY_VERTEX)
+//      { // Can't cut cells with dimensionality 0 (générate no data)
+//      return;
+//      }
+    input->GetCell(cellId,cell);
+    vtkIdList* cellPts = cell->GetPointIds();
+    vtkDataArray* cellScalars = this->CellsScalars->GetLocal( tid );
+    if ( cellScalars->GetSize() / cellScalars->GetNumberOfComponents() < cellPts->GetNumberOfIds() )
+      {
+      cellScalars->Allocate(cellScalars->GetNumberOfComponents()*cellPts->GetNumberOfIds());
+      }
+    inScalars->GetTuples(cellPts,cellScalars);
+
+    for (int i = 0; i < numContours; i++)
+      {
+      double v = values[i];
+      cell->Contour( v, cellScalars, this->Locator->GetLocal( tid ),
+                     newVerts->GetLocal( tid ), newLines->GetLocal( tid ), newPolys->GetLocal( tid ),
+                     inPd, outPd->GetLocal( tid ), inCd, cellId, outCd->GetLocal( tid ) );
+      }
+    }
+
+  void PreMerge ( )
+  {
+    vtkSMPThreadID max = vtkSMP::GetNumberOfThreads();
+    for ( vtkSMPThreadID i = 0; i < max; ++i )
+      Parallel1( i );
+  }
+
+protected:
+  void Parallel0 ( vtkSMPThreadID tid ) const
     {
     this->Lock->Lock();
 
@@ -278,39 +318,7 @@ public:
     cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
     }
 
-  void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
-    {
-    vtkGenericCell *cell = this->Cells->GetLocal( tid );
-//    int cellType = input->GetCellType(cellId);
-//    if (cellType >= VTK_NUMBER_OF_CELL_TYPES)
-//      { // Protect against new cell types added.
-//      vtkErrorMacro("Unknown cell type " << cellType);
-//      return;
-//      }
-//    if (cellTypeDimensions[cellType] != dimensionality)
-//    if (cellType == VTK_VERTEX || cellType == VTK_POLY_VERTEX)
-//      { // Can't cut cells with dimensionality 0 (générate no data)
-//      return;
-//      }
-    input->GetCell(cellId,cell);
-    vtkIdList* cellPts = cell->GetPointIds();
-    vtkDataArray* cellScalars = this->CellsScalars->GetLocal( tid );
-    if ( cellScalars->GetSize() / cellScalars->GetNumberOfComponents() < cellPts->GetNumberOfIds() )
-      {
-      cellScalars->Allocate(cellScalars->GetNumberOfComponents()*cellPts->GetNumberOfIds());
-      }
-    inScalars->GetTuples(cellPts,cellScalars);
-
-    for (int i = 0; i < numContours; i++)
-      {
-      double v = values[i];
-      cell->Contour( v, cellScalars, this->Locator->GetLocal( tid ),
-                     newVerts->GetLocal( tid ), newLines->GetLocal( tid ), newPolys->GetLocal( tid ),
-                     inPd, outPd->GetLocal( tid ), inCd, cellId, outCd->GetLocal( tid ) );
-      }
-    }
-
-  void pre_merge ( vtkSMPThreadID tid ) const
+  void Parallel1 ( vtkSMPThreadID tid ) const
     {
     vertOffset->ManageValues( tid, this->newVerts->GetLocal( tid ) );
     lineOffset->ManageValues( tid, this->newLines->GetLocal( tid ) );
@@ -319,7 +327,7 @@ public:
     numberOfPoints->IncrementValue( this->newPts->GetLocal( tid )->GetNumberOfPoints() );
     }
 
-  void merge( vtkSMPThreadID tid ) const
+  void Parallel2 ( vtkSMPThreadID tid ) const
     {
     vtkPointData* ptData = this->outPd->GetLocal( tid );
     vtkCellData* clData = this->outCd->GetLocal( tid );
@@ -392,7 +400,6 @@ public:
 
     }
 };
-
 
 // General contouring filter.  Handles arbitrary input.
 //
@@ -609,29 +616,32 @@ int vtkSMPContourFilter::RequestData(
       {
       input->ComputeBounds();
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
-      ThreadsFunctor my_contour( input, inCd, inPd, this->Locator,
+      ThreadsFunctor my_contour( input, newPts, inCd, inPd, this->Locator,
                                  estimatedSize, values, numContours,
                                  inScalars, this->ComputeScalars,
                                  newVerts, newLines, newPolys, outCd, outPd );
 
-//      for ( my_contour.dimensionality = 1; my_contour.dimensionality <= 3; ++(my_contour.dimensionality) )
-//        {
-        vtkSMP::ForEach( 0, numCells, my_contour );
-//        }
+      // init
+      vtkSMP::Parallel( my_contour, 0 );
 
-      vtkSMP::PreMerge( my_contour );
+      vtkSMP::ForEach( 0, numCells, my_contour );
+
+      // pre-merge
+//      vtkSMP::Parallel( my_contour, 1 );
+      my_contour.PreMerge();
 
       vtkIdType numberOfCells = my_contour.GetNumberOfVerts() +
           my_contour.GetNumberOfLines() + my_contour.GetNumberOfPolys();
 
-      newVerts->GetData()->SetNumberOfTuples( my_contour.GetNumberOfVertTuples() );
-      newLines->GetData()->SetNumberOfTuples( my_contour.GetNumberOfLineTuples() );
-      newPolys->GetData()->SetNumberOfTuples( my_contour.GetNumberOfPolyTuples() );
+      newVerts->GetData()->Resize( my_contour.GetNumberOfVertTuples() );
+      newLines->GetData()->Resize( my_contour.GetNumberOfLineTuples() );
+      newPolys->GetData()->Resize( my_contour.GetNumberOfPolyTuples() );
 
       outPd->InterpolateAllocate( inPd, my_contour.GetNumberOfPoints(), my_contour.GetNumberOfPoints() );
       outCd->CopyAllocate( inCd, numberOfCells, numberOfCells );
 
-      vtkSMP::Merge( my_contour );
+      // merge
+      vtkSMP::Parallel( my_contour, 2 );
 
       // Correcting size of arrays
       outPd->SetNumberOfTuples( my_contour.GetNumberOfPoints() );

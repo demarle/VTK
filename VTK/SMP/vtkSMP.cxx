@@ -9,6 +9,43 @@ vtkFunctor::vtkFunctor() { }
 
 vtkFunctor::~vtkFunctor() { }
 
+void vtkFunctor::Parallel( vtkSMPThreadID tid, int whichOne ) const
+{
+  switch(whichOne)
+  {
+  case 1:
+    Parallel1(tid);
+    return;
+  case 2:
+    Parallel2(tid);
+    return;
+  case 3:
+    Parallel3(tid);
+    return;
+  case 4:
+    Parallel4(tid);
+    return;
+  case 5:
+    Parallel5(tid);
+    return;
+  case 6:
+    Parallel6(tid);
+    return;
+  case 7:
+    Parallel7(tid);
+    return;
+  case 8:
+    Parallel8(tid);
+    return;
+  case 9:
+    Parallel9(tid);
+    return;
+  default:
+    Parallel0(tid);
+    return;
+  }
+}
+
 //--------------------------------------------------------------------------------
 vtkFunctorInitialisable::vtkFunctorInitialisable() : vtkFunctor()
   {
@@ -23,16 +60,6 @@ bool vtkFunctorInitialisable::CheckAndSetInitialized() const
   IsInitialized = true;
   return ret;
   }
-
-//--------------------------------------------------------------------------------
-vtkMergeable::vtkMergeable() { }
-
-vtkMergeable::~vtkMergeable() { }
-
-//--------------------------------------------------------------------------------
-vtkMergeableInitialisable::vtkMergeableInitialisable() { }
-
-vtkMergeableInitialisable::~vtkMergeableInitialisable() { }
 
 
 namespace vtkSMP
@@ -52,20 +79,15 @@ namespace vtkSMP
     InternalForEach( first, last, &f );
     }
 
+  void Parallel(const vtkFunctor &op, int whichMethod, vtkSMPThreadID skipThreads )
+  {
+    InternalParallel( &op, whichMethod, skipThreads );
+  }
+
   vtkSMPThreadID GetNumberOfThreads()
     {
     return InternalGetNumberOfThreads( );
     }
-
-  void Merge( const vtkMergeable &f )
-  {
-    InternalMerge( &f );
-  }
-
-  void PreMerge( const vtkMergeableInitialisable &f )
-  {
-    InternalPreMerge( &f );
-  }
 
   //--------------------------------------------------------------------------------
 //  vtkStandardNewMacro(vtkThreadLocal);

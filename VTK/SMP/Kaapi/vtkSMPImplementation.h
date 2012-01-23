@@ -11,13 +11,10 @@ typedef int32_t vtkSMPThreadID;
 
 class vtkFunctor;
 class vtkFunctorInitialisable;
-class vtkMergeable;
-class vtkMergeableInitialisable;
 
 void InternalForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op);
 void InternalInit( const vtkFunctorInitialisable* f );
 vtkSMPThreadID InternalGetNumberOfThreads( );
-void InternalMerge( const vtkMergeable* f );
-void InternalPreMerge( const vtkMergeableInitialisable* f );
+void InternalParallel( const vtkFunctor *f, int whichOne, vtkSMPThreadID skipThreads );
 
 #endif //__vtkSMPImplementation_h_
