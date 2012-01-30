@@ -26,8 +26,7 @@
 
 #include "vtkSMP.h"
 
-//#include <time.h>
-//#include <sys/time.h>
+#include "vtkBenchTimer.h"
 
 vtkStandardNewMacro(vtkSMPContourFilter);
 
@@ -622,13 +621,22 @@ int vtkSMPContourFilter::RequestData(
                                  newVerts, newLines, newPolys, outCd, outPd );
 
       // init
-      vtkSMP::Parallel( my_contour, 0 );
+      vtkBenchTimer* timer = vtkBenchTimer::New();
+      cout << endl;
 
+      timer->start_bench_timer();
+      vtkSMP::Parallel( my_contour, 0 );
+      timer->end_bench_timer();
+
+      timer->start_bench_timer();
       vtkSMP::ForEach( 0, numCells, my_contour );
+      timer->end_bench_timer();
 
       // pre-merge
 //      vtkSMP::Parallel( my_contour, 1 );
+      timer->start_bench_timer();
       my_contour.PreMerge();
+      timer->end_bench_timer();
 
       vtkIdType numberOfCells = my_contour.GetNumberOfVerts() +
           my_contour.GetNumberOfLines() + my_contour.GetNumberOfPolys();
@@ -641,7 +649,9 @@ int vtkSMPContourFilter::RequestData(
       outCd->CopyAllocate( inCd, numberOfCells, numberOfCells );
 
       // merge
+      timer->start_bench_timer();
       vtkSMP::Parallel( my_contour, 2 );
+      timer->end_bench_timer();
 
       // Correcting size of arrays
       outPd->SetNumberOfTuples( my_contour.GetNumberOfPoints() );

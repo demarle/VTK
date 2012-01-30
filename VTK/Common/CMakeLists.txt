@@ -27,6 +27,7 @@ vtkArrayIterator.cxx
 vtkAssemblyNode.cxx
 vtkAssemblyPath.cxx
 vtkAssemblyPaths.cxx
+vtkBenchTimer.cxx
 vtkBitArray.cxx
 vtkBitArrayIterator.cxx
 vtkBoundingBox.cxx
@@ -70,7 +71,6 @@ vtkGarbageCollector.cxx
 vtkGarbageCollectorManager.cxx
 vtkGaussianRandomSequence.cxx
 vtkGeneralTransform.cxx
-#vtkGenericIterator.h
 vtkHeap.cxx
 vtkHomogeneousTransform.cxx
 vtkIOStream.cxx

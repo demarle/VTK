@@ -33,8 +33,7 @@
 
 #include "vtkCompositeDataPipeline.h"
 
-#include <time.h>
-#include <sys/time.h>
+#include "vtkBenchTimer.h"
 
 const int vtKaapiRuns = 50;
 
@@ -758,33 +757,12 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
        !this->Algorithm->IsA("vtkAbstractMapper") )
     { // We want to monitor all but these
 
-    struct timespec t0, t1;
     cout << this->Algorithm->GetClassName() << endl;
     for (int i = 0; i < vtKaapiRuns; ++i)
       {
-      int ret_value = clock_gettime(CLOCK_REALTIME, &t0);
-      /* *** Filter execution *** */
+      vtkBenchTimer::New()->start_bench_timer();
       result = this->Algorithm->ProcessRequest(request, inInfo, outInfo);
-      /* *** Filter execution *** */
-      ret_value += clock_gettime(CLOCK_REALTIME, &t1);
-
-      int s = t1.tv_sec - t0.tv_sec;
-      int ns = t1.tv_nsec - t0.tv_nsec;
-      if ( ns < 0 ) { s -= 1; ns += 1000000000; }
-      if (s)
-        {
-        cout << s;
-        if ( ns < 100000000 ) cout << 0;
-        if ( ns < 10000000 ) cout << 0;
-        if ( ns < 1000000 ) cout << 0;
-        if ( ns < 100000 ) cout << 0;
-        if ( ns < 10000 ) cout << 0;
-        if ( ns < 1000 ) cout << 0;
-        if ( ns < 100 ) cout << 0;
-        if ( ns < 10 ) cout << 0;
-        }
-      if (ret_value) cout << "!";
-      cout << ns << " ";
+      vtkBenchTimer::New()->end_bench_timer();
       }
     cout << endl;
     }
