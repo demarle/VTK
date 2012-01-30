@@ -5,7 +5,7 @@
 #include "vtkObject.h"
 #include "vtkMutexLock.h"
 
-#include <map>
+#include <vector>
 #include <typeinfo>  //for 'typeid'
 
 class vtkPoints;
@@ -54,14 +54,14 @@ namespace vtkSMP
   class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
     {
     protected :
-      vtkThreadLocal() : vtkObject() { }
+      vtkThreadLocal() : vtkObject(), ThreadLocalStorage(InternalGetNumberOfThreads()) { }
       ~vtkThreadLocal()
         {
-        for ( typename vtkstd::map<vtkSMPThreadID, T*>::iterator it = ThreadLocalStorage.begin();
+        for ( typename vtkstd::vector<T*>::iterator it = ThreadLocalStorage.begin();
               it != ThreadLocalStorage.end(); ++it )
           {
-          it->second->UnRegister( this );
-          it->second = 0;
+          (*it)->UnRegister( this );
+          *it = 0;
           }
         ThreadLocalStorage.clear();
         }
@@ -78,11 +78,10 @@ namespace vtkSMP
         this->Superclass::PrintSelf( os, indent );
         os << indent << "Class stored: " << typeid(T).name() << endl;
         os << indent << "Local storage: " << endl;
-        for ( typename vtkstd::map<vtkSMPThreadID, T*>::iterator it = this->ThreadLocalStorage.begin();
-              it != this->ThreadLocalStorage.end(); ++it )
+        for ( size_t i = 0; i < this->ThreadLocalStorage.size(); ++i )
           {
-          os << indent.GetNextIndent() << "id " << it->first << ": (" << it->second << ")" << endl;
-          it->second->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
+          os << indent.GetNextIndent() << "id " << i << ": (" << ThreadLocalStorage[i] << ")" << endl;
+          ThreadLocalStorage[i]->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
           }
         }
 
@@ -145,7 +144,7 @@ namespace vtkSMP
     protected:
       // the __thread c++Ox modifier cannot be used because this is not static
       // create an explicit map and use the thread id key instead.
-      vtkstd::map<vtkSMPThreadID, T*> ThreadLocalStorage;
+      vtkstd::vector<T*> ThreadLocalStorage;
     };
 
   // ForEach template : parallel loop over an iterator

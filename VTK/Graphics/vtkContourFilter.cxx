@@ -467,6 +467,7 @@ int vtkContourFilter::RequestData(
       vtkCutter::GetCellTypeDimensions(cellTypeDimensions);
       int dimensionality;
       // We skip 0d cells (points), because they cannot be cut (generate no data).
+      cout << endl;
       vtkBenchTimer::New()->start_bench_timer();
       for (dimensionality = 1; dimensionality <= 3; ++dimensionality)
         {
