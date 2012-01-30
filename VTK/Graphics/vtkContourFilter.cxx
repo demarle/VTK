@@ -44,6 +44,8 @@
 
 #include <math.h>
 
+#include "vtkBenchTimer.h"
+
 vtkStandardNewMacro(vtkContourFilter);
 vtkCxxSetObjectMacro(vtkContourFilter,ScalarTree,vtkScalarTree);
 
@@ -465,6 +467,7 @@ int vtkContourFilter::RequestData(
       vtkCutter::GetCellTypeDimensions(cellTypeDimensions);
       int dimensionality;
       // We skip 0d cells (points), because they cannot be cut (generate no data).
+      vtkBenchTimer::New()->start_bench_timer();
       for (dimensionality = 1; dimensionality <= 3; ++dimensionality)
         {
         // Loop over all cells; get scalar values for all cell points
@@ -509,6 +512,7 @@ int vtkContourFilter::RequestData(
             } // for all contour values
           } // for all cells
         } // for all dimensions
+      vtkBenchTimer::New()->end_bench_timer();
       cell->Delete();
       } //if using scalar tree
     else
