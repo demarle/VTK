@@ -1,6 +1,4 @@
 #include "vtkTransform.h"
-#include "vtkSMPTransform.h"
-#include "vtkSMPTransformFilter.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
@@ -9,9 +7,16 @@
 #include "vtkPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkPolyData.h"
-#include "vtkSMPContourFilter.h"
 #include "vtkPointData.h"
 #include "vtkDoubleArray.h"
+#ifdef VTK_CAN_USE_SMP
+  #include "vtkSMPTransform.h"
+  #include "vtkSMPTransformFilter.h"
+  #include "vtkSMPContourFilter.h"
+#else
+  #include "vtkTransformFilter.h"
+  #include "vtkContourFilter.h"
+#endif
 
 #include "vtkCellArray.h"
 #include "vtkGenericCell.h"
@@ -36,6 +41,7 @@ int main( int argc, char** argv )
 
   pre_transform->Delete();
 
+#ifdef VTK_CAN_USE_SMP
   if ( parallel != 1 )
   {
     vtkSMPTransform* t = vtkSMPTransform::New();
@@ -46,12 +52,15 @@ int main( int argc, char** argv )
   }
   else
   {
+#endif
     vtkTransform* t = vtkTransform::New();
     t->Scale( -1., -1., -1. );
     pre_transform->SetTransform( t );
     transform->SetTransform( t );
     t->Delete();
+#ifdef VTK_CAN_USE_SMP
   }
+#endif
 
   /* === Testing contour filter === */
   transform->Update();
@@ -90,7 +99,11 @@ int main( int argc, char** argv )
   data->GetPointData()->SetScalars( s );
   s->Delete();
 
+#ifdef VTK_CAN_USE_SMP
   vtkContourFilter* isosurface = parallel != 1 ? vtkSMPContourFilter::New() : vtkContourFilter::New();
+#else
+  vtkContourFilter* isosurface = vtkContourFilter::New();
+#endif
   isosurface->SetInputConnection( transform->GetOutputPort() );
   isosurface->GenerateValues( 11, 0.0, 1.0 );
   isosurface->UseScalarTreeOff();

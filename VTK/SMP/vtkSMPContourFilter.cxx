@@ -43,11 +43,11 @@ class Reducer : public vtkObject
   Reducer( const Reducer& );
   void operator =( const Reducer& );
   vtkIdType value;
-  vtkMutexLock* Lock;
+//  vtkMutexLock* Lock;
 
 protected:
-  Reducer() { value = 0; Lock = vtkMutexLock::New(); }
-  ~Reducer() { Lock->Delete(); }
+  Reducer() { value = 0; /*Lock = vtkMutexLock::New();*/ }
+  ~Reducer() { /*Lock->Delete();*/ }
 
 public:
   vtkTypeMacro(Reducer,vtkObject);
@@ -78,15 +78,15 @@ class OffsetManager : public vtkObject
   vtkstd::vector<vtkIdType> tuples;
   vtkIdType CellsOffset;
   vtkIdType TuplesOffset;
-  vtkMutexLock* Lock;
+//  vtkMutexLock* Lock;
 protected:
   OffsetManager() : vtkObject(), cells(vtkSMP::GetNumberOfThreads(), 0), tuples(vtkSMP::GetNumberOfThreads(), 0)
     {
     CellsOffset = 0;
     TuplesOffset = 0;
-    Lock = vtkMutexLock::New();
+//    Lock = vtkMutexLock::New();
     }
-  ~OffsetManager() { Lock->Delete(); }
+  ~OffsetManager() { /*Lock->Delete();*/ }
 public:
   vtkTypeMacro(OffsetManager,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent)
@@ -284,14 +284,14 @@ public:
 protected:
   void Parallel0 ( vtkSMPThreadID tid ) const
     {
-    this->Lock->Lock();
+//    this->Lock->Lock();
 
     vtkPoints* pts = newPts->NewLocal( tid );
     pts->Allocate( estimatedSize, estimatedSize );
     vtkIncrementalPointLocator* l = Locator->NewLocal( tid, refLocator );
     l->InitPointInsertion( pts, input->GetBounds(), estimatedSize );
 
-    this->Lock->Unlock();
+//    this->Lock->Unlock();
 
     vtkCellArray* c = newVerts->NewLocal( tid );
     c->Allocate( estimatedSize, estimatedSize );
