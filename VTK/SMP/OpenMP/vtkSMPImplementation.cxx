@@ -33,7 +33,7 @@ vtkSMPThreadID InternalGetNumberOfThreads( )
 
 void InternalParallel( const vtkFunctor* f, int whichOne, vtkSMPThreadID skipThreads )
 {
-  #pragma omp parallel
+  #pragma omp parallel shared(skipThreads)
   {
     int num = omp_get_thread_num();
     if ( num >= skipThreads )

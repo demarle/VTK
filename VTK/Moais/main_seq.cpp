@@ -11,9 +11,12 @@
 #include "vtkContourFilter.h"
 #include "vtkPointData.h"
 #include "vtkDoubleArray.h"
+#include "vtkGenericCell.h"
 
 int main( int argc, char** argv )
 {
+  int parallel = argc == 1 ? 48 : atoi(argv[1]);
+
   /* === Reading 3D model === */
 
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();
@@ -40,21 +43,44 @@ int main( int argc, char** argv )
   s->SetNumberOfComponents(1);
   s->SetNumberOfTuples(transform->GetOutput()->GetNumberOfPoints());
   s->SetName("scalars");
-  for (vtkIdType i = 0; i < transform->GetOutput()->GetNumberOfPoints(); ++i)
+  vtkPointSet* data = transform->GetOutput();
+  vtkIdType num = data->GetNumberOfCells() / parallel, n;
+  ++num;
+  vtkGenericCell* cell = vtkGenericCell::New();
+  vtkIdList* cellPts;
+  for ( vtkIdType i = 0; i < num; ++i )
   {
-    double* h = transform->GetOutput()->GetPoint(i);
-    s->SetTuple(i,&h[2]);
+    data->GetCell( i, cell );
+    cellPts = cell->GetPointIds();
+    n = 0;
+    while ( n != cellPts->GetNumberOfIds() )
+    {
+      s->SetTuple1( cellPts->GetId( n ), 1.);
+      ++n;
+    }
   }
-  transform->GetOutput()->GetPointData()->SetScalars( s );
+  for ( vtkIdType i = num; i < data->GetNumberOfCells(); ++i )
+  {
+    data->GetCell( i, cell );
+    cellPts = cell->GetPointIds();
+    n = 0;
+    while ( n != cellPts->GetNumberOfIds() )
+    {
+      s->SetTuple1( cellPts->GetId( n ), -1.);
+      ++n;
+    }
+  }
+  cell->Delete();
+  data->GetPointData()->SetScalars( s );
   s->Delete();
 
   vtkContourFilter* isosurface = vtkContourFilter::New();
   isosurface->SetInputConnection( transform->GetOutputPort() );
-  isosurface->GenerateValues( 11, 0.0, 1.0 );
+  isosurface->GenerateValues( 1, 0.0, 1.0 );
   isosurface->UseScalarTreeOff();
   transform->Delete();
 
-/* */
+/* *
   // Simulate a call to vtkRenderWindow::Render()
   polyReader->Delete();
   isosurface->Update();
@@ -69,7 +95,7 @@ int main( int argc, char** argv )
   map->Delete();
 
   vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
-  mapper->SetInputConnection( polyReader->GetOutputPort() );
+  mapper->SetInputConnection( transform->GetOutputPort() );
   polyReader->Delete();
 
   vtkActor* reference = vtkActor::New();
@@ -97,5 +123,6 @@ int main( int argc, char** argv )
 
   eventsCatcher->Delete();
 /* */
+  cout << "should exit (" << parallel << ")" << endl;
   return 0;
 }

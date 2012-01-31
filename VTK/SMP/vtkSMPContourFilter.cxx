@@ -613,6 +613,10 @@ int vtkSMPContourFilter::RequestData(
     //
     if ( !this->UseScalarTree )
       {
+      vtkBenchTimer* timer = vtkBenchTimer::New();
+      cout << endl;
+
+      timer->start_bench_timer();
       input->ComputeBounds();
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
       ThreadsFunctor my_contour( input, newPts, inCd, inPd, this->Locator,
@@ -620,11 +624,8 @@ int vtkSMPContourFilter::RequestData(
                                  inScalars, this->ComputeScalars,
                                  newVerts, newLines, newPolys, outCd, outPd );
 
-      // init
-      vtkBenchTimer* timer = vtkBenchTimer::New();
-      cout << endl;
 
-      timer->start_bench_timer();
+      // init
       vtkSMP::Parallel( my_contour, 0 );
       timer->end_bench_timer();
 

@@ -8,7 +8,6 @@ void smpInit(void)
 void smpFini(void)
 {
   kaapic_finalize();
-  cout << "fini" << endl;
 }
 
 void func_call ( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdType f )
