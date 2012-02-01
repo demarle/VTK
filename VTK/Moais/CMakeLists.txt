@@ -12,17 +12,25 @@ set(HDRS
 
 include_directories("include" ${VTK_TDX_INCLUDE_PATH})
 
+find_program(HOSTNAME_CMD NAMES hostname)
+exec_program(${HOSTNAME_CMD} ARGS OUTPUT_VARIABLE MY_HOSTNAME)
+if("${MY_HOSTNAME}" STREQUAL "idfreeze")
+  add_definitions(-DHIDE_VTK_WINDOW)
+endif("${MY_HOSTNAME}" STREQUAL "idfreeze")
+
 IF(VTK_USE_SMP)
   string(TOLOWER ${VTK_SMP_IMPLEMENTATION_TYPE} SMP_NAME)
 
-  add_definitions(-DVTK_CAN_USE_SMP)
+  add_definitions(-DVTK_CAN_USE_SMP=1 -DVTK_WINDOW_NAME=\"${SMP_NAME}\")
 
-  add_executable(${SMP_NAME}Bench MACOSX_BUNDLE ${HDRS} "main.cpp")
+  add_executable(${SMP_NAME}Bench MACOSX_BUNDLE "main.cpp" ${HDRS})
   target_link_libraries(${SMP_NAME}Bench vtkIO vtkRendering vtkSMP)
 
   install(TARGETS ${SMP_NAME}Bench RUNTIME DESTINATION bin)
 ELSE(VTK_USE_SMP)
-  add_executable(purevtkBench MACOSX_BUNDLE ${HDRS} "main.cpp")
+  add_definitions(-DVTK_WINDOW_NAME=\"VTKreference\")
+
+  add_executable(purevtkBench MACOSX_BUNDLE "main.cpp" ${HDRS})
   target_link_libraries(purevtkBench vtkIO vtkRendering vtkGraphics)
 
   install(TARGETS purevtkBench RUNTIME DESTINATION bin)

@@ -5,7 +5,7 @@ vtkDemandDrivenPipeline:
 vtkSMPContourFilter:
  - Protéger les données en entrée pour éviter les segfaults
    Si possible, éviter de modifier tous les vtkCell.
- - Améliorer le merge (// ?)
+ - Améliorer le merge (remove Lock)
 
 Kaapi:
  - Réaliser une initialisation non séquentielle avec une meilleure maîtrise

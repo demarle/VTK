@@ -24,12 +24,26 @@
 
 int main( int argc, char** argv )
 {
-  int parallel = argc == 1 ? 48 : atoi(argv[1]);
+  if ( argc < 2 )
+  {
+    cout << "You must provide a file name" << endl;
+    return 1;
+  }
+  if ( ifstream(argv[1]) )
+  {
+    cout << "Using file " << argv[1] << endl;
+  }
+  else
+  {
+    cout << argv[1] << " is not a regular file" << endl;
+    return 1;
+  }
+  int parallel = argc == 2 ? 48 : atoi(argv[2]);
 
   /* === Reading 3D model === */
 
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();
-  polyReader->SetFileName("../../VTKData/Data/bunny.vtk");
+  polyReader->SetFileName(argv[1]);
 
   /* === Testing transform filter === */
 
@@ -109,12 +123,12 @@ int main( int argc, char** argv )
   isosurface->UseScalarTreeOff();
   transform->Delete();
 
-/* *
+#ifdef HIDE_VTK_WINDOW
   // Simulate a call to vtkRenderWindow::Render()
   polyReader->Delete();
   isosurface->Update();
   isosurface->Delete();
-/*/
+#else
   vtkPolyDataMapper* map = vtkPolyDataMapper::New();
   map->SetInputConnection( isosurface->GetOutputPort() );
   isosurface->Delete();
@@ -141,6 +155,7 @@ int main( int argc, char** argv )
 
   vtkRenderWindow* window = vtkRenderWindow::New();
   window->AddRenderer( viewport );
+  window->SetWindowName(VTK_WINDOW_NAME);
   viewport->Delete();
 
   vtkRenderWindowInteractor* eventsCatcher = vtkRenderWindowInteractor::New();
@@ -151,7 +166,7 @@ int main( int argc, char** argv )
   eventsCatcher->Start();
 
   eventsCatcher->Delete();
-/* */
+#endif
   cout << "should exit (" << parallel << ")" << endl;
   return 0;
 }

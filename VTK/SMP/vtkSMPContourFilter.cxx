@@ -165,7 +165,11 @@ class ThreadsFunctor : public vtkFunctor//Initialisable
   ThreadsFunctor( const ThreadsFunctor& );
   void operator =( const ThreadsFunctor& );
 
+  unsigned char cellTypeDimensions[VTK_NUMBER_OF_CELL_TYPES];
+
 public:
+  int dimensionality;
+
   ThreadsFunctor( vtkDataSet* _input, vtkPoints* _inPts, vtkCellData* _incd,
                   vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
                   vtkIdType& _size, double* _values, int _number,
@@ -173,6 +177,8 @@ public:
                   vtkCellArray* _outputLines, vtkCellArray* _outputPolys,
                   vtkCellData* _outputCd, vtkPointData* _outputPd )
     {
+    vtkCutter::GetCellTypeDimensions(cellTypeDimensions);
+
     this->inCd = _incd;
     this->inPd = _inpd;
     this->input = _input;
@@ -206,6 +212,12 @@ public:
     lineOffset = OffsetManager::New();
     polyOffset = OffsetManager::New();
 
+    if ( !computeScalars )
+      {
+      _outputPd->CopyScalarsOff();
+      }
+    _outputPd->InterpolateAllocate( inPd, estimatedSize, estimatedSize );
+    _outputCd->CopyAllocate( inCd, estimatedSize, estimatedSize );
     Locator->SetLocal( 0, _locator );
     newPts->SetLocal( 0, _inPts );
     newVerts->SetLocal( 0, _outputVerts );
@@ -214,7 +226,6 @@ public:
     outPd->SetLocal( 0, _outputPd );
     outCd->SetLocal( 0, _outputCd );
     Cells->NewLocal( 0 );
-
     vtkDataArray* cScalars = CellsScalars->NewLocal( 0, inScalars );
     cScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
     cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
@@ -251,11 +262,16 @@ public:
   void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
     {
     vtkGenericCell *cell = this->Cells->GetLocal( tid );
-//    int cellType = input->GetCellType(cellId);
-//    if (cellType == VTK_VERTEX || cellType == VTK_POLY_VERTEX)
-//      { // Can't cut cells with dimensionality 0 (générate no data)
-//      return;
-//      }
+    int cellType = input->GetCellType(cellId);
+    if (cellType >= VTK_NUMBER_OF_CELL_TYPES)
+      { // Protect against new cell types added.
+//      vtkErrorMacro("Unknown cell type " << cellType);
+      return;
+      }
+    if (cellTypeDimensions[cellType] != dimensionality)
+      {
+      return;
+      }
     input->GetCell(cellId,cell);
     vtkIdList* cellPts = cell->GetPointIds();
     vtkDataArray* cellScalars = this->CellsScalars->GetLocal( tid );
@@ -630,7 +646,10 @@ int vtkSMPContourFilter::RequestData(
       timer->end_bench_timer();
 
       timer->start_bench_timer();
-      vtkSMP::ForEach( 0, numCells, my_contour );
+      for ( my_contour.dimensionality = 1; my_contour.dimensionality <= 3; ++(my_contour.dimensionality) )
+        {
+        vtkSMP::ForEach( 0, numCells, my_contour );
+        }
       timer->end_bench_timer();
 
       // pre-merge
@@ -645,9 +664,9 @@ int vtkSMPContourFilter::RequestData(
       newVerts->GetData()->Resize( my_contour.GetNumberOfVertTuples() );
       newLines->GetData()->Resize( my_contour.GetNumberOfLineTuples() );
       newPolys->GetData()->Resize( my_contour.GetNumberOfPolyTuples() );
-
-      outPd->InterpolateAllocate( inPd, my_contour.GetNumberOfPoints(), my_contour.GetNumberOfPoints() );
-      outCd->CopyAllocate( inCd, numberOfCells, numberOfCells );
+      // Copy on itself means resize
+      outPd->CopyAllocate( outPd, my_contour.GetNumberOfPoints(), my_contour.GetNumberOfPoints() );
+      outCd->CopyAllocate( outCd, numberOfCells, numberOfCells );
 
       // merge
       timer->start_bench_timer();
