@@ -8,6 +8,7 @@ class vtkMutexLock;
 class vtkSMPMergePoints : public vtkMergePoints
 {
   vtkMutexLock** LockTable;
+  vtkMutexLock* CreatorLock;
 
 protected:
   vtkSMPMergePoints();
