@@ -23,6 +23,8 @@
 #include "vtkPointData.h"
 #include "vtkPointSet.h"
 
+#include "vtkBenchTimer.h"
+
 vtkStandardNewMacro(vtkTransformFilter);
 vtkCxxSetObjectMacro(vtkTransformFilter,Transform,vtkAbstractTransform);
 
@@ -113,6 +115,8 @@ int vtkTransformFilter::RequestData(
 
   // Loop over all points, updating position
   //
+  vtkBenchTimer::New()->start_bench_timer();
+  cout << endl;
   if ( inVectors || inNormals )
     {
     this->Transform->TransformPointsNormalsVectors(inPts,newPts,
@@ -123,6 +127,7 @@ int vtkTransformFilter::RequestData(
     {
     this->Transform->TransformPoints(inPts,newPts);
     }
+  vtkBenchTimer::New()->end_bench_timer();
 
   this->UpdateProgress (.6);
 
