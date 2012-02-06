@@ -7,7 +7,7 @@ class vtkMutexLock;
 
 class vtkSMPMergePoints : public vtkMergePoints
 {
-  vtkMutexLock* Lock;
+  vtkMutexLock** LockTable;
 
 protected:
   vtkSMPMergePoints();
@@ -20,6 +20,8 @@ public:
 
   int InitPointInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize);
   int SetUniquePoint(const double x[], vtkIdType &ptId);
+
+  void FreeSearchStructure();
 };
 
 #endif // VTKSMPMERGEPOINTS_H

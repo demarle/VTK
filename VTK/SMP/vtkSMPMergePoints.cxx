@@ -5,18 +5,16 @@
 #include "vtkFloatArray.h"
 #include "vtkMutexLock.h"
 
+typedef vtkMutexLock *vtkMutexLockPtr;
+
 vtkStandardNewMacro(vtkSMPMergePoints)
 
-vtkSMPMergePoints::vtkSMPMergePoints() : vtkMergePoints()
+vtkSMPMergePoints::vtkSMPMergePoints() : vtkMergePoints(), LockTable( 0 )
 {
-  Lock = vtkMutexLock::New();
-  Lock->Register(this);
-  Lock->Delete();
 }
 
 vtkSMPMergePoints::~vtkSMPMergePoints()
 {
-  Lock->UnRegister(this);
 }
 
 void vtkSMPMergePoints::PrintSelf(ostream &os, vtkIndent indent)
@@ -28,24 +26,16 @@ int vtkSMPMergePoints::InitPointInsertion(vtkPoints *newPts, const double bounds
 {
   if (newPts)
   {
-    return this->Superclass::InitPointInsertion(newPts, bounds, estSize);
+    if ( !this->Superclass::InitPointInsertion(newPts, bounds, estSize) )
+      return 0;
+    this->LockTable = new vtkMutexLockPtr[this->NumberOfBuckets];
+    for ( vtkIdType i = 0; i < this->NumberOfBuckets; ++i )
+      this->LockTable[i] = vtkMutexLock::New();
+    return 1;
   }
 
   if ( estSize > 0 )
   {
-    for ( vtkIdType i = 0; i < this->NumberOfBuckets; ++i )
-    {
-      if ( !this->HashTable[i] )
-      {
-        vtkIdList* bucket = vtkIdList::New();
-        bucket->Allocate( estSize );
-        this->HashTable[i] = bucket;
-      }
-      else
-      {
-        this->HashTable[i]->Resize( estSize );
-      }
-    }
     this->Points->GetData()->Resize( estSize );
     this->Points->SetNumberOfPoints( estSize );
   }
@@ -81,6 +71,8 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[], vtkIdType &id)
   idx = ijk0 + ijk1*this->Divisions[0] +
         ijk2*this->Divisions[0]*this->Divisions[1];
 
+  vtkMutexLock* Lock = this->LockTable[idx];
+  Lock->Lock();
   bucket = this->HashTable[idx];
 
   if (bucket) // see whether we've got duplicate point
@@ -113,6 +105,7 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[], vtkIdType &id)
           {
           // point is already in the list, return 0 and set the id parameter
           id = ptId;
+          Lock->Unlock();
           return 0;
           }
         }
@@ -129,6 +122,7 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[], vtkIdType &id)
           {
           // point is already in the list, return 0 and set the id parameter
           id = ptId;
+          Lock->Unlock();
           return 0;
           }
         }
@@ -136,7 +130,6 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[], vtkIdType &id)
     }
   else
     {
-    vtkErrorMacro(<<"InitPointInsertion should have been called before SetUniquePoint");
     bucket = vtkIdList::New();
     bucket->Allocate(this->NumberOfPointsPerBucket/2,
                      this->NumberOfPointsPerBucket/3);
@@ -144,11 +137,30 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[], vtkIdType &id)
     }
 
   // point has to be added
-  this->Lock->Lock();
-  id = this->InsertionPointId++;
+  id = __sync_fetch_and_add(&(this->InsertionPointId), 1);
   bucket->InsertNextId(id);
-  this->Lock->Unlock();
+  Lock->Unlock();
   this->Points->SetPoint(id,x);
 
   return 1;
+}
+
+void vtkSMPMergePoints::FreeSearchStructure()
+{
+  this->Superclass::FreeSearchStructure();
+  vtkMutexLock *lock;
+  vtkIdType i;
+
+  if ( this->LockTable )
+    {
+    for (i=0; i<this->NumberOfBuckets; i++)
+      {
+      if ( (lock = this->LockTable[i]) )
+        {
+        lock->Delete();
+        }
+      }
+    delete [] this->LockTable;
+    this->LockTable = NULL;
+    }
 }
