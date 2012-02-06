@@ -25,6 +25,7 @@
 #include "vtkMergePoints.h"
 
 #include "vtkSMP.h"
+#include "vtkSMPMergePoints.h"
 
 #include "vtkBenchTimer.h"
 
@@ -38,38 +39,6 @@ void vtkSMPContourFilter::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os,indent);
 }
 
-class Reducer : public vtkObject
-{
-  Reducer( const Reducer& );
-  void operator =( const Reducer& );
-  vtkIdType value;
-//  vtkMutexLock* Lock;
-
-protected:
-  Reducer() { value = 0; /*Lock = vtkMutexLock::New();*/ }
-  ~Reducer() { /*Lock->Delete();*/ }
-
-public:
-  vtkTypeMacro(Reducer,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent)
-  {
-    this->Superclass::PrintSelf( os, indent );
-    os << indent << "Value: " << value << endl;
-  }
-  static Reducer* New();
-
-  void IncrementValue ( vtkIdType v )
-  {
-//    this->Lock->Lock();
-    value += v;
-//    this->Lock->Unlock();
-  }
-
-  vtkIdType GetValue() { return value; }
-};
-
-vtkStandardNewMacro(Reducer);
-
 class OffsetManager : public vtkObject
 {
   OffsetManager( const OffsetManager& );
@@ -78,15 +47,14 @@ class OffsetManager : public vtkObject
   vtkstd::vector<vtkIdType> tuples;
   vtkIdType CellsOffset;
   vtkIdType TuplesOffset;
-//  vtkMutexLock* Lock;
+
 protected:
   OffsetManager() : vtkObject(), cells(vtkSMP::GetNumberOfThreads(), 0), tuples(vtkSMP::GetNumberOfThreads(), 0)
     {
     CellsOffset = 0;
     TuplesOffset = 0;
-//    Lock = vtkMutexLock::New();
     }
-  ~OffsetManager() { /*Lock->Delete();*/ }
+  ~OffsetManager() { }
 public:
   vtkTypeMacro(OffsetManager,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent)
@@ -111,12 +79,10 @@ public:
   {
     vtkIdType c = ca->GetNumberOfCells();
     vtkIdType t = ca->GetData()->GetNumberOfTuples();
-//    this->Lock->Lock();
     cells[tid] = CellsOffset;
     tuples[tid] = TuplesOffset;
     CellsOffset += c;
     TuplesOffset += t;
-//    this->Lock->Unlock();
   }
 
   vtkIdType GetNumberOfCells() { return CellsOffset; }
@@ -147,20 +113,18 @@ class ThreadsFunctor : public vtkFunctor//Initialisable
   double* values;
   int numContours;
   int computeScalars;
-  Reducer* numberOfPoints;
+  vtkIdType numberOfPoints;
 
   OffsetManager* vertOffset;
   OffsetManager* lineOffset;
   OffsetManager* polyOffset;
 
-  vtkIncrementalPointLocator* refLocator;
+  vtkSMPMergePoints* refLocator;
   vtkCellArray* outputVerts;
   vtkCellArray* outputLines;
   vtkCellArray* outputPolys;
   vtkCellData* outputCd;
   vtkPointData* outputPd;
-
-  vtkMutexLock* Lock;
 
   ThreadsFunctor( const ThreadsFunctor& );
   void operator =( const ThreadsFunctor& );
@@ -171,7 +135,7 @@ public:
   int dimensionality;
 
   ThreadsFunctor( vtkDataSet* _input, vtkPoints* _inPts, vtkCellData* _incd,
-                  vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
+                  vtkPointData* _inpd, vtkSMPMergePoints* _locator,
                   vtkIdType& _size, double* _values, int _number,
                   vtkDataArray* _scalars, int _compute, vtkCellArray* _outputVerts,
                   vtkCellArray* _outputLines, vtkCellArray* _outputPolys,
@@ -205,9 +169,7 @@ public:
     Cells = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
     CellsScalars = vtkSMP::vtkThreadLocal<vtkDataArray>::New();
 
-    Lock = vtkMutexLock::New();
-
-    numberOfPoints = Reducer::New();
+    numberOfPoints = 0;
     vertOffset = OffsetManager::New();
     lineOffset = OffsetManager::New();
     polyOffset = OffsetManager::New();
@@ -243,15 +205,12 @@ public:
     Cells->Delete();
     CellsScalars->Delete();
 
-    Lock->Delete();
-
     vertOffset->Delete();
     lineOffset->Delete();
     polyOffset->Delete();
-    numberOfPoints->Delete();
     }
 
-  vtkIdType GetNumberOfPoints() { return numberOfPoints->GetValue(); }
+  vtkIdType GetNumberOfPoints() { return numberOfPoints; }
   vtkIdType GetNumberOfVerts() { return vertOffset->GetNumberOfCells(); }
   vtkIdType GetNumberOfLines() { return lineOffset->GetNumberOfCells(); }
   vtkIdType GetNumberOfPolys() { return polyOffset->GetNumberOfCells(); }
@@ -294,20 +253,16 @@ public:
   {
     vtkSMPThreadID max = vtkSMP::GetNumberOfThreads();
     for ( vtkSMPThreadID i = 0; i < max; ++i )
-      Parallel1( i );
+      pre_merge( i );
   }
 
 protected:
   void Parallel0 ( vtkSMPThreadID tid ) const
     {
-//    this->Lock->Lock();
-
     vtkPoints* pts = newPts->NewLocal( tid );
     pts->Allocate( estimatedSize, estimatedSize );
     vtkIncrementalPointLocator* l = Locator->NewLocal( tid, refLocator );
     l->InitPointInsertion( pts, input->GetBounds(), estimatedSize );
-
-//    this->Lock->Unlock();
 
     vtkCellArray* c = newVerts->NewLocal( tid );
     c->Allocate( estimatedSize, estimatedSize );
@@ -333,13 +288,13 @@ protected:
     cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
     }
 
-  void Parallel1 ( vtkSMPThreadID tid ) const
+  void pre_merge ( vtkSMPThreadID tid )
     {
     vertOffset->ManageValues( tid, this->newVerts->GetLocal( tid ) );
     lineOffset->ManageValues( tid, this->newLines->GetLocal( tid ) );
     polyOffset->ManageValues( tid, this->newPolys->GetLocal( tid ) );
 
-    numberOfPoints->IncrementValue( this->newPts->GetLocal( tid )->GetNumberOfPoints() );
+    numberOfPoints += this->newPts->GetLocal( tid )->GetNumberOfPoints();
     }
 
   void Parallel2 ( vtkSMPThreadID tid ) const
@@ -353,9 +308,7 @@ protected:
     for ( vtkIdType i = 0; i < n; ++i )
       {
       double* pt = computedPoints->GetPoint( i );
-      this->Lock->Lock();
-      int inserted = refLocator->InsertUniquePoint( pt, newId );
-      this->Lock->Unlock();
+      int inserted = refLocator->SetUniquePoint( pt, newId );
       if ( inserted )
         outputPd->SetTuple( newId, i, ptData );
       map[i] = newId;
@@ -610,14 +563,6 @@ int vtkSMPContourFilter::RequestData(
     newPolys = vtkCellArray::New();
     cellScalars = inScalars->NewInstance();
 
-    // locator used to merge potentially duplicate points
-    if ( this->Locator == NULL )
-      {
-      this->CreateDefaultLocator();
-      }
-    this->Locator->InitPointInsertion (newPts,
-                                       input->GetBounds(),estimatedSize);
-
     // interpolate data along edge
     // if we did not ask for scalars to be computed, don't copy them
     if (!this->ComputeScalars)
@@ -629,13 +574,21 @@ int vtkSMPContourFilter::RequestData(
     //
     if ( !this->UseScalarTree )
       {
+      if ( !this->Locator || !this->Locator->IsA("vtkSMPMergePoints") )
+        {
+        if ( this->Locator )
+          this->Locator->UnRegister(this);
+        this->Locator = vtkSMPMergePoints::New();
+        this->Locator->Register(this);
+        this->Locator->Delete();
+        }
+      this->Locator->InitPointInsertion( newPts, input->GetBounds(), estimatedSize );
       vtkBenchTimer* timer = vtkBenchTimer::New();
       cout << endl;
 
       timer->start_bench_timer();
-      input->ComputeBounds();
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
-      ThreadsFunctor my_contour( input, newPts, inCd, inPd, this->Locator,
+      ThreadsFunctor my_contour( input, newPts, inCd, inPd, vtkSMPMergePoints::SafeDownCast(this->Locator),
                                  estimatedSize, values, numContours,
                                  inScalars, this->ComputeScalars,
                                  newVerts, newLines, newPolys, outCd, outPd );
@@ -656,7 +609,6 @@ int vtkSMPContourFilter::RequestData(
 //      vtkSMP::Parallel( my_contour, 1 );
       timer->start_bench_timer();
       my_contour.PreMerge();
-      timer->end_bench_timer();
 
       vtkIdType numberOfCells = my_contour.GetNumberOfVerts() +
           my_contour.GetNumberOfLines() + my_contour.GetNumberOfPolys();
@@ -667,6 +619,8 @@ int vtkSMPContourFilter::RequestData(
       // Copy on itself means resize
       outPd->CopyAllocate( outPd, my_contour.GetNumberOfPoints(), my_contour.GetNumberOfPoints() );
       outCd->CopyAllocate( outCd, numberOfCells, numberOfCells );
+      this->Locator->InitPointInsertion( 0, 0, my_contour.GetNumberOfPoints() ); //Rewrite with a resize meaning
+      timer->end_bench_timer();
 
       // merge
       timer->start_bench_timer();
@@ -674,7 +628,8 @@ int vtkSMPContourFilter::RequestData(
       timer->end_bench_timer();
 
       // Correcting size of arrays
-      outPd->SetNumberOfTuples( my_contour.GetNumberOfPoints() );
+      this->Locator->InitPointInsertion( 0, 0, 0 );
+      outPd->SetNumberOfTuples( newPts->GetNumberOfPoints() );
       outCd->SetNumberOfTuples( numberOfCells );
       newVerts->SetNumberOfCells( my_contour.GetNumberOfVerts() );
       newLines->SetNumberOfCells( my_contour.GetNumberOfLines() );
@@ -683,6 +638,14 @@ int vtkSMPContourFilter::RequestData(
       } //if using scalar tree
     else
       {
+      // locator used to merge potentially duplicate points
+      if ( this->Locator == NULL )
+        {
+        this->CreateDefaultLocator();
+        }
+      this->Locator->InitPointInsertion (newPts,
+                                         input->GetBounds(),estimatedSize);
+
       // Move of previously deleted Allocations
       newVerts->Allocate( estimatedSize, estimatedSize );
       newLines->Allocate( estimatedSize, estimatedSize );

@@ -17,6 +17,7 @@ set(Kit_SRCS
   vtkSMPTransform.cxx
   vtkSMPContourFilter.cxx
   vtkSMPWarpVector.cxx
+  vtkSMPMergePoints.cxx
 )
 
 SET_SOURCE_FILES_PROPERTIES(
@@ -46,6 +47,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkSMPTransform.h
     vtkSMPContourFilter.h
     vtkSMPWarpVector.h
+    vtkSMPMergePoints.h
     )
 
   INSTALL(FILES ${__inst_files}
