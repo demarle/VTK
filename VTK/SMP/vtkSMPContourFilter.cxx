@@ -95,6 +95,7 @@ vtkStandardNewMacro(OffsetManager);
 
 class ThreadsFunctor : public vtkFunctor//Initialisable
 {
+public:
   vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
   vtkSMP::vtkThreadLocal<vtkPoints>* newPts;
   vtkSMP::vtkThreadLocal<vtkCellArray>* newVerts;
@@ -131,7 +132,6 @@ class ThreadsFunctor : public vtkFunctor//Initialisable
 
   unsigned char cellTypeDimensions[VTK_NUMBER_OF_CELL_TYPES];
 
-public:
   int dimensionality;
 
   ThreadsFunctor( vtkDataSet* _input, vtkPoints* _inPts, vtkCellData* _incd,
@@ -256,8 +256,7 @@ public:
       pre_merge( i );
   }
 
-protected:
-  void Parallel0 ( vtkSMPThreadID tid ) const
+  /*void Init ( vtkSMPThreadID tid ) const
     {
     vtkPoints* pts = newPts->NewLocal( tid );
     pts->Allocate( estimatedSize, estimatedSize );
@@ -286,7 +285,7 @@ protected:
     vtkDataArray* cScalars = CellsScalars->NewLocal( tid, inScalars );
     cScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
     cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
-    }
+    }*/
 
   void pre_merge ( vtkSMPThreadID tid )
     {
@@ -297,7 +296,7 @@ protected:
     numberOfPoints += this->newPts->GetLocal( tid )->GetNumberOfPoints();
     }
 
-  void Parallel2 ( vtkSMPThreadID tid ) const
+  void ContourMerge ( vtkSMPThreadID tid ) const
     {
     vtkPointData* ptData = this->outPd->GetLocal( tid );
     vtkCellData* clData = this->outCd->GetLocal( tid );
@@ -368,6 +367,43 @@ protected:
 
     }
 };
+
+void MyInit( const vtkFunctor* o, vtkSMPThreadID tid )
+{
+  const ThreadsFunctor* self = static_cast<const ThreadsFunctor*>(o);
+  vtkPoints* pts = self->newPts->NewLocal( tid );
+  pts->Allocate( self->estimatedSize, self->estimatedSize );
+  vtkIncrementalPointLocator* l = self->Locator->NewLocal( tid, self->refLocator );
+  l->InitPointInsertion( pts, self->input->GetBounds(), self->estimatedSize );
+
+  vtkCellArray* c = self->newVerts->NewLocal( tid );
+  c->Allocate( self->estimatedSize, self->estimatedSize );
+  c = self->newLines->NewLocal( tid );
+  c->Allocate( self->estimatedSize, self->estimatedSize );
+  c = self->newPolys->NewLocal( tid );
+  c->Allocate( self->estimatedSize, self->estimatedSize );
+
+  vtkPointData* pd = self->outPd->NewLocal( tid );
+  if ( !self->computeScalars )
+    {
+    pd->CopyScalarsOff();
+    }
+  pd->InterpolateAllocate( self->inPd, self->estimatedSize, self->estimatedSize );
+
+  vtkCellData* cd = self->outCd->NewLocal( tid );
+  cd->CopyAllocate( self->inCd, self->estimatedSize, self->estimatedSize );
+
+  self->Cells->NewLocal( tid );
+
+  vtkDataArray* cScalars = self->CellsScalars->NewLocal( tid, self->inScalars );
+  cScalars->SetNumberOfComponents( self->inScalars->GetNumberOfComponents() );
+  cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
+}
+
+void MyMerge( const vtkFunctor* o, vtkSMPThreadID tid)
+{
+  static_cast<const ThreadsFunctor*>(o)->ContourMerge(tid);
+}
 
 // General contouring filter.  Handles arbitrary input.
 //
@@ -595,7 +631,7 @@ int vtkSMPContourFilter::RequestData(
 
 
       // init
-      vtkSMP::Parallel( my_contour, 0 );
+      vtkSMP::Parallel( my_contour, MyInit );
       timer->end_bench_timer();
 
       timer->start_bench_timer();
@@ -624,7 +660,7 @@ int vtkSMPContourFilter::RequestData(
 
       // merge
       timer->start_bench_timer();
-      vtkSMP::Parallel( my_contour, 2 );
+      vtkSMP::Parallel( my_contour, MyMerge );
       timer->end_bench_timer();
 
       // Correcting size of arrays

@@ -10,8 +10,7 @@ class vtkFunctor;
 class vtkFunctorInitialisable;
 
 void InternalForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op );
-void InternalInit( const vtkFunctorInitialisable* f );
+void InternalParallel( const vtkFunctor* f, void (*m)(const vtkFunctor*, vtkSMPThreadID) , vtkSMPThreadID skipThreads );
 vtkSMPThreadID InternalGetNumberOfThreads( );
-void InternalParallel( const vtkFunctor* f, int whichOne, vtkSMPThreadID skipThreads );
 
 #endif //__vtkSMPImplementation_h_

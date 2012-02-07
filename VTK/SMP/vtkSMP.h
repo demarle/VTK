@@ -15,28 +15,16 @@ class VTK_SMP_EXPORT vtkFunctor
 {
 public:
   virtual void operator () ( vtkIdType, vtkSMPThreadID ) const = 0;
-  void Parallel( vtkSMPThreadID, int) const;
 
 protected:
   vtkFunctor();
   ~vtkFunctor();
-
-  virtual void Parallel0( vtkSMPThreadID ) const { };
-  virtual void Parallel1( vtkSMPThreadID ) const { };
-  virtual void Parallel2( vtkSMPThreadID ) const { };
-  virtual void Parallel3( vtkSMPThreadID ) const { };
-  virtual void Parallel4( vtkSMPThreadID ) const { };
-  virtual void Parallel5( vtkSMPThreadID ) const { };
-  virtual void Parallel6( vtkSMPThreadID ) const { };
-  virtual void Parallel7( vtkSMPThreadID ) const { };
-  virtual void Parallel8( vtkSMPThreadID ) const { };
-  virtual void Parallel9( vtkSMPThreadID ) const { };
 };
 
 class VTK_SMP_EXPORT vtkFunctorInitialisable : public vtkFunctor
 {
 public:
-  virtual void init ( vtkSMPThreadID ) const = 0;
+  virtual void Init ( vtkSMPThreadID ) const = 0;
   bool CheckAndSetInitialized() const;
 
 protected:
@@ -152,7 +140,7 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable& f );
 
-  void VTK_SMP_EXPORT Parallel( const vtkFunctor& op, int whichMethod, vtkSMPThreadID skipThreads = 1 );
+  void VTK_SMP_EXPORT Parallel( const vtkFunctor& f, void (*exe)(const vtkFunctor*, vtkSMPThreadID), vtkSMPThreadID skipThreads = 1 );
 
   vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
 

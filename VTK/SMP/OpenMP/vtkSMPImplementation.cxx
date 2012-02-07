@@ -9,14 +9,6 @@ void InternalForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op)
     (*op)(i, omp_get_thread_num());
 }
 
-void InternalInit( const vtkFunctorInitialisable* f )
-{
-  #pragma omp parallel
-  {
-    f->init( omp_get_thread_num() );
-  }
-}
-
 vtkSMPThreadID InternalGetNumberOfThreads( )
 {
   int numThreads = 1;
@@ -31,12 +23,12 @@ vtkSMPThreadID InternalGetNumberOfThreads( )
   return numThreads;
 }
 
-void InternalParallel( const vtkFunctor* f, int whichOne, vtkSMPThreadID skipThreads )
+void InternalParallel( const vtkFunctor* f, void (*m)(const vtkFunctor*, vtkSMPThreadID) , vtkSMPThreadID skipThreads )
 {
   #pragma omp parallel shared(skipThreads)
   {
     int num = omp_get_thread_num();
     if ( num >= skipThreads )
-      f->Parallel( num, whichOne );
+      m( f, num );
   }
 }

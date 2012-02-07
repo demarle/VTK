@@ -6,18 +6,13 @@ void InternalForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op)
     (*op)( first, 0 );
 }
 
-void InternalInit( const vtkFunctorInitialisable* f )
-{
-  f->init( 0 );
-}
-
 vtkSMPThreadID InternalGetNumberOfThreads( )
 {
   return 1;
 }
 
-void InternalParallel( const vtkFunctor *f, int whichOne, vtkSMPThreadID skipThreads )
+void InternalParallel( const vtkFunctor* f, void (*m)(const vtkFunctor*, vtkSMPThreadID) , vtkSMPThreadID skipThreads )
 {
   if (!skipThreads)
-    f->Parallel( 0, whichOne );
+    m( f, 0 );
 }
