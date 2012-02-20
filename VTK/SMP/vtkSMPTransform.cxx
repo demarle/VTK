@@ -674,6 +674,13 @@ void vtkSMPTransform::InternalTransformDerivative(const double in[3],
 // Note that the derivative of the inverse transform is simply the
 // inverse of the derivative of the forward transform.
 struct AllModificator : public vtkFunctor {
+  vtkTypeMacro(AllModificator,vtkFunctor);
+  static AllModificator* New();
+  void PrintSelf(ostream &os, vtkIndent indent)
+  {
+    this->Superclass::PrintSelf(os,indent);
+  }
+
   vtkPoints* inPts;
   vtkPoints* outPts;
   vtkDataArray* inNms;
@@ -702,7 +709,15 @@ struct AllModificator : public vtkFunctor {
       outNms->SetTuple(id, point);
     }
   }
+protected:
+  AllModificator() {}
+  ~AllModificator() {}
+private:
+  AllModificator(const AllModificator&);
+  void operator =(const AllModificator&);
 };
+
+vtkStandardNewMacro(AllModificator);
 
 void vtkSMPTransform::TransformPointsNormalsVectors(vtkPoints *inPts,
                                                        vtkPoints *outPts,
@@ -715,27 +730,36 @@ void vtkSMPTransform::TransformPointsNormalsVectors(vtkPoints *inPts,
   double matrix[4][4];
   this->Update();
 
-  AllModificator mymodificator;
-  mymodificator.inPts = inPts;
-  mymodificator.outPts = outPts;
-  mymodificator.inNms = inNms;
-  mymodificator.outNms = outNms;
-  mymodificator.inVcs = inVrs;
-  mymodificator.outVcs = outVrs;
-  mymodificator.matrix = this->Matrix->Element;
+  AllModificator* mymodificator = AllModificator::New();
+  mymodificator->inPts = inPts;
+  mymodificator->outPts = outPts;
+  mymodificator->inNms = inNms;
+  mymodificator->outNms = outNms;
+  mymodificator->inVcs = inVrs;
+  mymodificator->outVcs = outVrs;
+  mymodificator->matrix = this->Matrix->Element;
   if (inNms)
     {
     vtkMatrix4x4::DeepCopy(*matrix,this->Matrix);
     vtkMatrix4x4::Invert(*matrix,*matrix);
     vtkMatrix4x4::Transpose(*matrix,*matrix);
-    mymodificator.matrixInvTr = matrix;
+    mymodificator->matrixInvTr = matrix;
     }
 
   vtkSMP::ForEach( 0, n, mymodificator );
+
+  mymodificator->Delete();
 }
 
 //----------------------------------------------------------------------------
 struct PtsModificator : public vtkFunctor {
+  vtkTypeMacro(PtsModificator,vtkFunctor);
+  static PtsModificator* New();
+  void PrintSelf(ostream &os, vtkIndent indent)
+  {
+    this->Superclass::PrintSelf(os,indent);
+  }
+
   vtkPoints* inPts;
   vtkPoints* outPts;
   double (*matrix)[4];
@@ -746,7 +770,15 @@ struct PtsModificator : public vtkFunctor {
     vtkSMPTransformPoint( matrix, point, point );
     outPts->SetPoint( id, point );
   }
+protected:
+  PtsModificator() {}
+  ~PtsModificator() {}
+private:
+  PtsModificator(const PtsModificator&);
+  void operator =(const PtsModificator&);
 };
+
+vtkStandardNewMacro(PtsModificator);
 
 void vtkSMPTransform::TransformPoints(vtkPoints *inPts,
                                          vtkPoints *outPts)
@@ -754,16 +786,25 @@ void vtkSMPTransform::TransformPoints(vtkPoints *inPts,
   vtkIdType n = inPts->GetNumberOfPoints();
   this->Update();
 
-  PtsModificator mypointsmodificator;
-  mypointsmodificator.inPts = inPts;
-  mypointsmodificator.outPts = outPts;
-  mypointsmodificator.matrix = this->Matrix->Element;
+  PtsModificator* mypointsmodificator = PtsModificator::New();
+  mypointsmodificator->inPts = inPts;
+  mypointsmodificator->outPts = outPts;
+  mypointsmodificator->matrix = this->Matrix->Element;
 
   vtkSMP::ForEach( 0, n, mypointsmodificator );
+
+  mypointsmodificator->Delete();
 }
 
 //----------------------------------------------------------------------------
 struct NmsModificator : public vtkFunctor {
+  vtkTypeMacro(NmsModificator,vtkFunctor);
+  static NmsModificator* New();
+  void PrintSelf(ostream &os, vtkIndent indent)
+  {
+    this->Superclass::PrintSelf(os,indent);
+  }
+
   vtkDataArray* inNms;
   vtkDataArray* outNms;
   double (*matrix)[4];
@@ -775,7 +816,15 @@ struct NmsModificator : public vtkFunctor {
     vtkMath::Normalize( norm );
     outNms->SetTuple( id, norm );
   }
+protected:
+  NmsModificator() {}
+  ~NmsModificator() {}
+private:
+  NmsModificator(const NmsModificator&);
+  void operator =(const NmsModificator&);
 };
+
+vtkStandardNewMacro(NmsModificator);
 
 void vtkSMPTransform::TransformNormals(vtkDataArray *inNms,
                                           vtkDataArray *outNms)
@@ -790,16 +839,25 @@ void vtkSMPTransform::TransformNormals(vtkDataArray *inNms,
   vtkMatrix4x4::Invert(*matrix,*matrix);
   vtkMatrix4x4::Transpose(*matrix,*matrix);
 
-  NmsModificator mynormalsmodificator;
-  mynormalsmodificator.inNms = inNms;
-  mynormalsmodificator.outNms = outNms;
-  mynormalsmodificator.matrix = matrix;
+  NmsModificator* mynormalsmodificator = NmsModificator::New();
+  mynormalsmodificator->inNms = inNms;
+  mynormalsmodificator->outNms = outNms;
+  mynormalsmodificator->matrix = matrix;
 
   vtkSMP::ForEach( 0, n, mynormalsmodificator );
+
+  mynormalsmodificator->Delete();
 }
 
 //----------------------------------------------------------------------------
 struct VcsModificator : public vtkFunctor {
+  vtkTypeMacro(VcsModificator,vtkFunctor);
+  static VcsModificator* New();
+  void PrintSelf(ostream &os, vtkIndent indent)
+  {
+    this->Superclass::PrintSelf( os, indent );
+  }
+
   vtkDataArray* inVcs;
   vtkDataArray* outVcs;
   double (*matrix)[4];
@@ -810,7 +868,15 @@ struct VcsModificator : public vtkFunctor {
     vtkSMPTransformVector( matrix, vec, vec );
     outVcs->SetTuple( id, vec );
   }
+protected:
+  VcsModificator() {}
+  ~VcsModificator() {}
+private:
+  VcsModificator(const VcsModificator&);
+  void operator =(const VcsModificator&);
 };
+
+vtkStandardNewMacro(VcsModificator);
 
 void vtkSMPTransform::TransformVectors(vtkDataArray *inNms,
                                           vtkDataArray *outNms)
@@ -818,10 +884,12 @@ void vtkSMPTransform::TransformVectors(vtkDataArray *inNms,
   vtkIdType n = inNms->GetNumberOfTuples();
   this->Update();
 
-  VcsModificator myvectorsmodificator;
-  myvectorsmodificator.inVcs = inNms;
-  myvectorsmodificator.outVcs = outNms;
-  myvectorsmodificator.matrix = this->Matrix->Element;
+  VcsModificator* myvectorsmodificator = VcsModificator::New();
+  myvectorsmodificator->inVcs = inNms;
+  myvectorsmodificator->outVcs = outNms;
+  myvectorsmodificator->matrix = this->Matrix->Element;
 
   vtkSMP::ForEach( 0, n, myvectorsmodificator );
+
+  myvectorsmodificator->Delete();
 }

@@ -9,6 +9,10 @@ vtkFunctor::vtkFunctor() { }
 
 vtkFunctor::~vtkFunctor() { }
 
+void vtkFunctor::PrintSelf(ostream &os, vtkIndent indent)
+  {
+  this->Superclass::PrintSelf( os, indent );
+  }
 
 //--------------------------------------------------------------------------------
 vtkFunctorInitialisable::vtkFunctorInitialisable() : vtkFunctor()
@@ -25,89 +29,20 @@ bool vtkFunctorInitialisable::CheckAndSetInitialized() const
   return ret;
   }
 
+void vtkFunctorInitialisable::PrintSelf(ostream &os, vtkIndent indent)
+  {
+  this->Superclass::PrintSelf( os, indent );
+  os << indent << "Is initialized: " << IsInitialized << endl;
+  }
 
-void vtkFunctorInitialization( const vtkFunctor* o, vtkSMPThreadID tid )
-{
-  static_cast<const vtkFunctorInitialisable*>(o)->Init( tid );
-}
+//--------------------------------------------------------------------------------
+vtkSMPCommand::vtkSMPCommand() { }
 
-namespace vtkSMP
-{
-  //--------------------------------------------------------------------------------
-  void ForEach( vtkIdType first, vtkIdType last, const vtkFunctor& op )
-    {
-    InternalForEach( first, last, &op );
-    }
+vtkSMPCommand::~vtkSMPCommand() { }
 
-  void ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable& f )
-    {
-    if (!f.CheckAndSetInitialized())
-      {
-      InternalParallel( &f, vtkFunctorInitialization, 0 );
-      }
-    InternalForEach( first, last, &f );
-    }
+void vtkSMPCommand::Execute(vtkObject *caller, unsigned long eventId, void *callData) { }
 
-  vtkSMPThreadID GetNumberOfThreads()
-    {
-    return InternalGetNumberOfThreads( );
-    }
-
-  void Parallel( const vtkFunctor &f, void (*exe)(const vtkFunctor*, vtkSMPThreadID), vtkSMPThreadID skipThreads)
-    {
-      InternalParallel( &f, exe, skipThreads );
-    }
-
-  //--------------------------------------------------------------------------------
-//  vtkStandardNewMacro(vtkThreadLocal);
-
-//  vtkThreadLocal::vtkThreadLocal() : vtkObject() { }
-
-//  vtkThreadLocal::~vtkThreadLocal()
-//    {
-//    for ( typename vtkstd::map<vtkSMPThreadID, vtkObject*>::iterator it = this->ThreadLocalStorage.begin();
-//          it != this->ThreadLocalStorage.end(); ++it )
-//      {
-//      it->second->UnRegister(this);
-//      it->second = 0;
-//      }
-//    this->ThreadLocalStorage.clear();
-//    }
-
-//  void vtkThreadLocal::PrintSelf(ostream &os, vtkIndent indent)
-//    {
-//    this->Superclass::PrintSelf( os, indent );
-//    os << indent << "Class stored: ";
-//    if (this->ThreadLocalStorage.size())
-//      cout << this->ThreadLocalStorage[0]->GetClassName() << endl;
-//    else
-//      cout << "unknown" << endl;
-//    os << indent << "Local storage: " << endl;
-//    for ( vtkstd::map<vtkSMPThreadID, vtkObject*>::iterator it = this->ThreadLocalStorage.begin();
-//          it != this->ThreadLocalStorage.end(); ++it )
-//      {
-//      os << indent.GetNextIndent() << "id " << it->first << ": (" << it->second << ")" << endl;
-//      it->second->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
-//      }
-//    }
-
-//  void vtkThreadLocal::SetLocal ( vtkSMPThreadID tid, vtkObject* item )
-//    {
-//    if (this->ThreadLocalStorage[tid])
-//      {
-//      this->ThreadLocalStorage[tid]->UnRegister(this);
-//      }
-
-//    if (item)
-//      {
-//      item->Register(this);
-//      }
-//    this->ThreadLocalStorage[tid] = item;
-//    }
-
-//  vtkObject* vtkThreadLocal::GetLocal(vtkSMPThreadID tid)
-//    {
-//    return this->ThreadLocalStorage[tid];
-//    }
-
-}
+void vtkSMPCommand::PrintSelf(ostream &os, vtkIndent indent)
+  {
+  this->Superclass::PrintSelf(os,indent);
+  }

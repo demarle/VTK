@@ -67,6 +67,8 @@ vtkSMPWarpVector::~vtkSMPWarpVector()
 template <class T1, class T2>
 struct vtkSMPWarpVectorOp : public vtkFunctor
 {
+  static vtkSMPWarpVectorOp<T1,T2>* New() { return new vtkSMPWarpVectorOp<T1,T2>(); }
+
   vtkArrayIteratorTemplate<T1> *inIter;
   vtkArrayIteratorTemplate<T1> *outIter;
   vtkArrayIteratorTemplate<T2> *inVecIter;
@@ -82,6 +84,12 @@ struct vtkSMPWarpVectorOp : public vtkFunctor
     outTuple[1] = inTuple[1] + scaleFactor * (T1)(inVecTuple[1]);
     outTuple[2] = inTuple[2] + scaleFactor * (T1)(inVecTuple[2]);
     }
+protected:
+  vtkSMPWarpVectorOp() {}
+  ~vtkSMPWarpVectorOp() {}
+private:
+  vtkSMPWarpVectorOp(const vtkSMPWarpVectorOp&);
+  void operator =(const vtkSMPWarpVectorOp&);
 };
 
 //----------------------------------------------------------------------------
@@ -92,13 +100,15 @@ void vtkSMPWarpVectorExecute2(vtkSMPWarpVector *self,
                               vtkArrayIteratorTemplate<T2> *inVecIter,
                               vtkIdType size)
 {
-  vtkSMPWarpVectorOp<T1, T2> op;
-  op.inIter = inIter;
-  op.outIter = outIter;
-  op.inVecIter = inVecIter;
-  op.scaleFactor = (T1)self->GetScaleFactor();
+  vtkSMPWarpVectorOp<T1, T2>* op = vtkSMPWarpVectorOp<T1,T2>::New();
+  op->inIter = inIter;
+  op->outIter = outIter;
+  op->inVecIter = inVecIter;
+  op->scaleFactor = (T1)self->GetScaleFactor();
 
   vtkSMP::ForEach( 0, size, op);
+
+  op->Delete();
 }
 
 //----------------------------------------------------------------------------

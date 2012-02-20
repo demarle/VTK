@@ -3,17 +3,20 @@
 
 #include "vtkSMPImplementation.h"
 #include "vtkObject.h"
-#include "vtkMutexLock.h"
+#include "vtkCommand.h"
 
 #include <vector>
 #include <typeinfo>  //for 'typeid'
 
 class vtkPoints;
-class vtkMutexLock;
+class vtkCommand;
 
-class VTK_SMP_EXPORT vtkFunctor
+class VTK_SMP_EXPORT vtkFunctor : public vtkObject
 {
 public:
+  vtkTypeMacro(vtkFunctor,vtkObject);
+  void PrintSelf(ostream& os, vtkIndent indent);
+
   virtual void operator () ( vtkIdType, vtkSMPThreadID ) const = 0;
 
 protected:
@@ -24,6 +27,9 @@ protected:
 class VTK_SMP_EXPORT vtkFunctorInitialisable : public vtkFunctor
 {
 public:
+  vtkTypeMacro(vtkFunctorInitialisable,vtkFunctor);
+  void PrintSelf(ostream& os, vtkIndent indent);
+
   virtual void Init ( vtkSMPThreadID ) const = 0;
   bool CheckAndSetInitialized() const;
 
@@ -35,14 +41,39 @@ private:
   mutable bool IsInitialized;
 };
 
+class VTK_SMP_EXPORT vtkSMPCommand : public vtkCommand
+{
+  vtkTypeMacro(vtkSMPCommand,vtkCommand);
+  void PrintSelf(ostream &os, vtkIndent indent);
+
+  virtual void Execute(vtkObject *caller, unsigned long eventId, void *callData); // Not used in vtkSMP internals
+  virtual void Execute(const vtkObject *caller, unsigned long eventId, void *callData) const = 0;
+
+protected:
+  vtkSMPCommand();
+  ~vtkSMPCommand();
+private:
+  vtkSMPCommand(const vtkSMPCommand&);
+  void operator =(const vtkSMPCommand&);
+};
+
 namespace vtkSMP
 {
+  // ForEach template : parallel loop over an iterator
+  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op );
+
+  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f );
+
+  void VTK_SMP_EXPORT Parallel( const vtkFunctor* f, const vtkSMPCommand* callback, vtkSMPThreadID skipThreads = 1 );
+
+  vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
+
 
   template<class T>
   class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
     {
     protected :
-      vtkThreadLocal() : vtkObject(), ThreadLocalStorage(InternalGetNumberOfThreads()) { }
+      vtkThreadLocal() : vtkObject(), ThreadLocalStorage(GetNumberOfThreads()) { }
       ~vtkThreadLocal()
         {
         for ( typename vtkstd::vector<T*>::iterator it = ThreadLocalStorage.begin();
@@ -134,15 +165,6 @@ namespace vtkSMP
       // create an explicit map and use the thread id key instead.
       vtkstd::vector<T*> ThreadLocalStorage;
     };
-
-  // ForEach template : parallel loop over an iterator
-  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctor& op );
-
-  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable& f );
-
-  void VTK_SMP_EXPORT Parallel( const vtkFunctor& f, void (*exe)(const vtkFunctor*, vtkSMPThreadID), vtkSMPThreadID skipThreads = 1 );
-
-  vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
 
 }
 
