@@ -78,6 +78,7 @@ int main( int argc, char** argv )
 
   /* === Testing contour filter === */
   transform->Update();
+  polyReader->Update();
   vtkDataArray* s = vtkDoubleArray::New();
   s->SetNumberOfComponents(1);
   s->SetNumberOfTuples(transform->GetOutput()->GetNumberOfPoints());

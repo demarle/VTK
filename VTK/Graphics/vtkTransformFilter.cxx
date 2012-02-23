@@ -66,7 +66,10 @@ int vtkTransformFilter::RequestData(
   vtkDebugMacro(<<"Executing transform filter");
 
   // First, copy the input to the output as a starting point
+  vtkBenchTimer::New()->start_bench_timer();
+  cout << endl;
   output->CopyStructure( input );
+  vtkBenchTimer::New()->end_bench_timer();
 
   // Check input
   //
@@ -93,13 +96,11 @@ int vtkTransformFilter::RequestData(
 
   newPts = vtkPoints::New();
   newPts->SetNumberOfPoints(numPts);
-//  newPts->Allocate(numPts);
   if ( inVectors )
     {
     newVectors = vtkFloatArray::New();
     newVectors->SetNumberOfComponents(3);
     newVectors->SetNumberOfTuples(numPts);
-//    newVectors->Allocate(3*numPts);
     newVectors->SetName(inVectors->GetName());
     }
   if ( inNormals )
@@ -107,7 +108,6 @@ int vtkTransformFilter::RequestData(
     newNormals = vtkFloatArray::New();
     newNormals->SetNumberOfComponents(3);
     newNormals->SetNumberOfTuples(numPts);
-//    newNormals->Allocate(3*numPts);
     newNormals->SetName(inNormals->GetName());
     }
 
@@ -116,7 +116,6 @@ int vtkTransformFilter::RequestData(
   // Loop over all points, updating position
   //
   vtkBenchTimer::New()->start_bench_timer();
-  cout << endl;
   if ( inVectors || inNormals )
     {
     this->Transform->TransformPointsNormalsVectors(inPts,newPts,
@@ -141,16 +140,15 @@ int vtkTransformFilter::RequestData(
       newCellVectors = vtkFloatArray::New();
       newCellVectors->SetNumberOfComponents(3);
       newCellVectors->SetNumberOfTuples(numCells);
-//      newCellVectors->Allocate(3*numCells);
       newCellVectors->SetName( inCellVectors->GetName() );
       lt->TransformVectors(inCellVectors,newCellVectors);
       }
     if ( inCellNormals )
       {
+      cout << "there" << endl;
       newCellNormals = vtkFloatArray::New();
       newCellNormals->SetNumberOfComponents(3);
       newCellNormals->SetNumberOfTuples(numCells);
-//      newCellNormals->Allocate(3*numCells);
       newCellNormals->SetName( inCellNormals->GetName() );
       lt->TransformNormals(inCellNormals,newCellNormals);
       }
