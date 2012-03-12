@@ -3,12 +3,11 @@
 
 #include "vtkMergePoints.h"
 
-class vtkMutexLock;
+class vtkPointData;
 
 class vtkSMPMergePoints : public vtkMergePoints
 {
-  vtkMutexLock** LockTable;
-  vtkMutexLock* CreatorLock;
+  vtkIdType* TreatedTable;
 
 protected:
   vtkSMPMergePoints();
@@ -20,7 +19,11 @@ public:
   void PrintSelf(ostream &os, vtkIndent indent);
 
   int InitPointInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize);
-  int SetUniquePoint(const double x[], vtkIdType &ptId);
+
+  void Merge ( vtkSMPMergePoints* locator, vtkIdType idx, vtkPointData *outPd, vtkPointData *ptData, vtkIdList* idList );
+  vtkIdType GetNumberOfIdInBucket ( vtkIdType idx );
+  vtkIdType GetNumberOfBuckets();
+  int MustTreatBucket ( vtkIdType idx );
 
   void FreeSearchStructure();
 };
