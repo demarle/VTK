@@ -268,53 +268,19 @@ public:
     }
 
   void PreMerge ( )
-  {
+    {
     vtkSMPThreadID max = vtkSMP::GetNumberOfThreads();
-    for ( vtkSMPThreadID i = 0; i < max; ++i )
-      pre_merge( i );
-  }
-
-  /*void Init ( vtkSMPThreadID tid ) const
-    {
-    vtkPoints* pts = newPts->NewLocal( tid );
-    pts->Allocate( estimatedSize, estimatedSize );
-    vtkIncrementalPointLocator* l = Locator->NewLocal( tid, refLocator );
-    l->InitPointInsertion( pts, input->GetBounds(), estimatedSize );
-
-    vtkCellArray* c = newVerts->NewLocal( tid );
-    c->Allocate( estimatedSize, estimatedSize );
-    c = newLines->NewLocal( tid );
-    c->Allocate( estimatedSize, estimatedSize );
-    c = newPolys->NewLocal( tid );
-    c->Allocate( estimatedSize, estimatedSize );
-
-    vtkPointData* pd = outPd->NewLocal( tid );
-    if ( !computeScalars )
+    for ( vtkSMPThreadID tid = 0; tid < max; ++tid )
       {
-      pd->CopyScalarsOff();
+      vertOffset->ManageValues( tid, this->newVerts->GetLocal( tid ) );
+      lineOffset->ManageValues( tid, this->newLines->GetLocal( tid ) );
+      polyOffset->ManageValues( tid, this->newPolys->GetLocal( tid ) );
+
+      vtkIdType n = this->newPts->GetLocal( tid )->GetNumberOfPoints();
+      vtkIdList* map = this->Maps->NewLocal( tid );
+      map->Allocate( n );
+      numberOfPoints += n;
       }
-    pd->InterpolateAllocate( inPd, estimatedSize, estimatedSize );
-
-    vtkCellData* cd = outCd->NewLocal( tid );
-    cd->CopyAllocate( inCd, estimatedSize, estimatedSize );
-
-    Cells->NewLocal( tid );
-
-    vtkDataArray* cScalars = CellsScalars->NewLocal( tid, inScalars );
-    cScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
-    cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
-    }*/
-
-  void pre_merge ( vtkSMPThreadID tid )
-    {
-    vertOffset->ManageValues( tid, this->newVerts->GetLocal( tid ) );
-    lineOffset->ManageValues( tid, this->newLines->GetLocal( tid ) );
-    polyOffset->ManageValues( tid, this->newPolys->GetLocal( tid ) );
-
-    vtkIdType n = this->newPts->GetLocal( tid )->GetNumberOfPoints();
-    vtkIdList* map = this->Maps->NewLocal( tid );
-    map->Allocate( n );
-    numberOfPoints += n;
     }
 
   void CellsMerge ( vtkSMPThreadID tid ) const
@@ -451,8 +417,6 @@ struct MyPointMerge : public vtkSMPCommand
           for ( vtkSMPThreadID j = 1; j < vtkSMP::GetNumberOfThreads(); ++j )
             self->refLocator->Merge( self->Locator->GetLocal(j), i, self->outputPd, self->outPd->GetLocal(j), self->Maps->GetLocal(j) );
       }
-
-    self->CellsMerge( tid );
     }
 protected:
   MyPointMerge() {}
