@@ -441,8 +441,7 @@ struct MyPointMerge : public vtkSMPCommand
     {
     const ThreadsFunctor* self = static_cast<const ThreadsFunctor*>(caller);
     vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
-    
-    vtkPointData* ptData = self->outPd->GetLocal( tid );
+
     vtkSMPMergePoints* locator = self->Locator->GetLocal( tid );
 
     for ( vtkIdType i = 0; i < self->refLocator->GetNumberOfBuckets(); ++i )
@@ -450,7 +449,7 @@ struct MyPointMerge : public vtkSMPCommand
       if ( locator->GetNumberOfIdInBucket(i) )
         if ( self->refLocator->MustTreatBucket(i) )
           for ( vtkSMPThreadID j = 1; j < vtkSMP::GetNumberOfThreads(); ++j )
-            self->refLocator->Merge( self->Locator->GetLocal(j), i, self->outputPd, ptData, self->Maps->GetLocal(j) );
+            self->refLocator->Merge( self->Locator->GetLocal(j), i, self->outputPd, self->outPd->GetLocal(j), self->Maps->GetLocal(j) );
       }
 
     self->CellsMerge( tid );
@@ -476,7 +475,7 @@ struct MyCellMerge : public vtkSMPCommand
     {
     const ThreadsFunctor* self = static_cast<const ThreadsFunctor*>(caller);
     vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
-    
+
     self->CellsMerge( tid );
     }
 protected:
