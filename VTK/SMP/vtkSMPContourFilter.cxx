@@ -41,6 +41,9 @@ void vtkSMPContourFilter::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os,indent);
 }
 
+/* ================================================================================
+  Generic contouring: Functors for parallel execution without ScalarTree
+ ================================================================================ */
 class OffsetManager : public vtkObject
 {
   OffsetManager( const OffsetManager& );
@@ -504,6 +507,30 @@ private:
   MySequentialMerge(const MySequentialMerge&);
   void operator =(const MySequentialMerge&);
 };
+
+/* ================================================================================
+  Generic contouring: Functors for parallel execution with ScalarTree
+ ================================================================================ */
+
+class TreeFuntor : public ThreadsFunctor
+{
+  TreeFuntor( const TreeFuntor& );
+  void operator =( const TreeFuntor& );
+
+protected:
+  TreeFuntor() { }
+  ~TreeFuntor() { }
+
+public:
+  vtkTypeMacro(TreeFuntor,ThreadsFunctor);
+  static TreeFuntor* New();
+  void PrintSelf(ostream &os, vtkIndent indent)
+    {
+    this->Superclass::PrintSelf(os,indent);
+    }
+};
+
+vtkStandardNewMacro(TreeFuntor);
 
 // General contouring filter.  Handles arbitrary input.
 //
