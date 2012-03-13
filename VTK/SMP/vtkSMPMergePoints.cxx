@@ -22,26 +22,17 @@ void vtkSMPMergePoints::PrintSelf(ostream &os, vtkIndent indent)
 
 int vtkSMPMergePoints::InitPointInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize)
 {
-  if (newPts)
-  {
-    if ( !this->Superclass::InitPointInsertion(newPts, bounds, estSize) )
-      return 0;
-    this->TreatedTable = new vtkIdType[this->NumberOfBuckets];
-    memset( this->TreatedTable, 0, this->NumberOfBuckets * sizeof(vtkIdType) );
-    return 1;
-  }
-
-  if ( estSize > 0 )
-  {
-    this->Points->GetData()->Resize( estSize );
-    this->Points->SetNumberOfPoints( estSize );
-  }
-  else
-  {
-    this->Points->SetNumberOfPoints(this->InsertionPointId);
-  }
+  if ( !this->Superclass::InitPointInsertion(newPts, bounds, estSize) )
+    return 0;
+  this->TreatedTable = new vtkIdType[this->NumberOfBuckets];
+  memset( this->TreatedTable, 0, this->NumberOfBuckets * sizeof(vtkIdType) );
   return 1;
 }
+
+void vtkSMPMergePoints::FixSizeOfPointArray()
+  {
+  this->Points->SetNumberOfPoints(this->InsertionPointId);
+  }
 
 void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPointData* outPd, vtkPointData* ptData, vtkIdList* idList )
   {
@@ -65,7 +56,7 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
     oldIdToMerge = vtkIdList::New();
     oldIdToMerge->Register( this );
     oldIdToMerge->Delete();
-  
+
     int nbOfIds = bucket->GetNumberOfIds (), nbOfOldIds = locator->HashTable[idx]->GetNumberOfIds();
     oldIdToMerge->Allocate( nbOfOldIds );
 
@@ -73,7 +64,7 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
     vtkIdType *idArray = bucket->GetPointer(0), *idOldArray = locator->HashTable[idx]->GetPointer(0);
 
     bool found;
-    
+
     if (dataArray->GetDataType() == VTK_FLOAT)
       {
       vtkFloatArray* floatDataArray = static_cast<vtkFloatArray*>(dataArray);

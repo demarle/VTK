@@ -5,7 +5,7 @@
 
 class vtkPointData;
 
-class vtkSMPMergePoints : public vtkMergePoints
+class VTK_SMP_EXPORT vtkSMPMergePoints : public vtkMergePoints
 {
   vtkIdType* TreatedTable;
 
@@ -19,6 +19,7 @@ public:
   void PrintSelf(ostream &os, vtkIndent indent);
 
   int InitPointInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize);
+  void FixSizeOfPointArray();
 
   void Merge ( vtkSMPMergePoints* locator, vtkIdType idx, vtkPointData *outPd, vtkPointData *ptData, vtkIdList* idList );
   vtkIdType GetNumberOfIdInBucket ( vtkIdType idx );
