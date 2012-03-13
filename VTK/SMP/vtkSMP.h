@@ -66,6 +66,8 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT Parallel( const vtkFunctor* f, const vtkSMPCommand* callback, vtkSMPThreadID skipThreads = 1 );
 
+
+
   vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
 
 
@@ -158,6 +160,15 @@ namespace vtkSMP
       T* GetLocal( vtkSMPThreadID tid )
         {
         return this->ThreadLocalStorage[tid];
+        }
+
+      template<class Derived>
+      void FillDerivedThreadLocal ( vtkThreadLocal<Derived>* other )
+        {
+        for ( typename vtkstd::vector<T*>::size_type i = 0; i < ThreadLocalStorage.size(); ++i )
+          {
+          other->SetLocal( i, Derived::SafeDownCast(ThreadLocalStorage[i]) );
+          }
         }
 
     protected:

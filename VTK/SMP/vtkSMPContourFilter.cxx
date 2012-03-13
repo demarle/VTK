@@ -402,6 +402,9 @@ struct MyPointMerge : public vtkSMPCommand
 {
   typedef vtkSMPMergePoints *vtkSMPMergePointsPtr;
 
+  vtkSMPMergePoints* OutputLocator;
+  vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* SMPLocator;
+
   vtkTypeMacro(MyPointMerge,vtkSMPCommand);
   static MyPointMerge* New() { return new MyPointMerge; }
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -415,26 +418,20 @@ struct MyPointMerge : public vtkSMPCommand
     vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
 
     vtkSMPThreadID NumberOfThreads = vtkSMP::GetNumberOfThreads();
-    vtkSMPMergePointsPtr* Locators = new vtkSMPMergePointsPtr[NumberOfThreads];
-    for ( vtkSMPThreadID i = 0; i < NumberOfThreads; ++i )
-      Locators[i] = vtkSMPMergePoints::SafeDownCast(self->Locator->GetLocal(i) );
-
-    vtkSMPMergePoints* OutputLocator = Locators[0];
     vtkIdType NumberOfBuckets = OutputLocator->GetNumberOfBuckets();
 
     for ( vtkIdType i = 0; i < NumberOfBuckets; ++i )
       {
-      if ( Locators[tid]->GetNumberOfIdInBucket(i) )
+      if ( SMPLocator->GetLocal(tid)->GetNumberOfIdInBucket(i) )
         if ( OutputLocator->MustTreatBucket(i) )
-          for ( vtkSMPThreadID j = 1; j < vtkSMP::GetNumberOfThreads(); ++j )
-            OutputLocator->Merge( Locators[j], i, self->outputPd, self->outPd->GetLocal(j), self->Maps->GetLocal(j) );
+          for ( vtkSMPThreadID j = 1; j < NumberOfThreads; ++j )
+            OutputLocator->Merge( SMPLocator->GetLocal(j), i, self->outputPd, self->outPd->GetLocal(j), self->Maps->GetLocal(j) );
       }
-
-    delete [] Locators;
     }
 protected:
-  MyPointMerge() {}
-  ~MyPointMerge() {}
+  MyPointMerge() { SMPLocator = vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::New(); }
+  ~MyPointMerge() { SMPLocator->Delete(); }
+
 private:
   MyPointMerge(const MyPointMerge&);
   void operator =(const MyPointMerge&);
@@ -793,6 +790,8 @@ int vtkSMPContourFilter::RequestData(
       if ( parallelLocator )
         {
         MyPointMerge* ThePointMerge = MyPointMerge::New();
+        ThePointMerge->OutputLocator = parallelLocator;
+        my_contour->Locator->FillDerivedThreadLocal( ThePointMerge->SMPLocator );
         vtkSMP::Parallel( my_contour, ThePointMerge );
         ThePointMerge->Delete();
         MyCellMerge* TheCellMerge = MyCellMerge::New();
