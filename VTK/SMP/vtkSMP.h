@@ -10,6 +10,10 @@
 
 class vtkPoints;
 class vtkCommand;
+class vtkPointData;
+class vtkCellArray;
+class vtkCellData;
+class vtkSMPMergePoints;
 
 class VTK_SMP_EXPORT vtkFunctor : public vtkObject
 {
@@ -59,13 +63,6 @@ private:
 
 namespace vtkSMP
 {
-  // ForEach template : parallel loop over an iterator
-  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op );
-
-  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f );
-
-  void VTK_SMP_EXPORT Parallel( const vtkFunctor* f, const vtkSMPCommand* callback, vtkSMPThreadID skipThreads = 1 );
-
   vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
 
 
@@ -160,11 +157,43 @@ namespace vtkSMP
         return this->ThreadLocalStorage[tid];
         }
 
+      template<class Derived>
+      void FillDerivedThreadLocal ( vtkThreadLocal<Derived>* other )
+        {
+        for ( typename vtkstd::vector<T*>::size_type i = 0; i < ThreadLocalStorage.size(); ++i )
+          {
+          other->SetLocal( i, Derived::SafeDownCast(ThreadLocalStorage[i]) );
+          }
+        }
+
     protected:
       // the __thread c++Ox modifier cannot be used because this is not static
       // create an explicit map and use the thread id key instead.
       vtkstd::vector<T*> ThreadLocalStorage;
     };
+
+  // ForEach template : parallel loop over an iterator
+  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op );
+
+  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f );
+
+  void VTK_SMP_EXPORT Parallel( const vtkFunctor* f, const vtkSMPCommand* callback, vtkSMPThreadID skipThreads = 1 );
+
+  void VTK_SMP_EXPORT MergePoints( vtkPoints* outPoints, vtkThreadLocal<vtkPoints>* inPoints,
+                                   vtkPointData* outPtsData, vtkThreadLocal<vtkPointData>* inPtsData,
+                                   vtkCellArray* outVerts, vtkThreadLocal<vtkCellArray>* inVerts,
+                                   vtkCellArray* outLines, vtkThreadLocal<vtkCellArray>* inLines,
+                                   vtkCellArray* outPolys, vtkThreadLocal<vtkCellArray>* inPolys,
+                                   vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
+                                   vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData, int SkipThreads );
+
+  void VTK_SMP_EXPORT MergePoints( vtkSMPMergePoints* outPoints, vtkThreadLocal<vtkSMPMergePoints>* inPoints,
+                                   vtkPointData* outPtsData, vtkThreadLocal<vtkPointData>* inPtsData,
+                                   vtkCellArray* outVerts, vtkThreadLocal<vtkCellArray>* inVerts,
+                                   vtkCellArray* outLines, vtkThreadLocal<vtkCellArray>* inLines,
+                                   vtkCellArray* outPolys, vtkThreadLocal<vtkCellArray>* inPolys,
+                                   vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
+                                   vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData, int SkipThreads );
 
 }
 

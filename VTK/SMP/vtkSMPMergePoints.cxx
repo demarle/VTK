@@ -8,26 +8,27 @@
 vtkStandardNewMacro(vtkSMPMergePoints)
 
 vtkSMPMergePoints::vtkSMPMergePoints() : vtkMergePoints(), TreatedTable( 0 )
-{
-}
+  {
+  }
 
 vtkSMPMergePoints::~vtkSMPMergePoints()
-{
-}
+  {
+  }
 
 void vtkSMPMergePoints::PrintSelf(ostream &os, vtkIndent indent)
-{
+  {
   this->Superclass::PrintSelf(os, indent);
-}
+  }
 
 int vtkSMPMergePoints::InitPointInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize)
-{
+  {
   if ( !this->Superclass::InitPointInsertion(newPts, bounds, estSize) )
     return 0;
   this->TreatedTable = new vtkIdType[this->NumberOfBuckets];
   memset( this->TreatedTable, 0, this->NumberOfBuckets * sizeof(vtkIdType) );
+  this->InsertionPointId = newPts->GetNumberOfPoints();
   return 1;
-}
+  }
 
 void vtkSMPMergePoints::FixSizeOfPointArray()
   {
@@ -140,7 +141,7 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
   }
 
 void vtkSMPMergePoints::FreeSearchStructure()
-{
+  {
   this->Superclass::FreeSearchStructure();
   vtkIdList *ptIds;
   vtkIdType i;
@@ -159,7 +160,7 @@ void vtkSMPMergePoints::FreeSearchStructure()
     this->TreatedTable = NULL;
     this->HashTable = NULL;
     }
-}
+  }
 
 vtkIdType vtkSMPMergePoints::GetNumberOfBuckets()
   {
