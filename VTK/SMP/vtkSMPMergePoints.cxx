@@ -26,6 +26,7 @@ int vtkSMPMergePoints::InitPointInsertion(vtkPoints *newPts, const double bounds
     return 0;
   this->TreatedTable = new vtkIdType[this->NumberOfBuckets];
   memset( this->TreatedTable, 0, this->NumberOfBuckets * sizeof(vtkIdType) );
+  this->InsertionPointId = newPts->GetNumberOfPoints();
   return 1;
   }
 
