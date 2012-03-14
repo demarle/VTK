@@ -39,6 +39,7 @@ int main( int argc, char** argv )
     cout << argv[1] << " is not a regular file" << endl;
     return 1;
   }
+
   int parallel = argc == 2 ? 48 : atoi(argv[2]);
 
   /* === Reading 3D model === */
