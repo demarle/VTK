@@ -4,15 +4,19 @@
 #include "vtkObjectFactory.h"
 #include "vtkFloatArray.h"
 #include "vtkPointData.h"
+#include "vtkMutexLock.h"
 
 vtkStandardNewMacro(vtkSMPMergePoints)
 
-vtkSMPMergePoints::vtkSMPMergePoints() : vtkMergePoints(), TreatedTable( 0 )
+vtkSMPMergePoints::vtkSMPMergePoints() : vtkMergePoints(), LockTable( 0 )
   {
+  this->CreatorLock = 0;
   }
 
 vtkSMPMergePoints::~vtkSMPMergePoints()
   {
+  if ( this->CreatorLock )
+    this->CreatorLock->Delete();
   }
 
 void vtkSMPMergePoints::PrintSelf(ostream &os, vtkIndent indent)
@@ -20,13 +24,14 @@ void vtkSMPMergePoints::PrintSelf(ostream &os, vtkIndent indent)
   this->Superclass::PrintSelf(os, indent);
   }
 
-int vtkSMPMergePoints::InitPointInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize)
+int vtkSMPMergePoints::InitLockInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize)
   {
-  if ( !this->Superclass::InitPointInsertion(newPts, bounds, estSize) )
+  if ( !this->InitPointInsertion(newPts, bounds, estSize) )
     return 0;
-  this->TreatedTable = new vtkIdType[this->NumberOfBuckets];
-  memset( this->TreatedTable, 0, this->NumberOfBuckets * sizeof(vtkIdType) );
+  this->LockTable = new vtkMutexLockPtr[this->NumberOfBuckets];
+  memset( this->LockTable, 0, this->NumberOfBuckets * sizeof(vtkMutexLockPtr) );
   this->InsertionPointId = newPts->GetNumberOfPoints();
+  if ( !this->CreatorLock ) this->CreatorLock = vtkMutexLock::New();
   return 1;
   }
 
@@ -144,9 +149,10 @@ void vtkSMPMergePoints::FreeSearchStructure()
   {
   this->Superclass::FreeSearchStructure();
   vtkIdList *ptIds;
+  vtkMutexLock *lock;
   vtkIdType i;
 
-  if ( this->HashTable ) // So this->LockTable also exist
+  if ( this->HashTable )
     {
     for (i=0; i<this->NumberOfBuckets; i++)
       {
@@ -154,10 +160,14 @@ void vtkSMPMergePoints::FreeSearchStructure()
         {
         ptIds->Delete();
         }
+      if ( this->LockTable && (lock = this->LockTable[i]) )
+        {
+        lock->Delete();
+        }
       }
     delete [] this->HashTable;
-    delete [] this->TreatedTable;
-    this->TreatedTable = NULL;
+    if ( this->LockTable ) delete [] this->LockTable;
+    this->LockTable = NULL;
     this->HashTable = NULL;
     }
   }
@@ -172,10 +182,4 @@ vtkIdType vtkSMPMergePoints::GetNumberOfIdInBucket( vtkIdType idx )
   if ( !this->HashTable ) return 0;
   vtkIdList* bucket = this->HashTable[idx];
   return bucket ? bucket->GetNumberOfIds() : 0;
-  }
-
-int vtkSMPMergePoints::MustTreatBucket( vtkIdType idx )
-  {
-  if ( !this->TreatedTable ) return 0;
-  return !__sync_fetch_and_add(&(this->TreatedTable[idx]), 1);
   }

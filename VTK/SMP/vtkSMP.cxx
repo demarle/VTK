@@ -190,30 +190,24 @@ public:
 
   vtkIdType GetNumberOfCells() const { return NumberOfCells; }
 
-  void CreateLocator( vtkPoints* OutputPoints )
-    {
-    outputLocator = vtkSMPMergePoints::New();
-    double bounds[6];
-    OutputPoints->GetBounds( bounds );
-    outputLocator->InitPointInsertion( OutputPoints, bounds, OutputPoints->GetNumberOfPoints() );
-    }
-
-  void InitializeSMPNeeds( vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* _locator,
-                           vtkSMPMergePoints* _outlocator,
-                           vtkSMP::vtkThreadLocal<vtkCellArray>* _inverts,
-                           vtkCellArray* _outverts,
-                           vtkSMP::vtkThreadLocal<vtkCellArray>* _inlines,
-                           vtkCellArray* _outlines,
-                           vtkSMP::vtkThreadLocal<vtkCellArray>* _inpolys,
-                           vtkCellArray* _outpolys,
-                           vtkSMP::vtkThreadLocal<vtkCellArray>* _instrips,
-                           vtkCellArray* _outstrips,
-                           vtkSMP::vtkThreadLocal<vtkPointData>* _inpd,
-                           vtkPointData* _outpd,
-                           vtkSMP::vtkThreadLocal<vtkCellData>* _incd,
-                           vtkCellData* _outcd )
+  void InitializeNeeds( vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* _locator,
+                        vtkSMP::vtkThreadLocal<vtkPoints>* _points,
+                        vtkSMPMergePoints* _outlocator,
+                        vtkSMP::vtkThreadLocal<vtkCellArray>* _inverts,
+                        vtkCellArray* _outverts,
+                        vtkSMP::vtkThreadLocal<vtkCellArray>* _inlines,
+                        vtkCellArray* _outlines,
+                        vtkSMP::vtkThreadLocal<vtkCellArray>* _inpolys,
+                        vtkCellArray* _outpolys,
+                        vtkSMP::vtkThreadLocal<vtkCellArray>* _instrips,
+                        vtkCellArray* _outstrips,
+                        vtkSMP::vtkThreadLocal<vtkPointData>* _inpd,
+                        vtkPointData* _outpd,
+                        vtkSMP::vtkThreadLocal<vtkCellData>* _incd,
+                        vtkCellData* _outcd )
     {
     Locators = _locator;
+    InPoints = _points;
     outputLocator = _outlocator;
 
     InVerts = _inverts;
@@ -240,69 +234,7 @@ public:
       if ( this->InPolys ) polyOffset->ManageValues( tid, this->InPolys->GetLocal( tid ) );
       if ( this->InStrips ) stripOffset->ManageValues( tid, this->InStrips->GetLocal( tid ) );
 
-      vtkIdType n = this->Locators->GetLocal( tid )->GetPoints()->GetNumberOfPoints();
-      vtkIdList* map = this->Maps->NewLocal( tid );
-      map->Allocate( n );
-      NumberOfPoints += n;
-      }
-
-    NumberOfCells = vertOffset->GetNumberOfCells() +
-        lineOffset->GetNumberOfCells() +
-        polyOffset->GetNumberOfCells() +
-        stripOffset->GetNumberOfCells();
-
-    if ( this->outputVerts ) this->outputVerts->GetData()->Resize( vertOffset->GetNumberOfTuples() );
-    if ( this->outputLines ) this->outputLines->GetData()->Resize( lineOffset->GetNumberOfTuples() );
-    if ( this->outputPolys ) this->outputPolys->GetData()->Resize( polyOffset->GetNumberOfTuples() );
-    if ( this->outputStrips ) this->outputStrips->GetData()->Resize( stripOffset->GetNumberOfTuples() );
-    // Copy on itself means resize
-    this->outputPd->CopyAllocate( this->outputPd, NumberOfPoints, NumberOfPoints );
-    this->outputCd->CopyAllocate( this->outputCd, NumberOfCells, NumberOfCells );
-    outputLocator->GetPoints()->GetData()->Resize( NumberOfPoints );
-    outputLocator->GetPoints()->SetNumberOfPoints( NumberOfPoints );
-    }
-
-  void InitializeNeeds( vtkSMP::vtkThreadLocal<vtkPoints>* _inpts,
-                        vtkSMP::vtkThreadLocal<vtkCellArray>* _inverts,
-                        vtkCellArray* _outverts,
-                        vtkSMP::vtkThreadLocal<vtkCellArray>* _inlines,
-                        vtkCellArray* _outlines,
-                        vtkSMP::vtkThreadLocal<vtkCellArray>* _inpolys,
-                        vtkCellArray* _outpolys,
-                        vtkSMP::vtkThreadLocal<vtkCellArray>* _instrips,
-                        vtkCellArray* _outstrips,
-                        vtkSMP::vtkThreadLocal<vtkPointData>* _inpd,
-                        vtkPointData* _outpd,
-                        vtkSMP::vtkThreadLocal<vtkCellData>* _incd,
-                        vtkCellData* _outcd )
-    {
-    InPoints = _inpts;
-
-    InVerts = _inverts;
-    outputVerts = _outverts;
-    InLines = _inlines;
-    outputLines = _outlines;
-    InPolys = _inpolys;
-    outputPolys = _outpolys;
-    InStrips = _instrips;
-    outputStrips = _outstrips;
-
-    InPd = _inpd;
-    outputPd = _outpd;
-
-    InCd = _incd;
-    outputCd = _outcd;
-
-    vtkIdType NumberOfPoints = 0;
-    vtkSMPThreadID max = vtkSMP::GetNumberOfThreads();
-    for ( vtkSMPThreadID tid = 0; tid < max; ++tid )
-      {
-      if ( this->InVerts ) vertOffset->ManageValues( tid, this->InVerts->GetLocal( tid ) );
-      if ( this->InLines ) lineOffset->ManageValues( tid, this->InLines->GetLocal( tid ) );
-      if ( this->InPolys ) polyOffset->ManageValues( tid, this->InPolys->GetLocal( tid ) );
-      if ( this->InStrips ) stripOffset->ManageValues( tid, this->InStrips->GetLocal( tid ) );
-
-      vtkIdType n = this->InPoints->GetLocal( tid )->GetNumberOfPoints();
+      vtkIdType n = (_points ? this->InPoints->GetLocal( tid ) : this->Locators->GetLocal( tid )->GetPoints())->GetNumberOfPoints();
       vtkIdList* map = this->Maps->NewLocal( tid );
       map->Allocate( n );
       NumberOfPoints += n;
@@ -416,6 +348,15 @@ public:
 
 vtkStandardNewMacro(DummyMergeFunctor);
 
+typedef vtkIdType *vtkIdTypePtr;
+vtkIdType** TreatedTable = 0;
+
+int MustTreatBucket( vtkIdType idx )
+  {
+  if ( !TreatedTable ) return 0;
+  return !__sync_fetch_and_add(&(TreatedTable[idx]), 1);
+  }
+
 struct ParallelPointMerger : public vtkSMPCommand
 {
   vtkTypeMacro(ParallelPointMerger,vtkSMPCommand);
@@ -436,7 +377,7 @@ struct ParallelPointMerger : public vtkSMPCommand
     for ( vtkIdType i = 0; i < NumberOfBuckets; ++i )
       {
       if ( self->Locators->GetLocal(tid)->GetNumberOfIdInBucket(i) )
-        if ( self->outputLocator->MustTreatBucket(i) )
+        if ( MustTreatBucket(i) )
           for ( vtkSMPThreadID j = 1; j < NumberOfThreads; ++j )
             self->outputLocator->Merge( self->Locators->GetLocal(j), i, self->outputPd, self->InPd->GetLocal(j), self->Maps->GetLocal(j) );
       }
@@ -517,8 +458,11 @@ namespace vtkSMP
 {
   void MergePoints(vtkSMPMergePoints *outPoints, vtkThreadLocal<vtkSMPMergePoints> *inPoints, vtkPointData *outPtsData, vtkThreadLocal<vtkPointData> *inPtsData, vtkCellArray *outVerts, vtkThreadLocal<vtkCellArray> *inVerts, vtkCellArray *outLines, vtkThreadLocal<vtkCellArray> *inLines, vtkCellArray *outPolys, vtkThreadLocal<vtkCellArray> *inPolys, vtkCellArray *outStrips, vtkThreadLocal<vtkCellArray> *inStrips, vtkCellData *outCellsData, vtkThreadLocal<vtkCellData> *inCellsData, int SkipThreads)
     {
+    TreatedTable = new vtkIdTypePtr[outPoints->GetNumberOfBuckets()];
+    memset( TreatedTable, 0, outPoints->GetNumberOfBuckets() * sizeof(vtkIdTypePtr) );
+
     DummyMergeFunctor* DummyFunctor = DummyMergeFunctor::New();
-    DummyFunctor->InitializeSMPNeeds( inPoints, outPoints, inVerts, outVerts, inLines, outLines, inPolys, outPolys, inStrips, outStrips, inPtsData, outPtsData, inCellsData, outCellsData );
+    DummyFunctor->InitializeNeeds( inPoints, 0, outPoints, inVerts, outVerts, inLines, outLines, inPolys, outPolys, inStrips, outStrips, inPtsData, outPtsData, inCellsData, outCellsData );
 
     ParallelPointMerger* TheMerge = ParallelPointMerger::New();
     Parallel( DummyFunctor, TheMerge, SkipThreads );
@@ -536,18 +480,25 @@ namespace vtkSMP
     if (outLines) outLines->SetNumberOfCells( DummyFunctor->lineOffset->GetNumberOfCells() );
     if (outPolys) outPolys->SetNumberOfCells( DummyFunctor->polyOffset->GetNumberOfCells() );
     if (outStrips) outStrips->SetNumberOfCells( DummyFunctor->stripOffset->GetNumberOfCells() );
+
+    delete [] TreatedTable;
+    TreatedTable = 0;
     DummyFunctor->Delete();
     }
 
   void MergePoints(vtkPoints *outPoints, vtkThreadLocal<vtkPoints> *inPoints, vtkPointData *outPtsData, vtkThreadLocal<vtkPointData> *inPtsData, vtkCellArray *outVerts, vtkThreadLocal<vtkCellArray> *inVerts, vtkCellArray *outLines, vtkThreadLocal<vtkCellArray> *inLines, vtkCellArray *outPolys, vtkThreadLocal<vtkCellArray> *inPolys, vtkCellArray *outStrips, vtkThreadLocal<vtkCellArray> *inStrips, vtkCellData *outCellsData, vtkThreadLocal<vtkCellData> *inCellsData, int SkipThreads)
     {
     DummyMergeFunctor* Functor = DummyMergeFunctor::New();
-    Functor->CreateLocator( outPoints );
+    vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::New();
+    double bounds[6];
+    inPoints->GetLocal(0)->GetBounds( bounds );
+    outputLocator->InitLockInsertion( outPoints, bounds, inPoints->GetLocal(0)->GetNumberOfPoints() );
+    Functor->outputLocator = outputLocator;
 
     vtkIdType PointsAlreadyPresent = outPoints->GetNumberOfPoints();
     if ( PointsAlreadyPresent ) ForEach( 0, PointsAlreadyPresent, Functor );
 
-    Functor->InitializeNeeds( inPoints, inVerts, outVerts, inLines, outLines, inPolys, outPolys, inStrips, outStrips, inPtsData, outPtsData, inCellsData, outCellsData );
+    Functor->InitializeNeeds( 0, inPoints, outputLocator, inVerts, outVerts, inLines, outLines, inPolys, outPolys, inStrips, outStrips, inPtsData, outPtsData, inCellsData, outCellsData );
     Merger* TheMerge = Merger::New();
     Parallel( Functor, TheMerge, SkipThreads );
     TheMerge->Delete();
@@ -560,6 +511,8 @@ namespace vtkSMP
     if (outLines) outLines->SetNumberOfCells( Functor->lineOffset->GetNumberOfCells() );
     if (outPolys) outPolys->SetNumberOfCells( Functor->polyOffset->GetNumberOfCells() );
     if (outStrips) outStrips->SetNumberOfCells( Functor->stripOffset->GetNumberOfCells() );
+
+    outputLocator->Delete();
     Functor->Delete();
     }
 }
