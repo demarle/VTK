@@ -432,7 +432,7 @@ struct Merger : public vtkSMPCommand
     vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
 
     vtkPointData* ptData = self->InPd->GetLocal( tid );
-    vtkPoints* Points = self->Locators->GetLocal( tid )->GetPoints();
+    vtkPoints* Points = self->InPoints->GetLocal( tid );
     vtkIdType newId, NumberOfPoints = Points->GetNumberOfPoints();
     vtkIdList* map = self->Maps->GetLocal( tid );
     double pt[3];

@@ -118,7 +118,7 @@ int main( int argc, char** argv )
 #ifdef VTK_CAN_USE_SMP
   vtkContourFilter* isosurface = parallel != 1 ? vtkSMPContourFilter::New() : vtkContourFilter::New();
   vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
-  isosurface->SetLocator( locator );
+//  isosurface->SetLocator( locator );
   locator->Delete();
 #else
   vtkContourFilter* isosurface = vtkContourFilter::New();
