@@ -486,12 +486,10 @@ namespace vtkSMP
     DummyFunctor->Delete();
     }
 
-  void MergePoints(vtkPoints *outPoints, vtkThreadLocal<vtkPoints> *inPoints, vtkPointData *outPtsData, vtkThreadLocal<vtkPointData> *inPtsData, vtkCellArray *outVerts, vtkThreadLocal<vtkCellArray> *inVerts, vtkCellArray *outLines, vtkThreadLocal<vtkCellArray> *inLines, vtkCellArray *outPolys, vtkThreadLocal<vtkCellArray> *inPolys, vtkCellArray *outStrips, vtkThreadLocal<vtkCellArray> *inStrips, vtkCellData *outCellsData, vtkThreadLocal<vtkCellData> *inCellsData, int SkipThreads)
+  void MergePoints(vtkPoints *outPoints, vtkThreadLocal<vtkPoints> *inPoints, const double bounds[6], vtkPointData *outPtsData, vtkThreadLocal<vtkPointData> *inPtsData, vtkCellArray *outVerts, vtkThreadLocal<vtkCellArray> *inVerts, vtkCellArray *outLines, vtkThreadLocal<vtkCellArray> *inLines, vtkCellArray *outPolys, vtkThreadLocal<vtkCellArray> *inPolys, vtkCellArray *outStrips, vtkThreadLocal<vtkCellArray> *inStrips, vtkCellData *outCellsData, vtkThreadLocal<vtkCellData> *inCellsData, int SkipThreads)
     {
     DummyMergeFunctor* Functor = DummyMergeFunctor::New();
     vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::New();
-    double bounds[6];
-    inPoints->GetLocal(0)->GetBounds( bounds );
     outputLocator->InitLockInsertion( outPoints, bounds, inPoints->GetLocal(0)->GetNumberOfPoints() );
     Functor->outputLocator = outputLocator;
 

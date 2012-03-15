@@ -24,7 +24,7 @@ void vtkSMPMergePoints::PrintSelf(ostream &os, vtkIndent indent)
   this->Superclass::PrintSelf(os, indent);
   }
 
-int vtkSMPMergePoints::InitLockInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize)
+int vtkSMPMergePoints::InitLockInsertion(vtkPoints *newPts, const double bounds[6], vtkIdType estSize)
   {
   if ( !this->InitPointInsertion(newPts, bounds, estSize) )
     return 0;
@@ -184,30 +184,32 @@ vtkIdType vtkSMPMergePoints::GetNumberOfIdInBucket( vtkIdType idx )
   return bucket ? bucket->GetNumberOfIds() : 0;
   }
 
-void vtkSMPMergePoints::AddPointIdInBucket(vtkIdType ptId)
+vtkIdType vtkSMPMergePoints::LocateBucketThatPointIsIn(double x, double y, double z)
   {
-  vtkIdType ijk0, ijk1, ijk2, idx;
-  double x[3];
-  this->Points->GetPoint( ptId, x );
+  vtkIdType ijk0, ijk1, ijk2;
 
-  //
-  //  Locate bucket that point is in.
-  //
   ijk0 = static_cast<vtkIdType>(
-    static_cast<double> ((x[0] - this->Bounds[0]) /
+    static_cast<double> ((x - this->Bounds[0]) /
                          (this->Bounds[1] - this->Bounds[0]))
     * (this->Divisions[0] - 1));
   ijk1 = static_cast<vtkIdType>(
-    static_cast<double> ((x[1] - this->Bounds[2]) /
+    static_cast<double> ((y - this->Bounds[2]) /
                          (this->Bounds[3] - this->Bounds[2]))
     * (this->Divisions[1] - 1));
   ijk2 = static_cast<vtkIdType>(
-    static_cast<double> ((x[2] - this->Bounds[4]) /
+    static_cast<double> ((z - this->Bounds[4]) /
                          (this->Bounds[5] - this->Bounds[4]))
     * (this->Divisions[2] - 1));
 
-  idx = ijk0 + ijk1*this->Divisions[0] +
-        ijk2*this->Divisions[0]*this->Divisions[1];
+  return ijk0 + ijk1*this->Divisions[0] + ijk2*this->Divisions[0]*this->Divisions[1];
+  }
+
+void vtkSMPMergePoints::AddPointIdInBucket(vtkIdType ptId)
+  {
+  double x[3];
+  this->Points->GetPoint( ptId, x );
+
+  vtkIdType idx = LocateBucketThatPointIsIn( x[0], x[1], x[2] );
 
   vtkIdList* bucket;
   vtkMutexLock* lock;
@@ -236,31 +238,12 @@ void vtkSMPMergePoints::AddPointIdInBucket(vtkIdType ptId)
 
 int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
   {
-  vtkIdType i, ijk0, ijk1, ijk2;
-  vtkIdType idx;
   vtkIdList *bucket;
   vtkMutexLock* lock;
 
-  //
-  //  Locate bucket that point is in.
-  //
-  ijk0 = static_cast<vtkIdType>(
-    static_cast<double> ((x[0] - this->Bounds[0]) /
-                         (this->Bounds[1] - this->Bounds[0]))
-    * (this->Divisions[0] - 1));
-  ijk1 = static_cast<vtkIdType>(
-    static_cast<double> ((x[1] - this->Bounds[2]) /
-                         (this->Bounds[3] - this->Bounds[2]))
-    * (this->Divisions[1] - 1));
-  ijk2 = static_cast<vtkIdType>(
-    static_cast<double> ((x[2] - this->Bounds[4]) /
-                         (this->Bounds[5] - this->Bounds[4]))
-    * (this->Divisions[2] - 1));
+  vtkIdType i, idx = LocateBucketThatPointIsIn( x[0], x[1], x[2] );
 
-  idx = ijk0 + ijk1*this->Divisions[0] +
-        ijk2*this->Divisions[0]*this->Divisions[1];
-
-  if ( !(bucket = this->HashTable[idx]) ) // see whether we've got duplicate point
+  if ( !(bucket = this->HashTable[idx]) )
     {
     this->CreatorLock->Lock();
     if ( !(lock = this->LockTable[idx]) )
@@ -275,7 +258,7 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
     bucket = this->HashTable[idx];
     lock->Lock();
     }
-  else
+  else  // see whether we've got duplicate point
     {
     lock = this->LockTable[idx];
     lock->Lock();

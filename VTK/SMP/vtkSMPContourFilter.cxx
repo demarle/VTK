@@ -526,7 +526,7 @@ int vtkSMPContourFilter::RequestData(
         }
       else
         {
-        vtkSMP::MergePoints( newPts, my_contour->newPts,
+        vtkSMP::MergePoints( newPts, my_contour->newPts, input->GetBounds(),
                              outPd, my_contour->outPd,
                              newVerts, my_contour->newVerts,
                              newLines, my_contour->newLines,

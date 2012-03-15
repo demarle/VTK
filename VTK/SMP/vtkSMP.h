@@ -179,7 +179,7 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT Parallel( const vtkFunctor* f, const vtkSMPCommand* callback, vtkSMPThreadID skipThreads = 1 );
 
-  void VTK_SMP_EXPORT MergePoints( vtkPoints* outPoints, vtkThreadLocal<vtkPoints>* inPoints,
+  void VTK_SMP_EXPORT MergePoints( vtkPoints* outPoints, vtkThreadLocal<vtkPoints>* inPoints, const double bounds[6],
                                    vtkPointData* outPtsData, vtkThreadLocal<vtkPointData>* inPtsData,
                                    vtkCellArray* outVerts, vtkThreadLocal<vtkCellArray>* inVerts,
                                    vtkCellArray* outLines, vtkThreadLocal<vtkCellArray>* inLines,

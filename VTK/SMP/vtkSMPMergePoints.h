@@ -22,13 +22,14 @@ public:
   void PrintSelf(ostream &os, vtkIndent indent);
 
   // Replace InitPointInsertion for
-  int InitLockInsertion(vtkPoints *newPts, const double bounds[], vtkIdType estSize);
+  int InitLockInsertion(vtkPoints *newPts, const double bounds[6], vtkIdType estSize);
   void AddPointIdInBucket( vtkIdType ptId );
   int SetUniquePoint( const double x[3], vtkIdType& id );
 
   void Merge ( vtkSMPMergePoints* locator, vtkIdType idx, vtkPointData *outPd, vtkPointData *ptData, vtkIdList* idList );
 
   void FixSizeOfPointArray();
+  virtual vtkIdType LocateBucketThatPointIsIn ( double x, double y, double z );
   vtkIdType GetNumberOfIdInBucket ( vtkIdType idx );
   vtkIdType GetNumberOfBuckets();
 
