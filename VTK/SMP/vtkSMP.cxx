@@ -8,6 +8,8 @@
 #include "vtkCellData.h"
 #include "vtkCellArray.h"
 
+#include "vtkBenchTimer.h"
+
 //--------------------------------------------------------------------------------
 vtkFunctor::vtkFunctor() { }
 
@@ -488,6 +490,8 @@ namespace vtkSMP
 
   void MergePoints(vtkPoints *outPoints, vtkThreadLocal<vtkPoints> *inPoints, const double bounds[6], vtkPointData *outPtsData, vtkThreadLocal<vtkPointData> *inPtsData, vtkCellArray *outVerts, vtkThreadLocal<vtkCellArray> *inVerts, vtkCellArray *outLines, vtkThreadLocal<vtkCellArray> *inLines, vtkCellArray *outPolys, vtkThreadLocal<vtkCellArray> *inPolys, vtkCellArray *outStrips, vtkThreadLocal<vtkCellArray> *inStrips, vtkCellData *outCellsData, vtkThreadLocal<vtkCellData> *inCellsData, int SkipThreads)
     {
+    vtkBenchTimer* timer = vtkBenchTimer::New();
+    timer->start_bench_timer();
     DummyMergeFunctor* Functor = DummyMergeFunctor::New();
     vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::New();
     outputLocator->InitLockInsertion( outPoints, bounds, inPoints->GetLocal(0)->GetNumberOfPoints() );
@@ -496,10 +500,14 @@ namespace vtkSMP
     vtkIdType PointsAlreadyPresent = outPoints->GetNumberOfPoints();
     if ( PointsAlreadyPresent ) ForEach( 0, PointsAlreadyPresent, Functor );
 
+    timer->end_bench_timer();
+
+    timer->start_bench_timer();
     Functor->InitializeNeeds( 0, inPoints, outputLocator, inVerts, outVerts, inLines, outLines, inPolys, outPolys, inStrips, outStrips, inPtsData, outPtsData, inCellsData, outCellsData );
     Merger* TheMerge = Merger::New();
     Parallel( Functor, TheMerge, SkipThreads );
     TheMerge->Delete();
+    timer->end_bench_timer();
 
     // Correcting size of arrays
     Functor->outputLocator->FixSizeOfPointArray();
