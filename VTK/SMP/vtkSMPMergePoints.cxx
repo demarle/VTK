@@ -238,78 +238,81 @@ void vtkSMPMergePoints::AddPointIdInBucket(vtkIdType ptId)
 
 int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
   {
-  vtkIdList *bucket;
-  vtkMutexLock* lock;
-
   vtkIdType i, idx = LocateBucketThatPointIsIn( x[0], x[1], x[2] );
+  vtkIdList *bucket;
 
-  if ( !(bucket = this->HashTable[idx]) )
+  vtkMutexLock* lock = this->LockTable[idx];
+  if ( !lock )
     {
-    this->CreatorLock->Lock();
-    if ( !(lock = this->LockTable[idx]) )
+    CreatorLock->Lock();
+    if ( !(lock = this->LockTable[idx]) ) // If no other thread created it before
       {
-      // create a bucket point list and insert the point
-      this->LockTable[idx] = lock = vtkMutexLock::New();
-      bucket = vtkIdList::New();
+      lock = vtkMutexLock::New();
+      lock->Lock();
+      this->LockTable[idx] = lock;
+      this->HashTable[idx] = bucket = vtkIdList::New();
       bucket->Allocate(this->NumberOfPointsPerBucket/2, this->NumberOfPointsPerBucket/3);
-      this->HashTable[idx] = bucket;
-      }
-    this->CreatorLock->Unlock();
-    bucket = this->HashTable[idx];
-    lock->Lock();
-    }
-  else  // see whether we've got duplicate point
-    {
-    lock = this->LockTable[idx];
-    lock->Lock();
-    //
-    // Check the list of points in that bucket.
-    //
-    vtkIdType ptId;
-    int nbOfIds = bucket->GetNumberOfIds ();
-
-    // For efficiency reasons, we break the data abstraction for points
-    // and ids (we are assuming vtkPoints stores a vtkIdList
-    // is storing ints).
-    vtkDataArray *dataArray = this->Points->GetData();
-    vtkIdType *idArray = bucket->GetPointer(0);
-
-    if (dataArray->GetDataType() == VTK_FLOAT)
-      {
-      float f[3];
-      f[0] = static_cast<float>(x[0]);
-      f[1] = static_cast<float>(x[1]);
-      f[2] = static_cast<float>(x[2]);
-      vtkFloatArray *floatArray = static_cast<vtkFloatArray *>(dataArray);
-      float *pt;
-      for (i=0; i < nbOfIds; i++)
-        {
-        ptId = idArray[i];
-        pt = floatArray->GetPointer(0) + 3*ptId;
-        if ( f[0] == pt[0] && f[1] == pt[1] && f[2] == pt[2] )
-          {
-          // point is already in the list, return 0 and set the id parameter
-          id = ptId;
-          lock->Unlock();
-          return 0;
-          }
-        }
       }
     else
       {
-      // Using the double interface
-      double *pt;
-      for (i=0; i < nbOfIds; i++)
+      lock->Lock();
+      bucket = this->HashTable[idx];
+      }
+    CreatorLock->Unlock();
+    }
+  else
+    {
+    lock->Lock();
+    bucket = this->HashTable[idx];
+    }
+
+  //
+  // Check the list of points in that bucket.
+  //
+  vtkIdType ptId;
+  int nbOfIds = bucket->GetNumberOfIds ();
+
+  // For efficiency reasons, we break the data abstraction for points
+  // and ids (we are assuming vtkPoints stores a vtkIdList
+  // is storing ints).
+  vtkDataArray *dataArray = this->Points->GetData();
+  vtkIdType *idArray = bucket->GetPointer(0);
+
+  if (dataArray->GetDataType() == VTK_FLOAT)
+    {
+    float f[3];
+    f[0] = static_cast<float>(x[0]);
+    f[1] = static_cast<float>(x[1]);
+    f[2] = static_cast<float>(x[2]);
+    vtkFloatArray *floatArray = static_cast<vtkFloatArray *>(dataArray);
+    float *pt;
+    for (i=0; i < nbOfIds; i++)
+      {
+      ptId = idArray[i];
+      pt = floatArray->GetPointer(0) + 3*ptId;
+      if ( f[0] == pt[0] && f[1] == pt[1] && f[2] == pt[2] )
         {
-        ptId = idArray[i];
-        pt = dataArray->GetTuple(ptId);
-        if ( x[0] == pt[0] && x[1] == pt[1] && x[2] == pt[2] )
-          {
-          // point is already in the list, return 0 and set the id parameter
-          id = ptId;
-          lock->Unlock();
-          return 0;
-          }
+        // point is already in the list, return 0 and set the id parameter
+        id = ptId;
+        lock->Unlock();
+        return 0;
+        }
+      }
+    }
+  else
+    {
+    // Using the double interface
+    double *pt;
+    for (i=0; i < nbOfIds; i++)
+      {
+      ptId = idArray[i];
+      pt = dataArray->GetTuple(ptId);
+      if ( x[0] == pt[0] && x[1] == pt[1] && x[2] == pt[2] )
+        {
+        // point is already in the list, return 0 and set the id parameter
+        id = ptId;
+        lock->Unlock();
+        return 0;
         }
       }
     }
