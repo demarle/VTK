@@ -437,11 +437,10 @@ struct Merger : public vtkSMPCommand
     vtkPoints* Points = self->InPoints->GetLocal( tid );
     vtkIdType newId, NumberOfPoints = Points->GetNumberOfPoints();
     vtkIdList* map = self->Maps->GetLocal( tid );
-    double pt[3];
 
     for ( vtkIdType i = 0; i < NumberOfPoints; ++i )
       {
-      Points->GetPoint( i, pt );
+      double *pt = Points->GetPoint( i );
       if ( self->outputLocator->SetUniquePoint( pt, newId ) ) self->outputPd->SetTuple( newId, i, ptData );
       map->SetId( i, newId );
       }
