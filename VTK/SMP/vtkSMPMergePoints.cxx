@@ -259,7 +259,7 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
   //
   // Check the list of points in that bucket.
   //
-  vtkIdType ptId;
+  vtkIdType ptId, maxId = this->Points->GetNumberOfPoints();
   int nbOfIds = bucket->GetNumberOfIds();
 
   // For efficiency reasons, we break the data abstraction for points
@@ -280,6 +280,7 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
     for (i=0; i < nbOfIds; ++i)
       {
       ptId = idArray[i];
+      if ( ptId > maxId ) break;
       pt = floatArray->GetPointer(0) + 3*ptId;
       if ( f[0] == pt[0] && f[1] == pt[1] && f[2] == pt[2] )
         {
@@ -294,7 +295,8 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
     if ( bucket->GetNumberOfIds() != nbOfIds )
       {
       // Check again
-      for ( i = nbOfIds; i < bucket->GetNumberOfIds(); ++i)
+      idArray = bucket->GetPointer(0);
+      for ( ; i < bucket->GetNumberOfIds(); ++i)
         {
         ptId = idArray[i];
         pt = floatArray->GetPointer(0) + 3*ptId;
@@ -302,6 +304,7 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
           {
           // point is already in the list, return 0 and set the id parameter
           id = ptId;
+          lock->Unlock();
           return 0;
           }
         }
@@ -317,6 +320,7 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
     for (i=0; i < nbOfIds; ++i)
       {
       ptId = idArray[i];
+      if ( ptId > maxId ) break;
       pt = dataArray->GetTuple(ptId);
       if ( x[0] == pt[0] && x[1] == pt[1] && x[2] == pt[2] )
         {
@@ -331,7 +335,8 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
     if ( bucket->GetNumberOfIds() != nbOfIds )
       {
       // Check again
-      for ( i = nbOfIds; i < bucket->GetNumberOfIds(); ++i )
+      idArray = bucket->GetPointer(0);
+      for ( ; i < bucket->GetNumberOfIds(); ++i )
         {
         ptId = idArray[i];
         pt = dataArray->GetTuple(ptId);
@@ -339,6 +344,7 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
           {
           // point is already in the list, return 0 and set the id parameter
           id = ptId;
+          lock->Unlock();
           return 0;
           }
         }
