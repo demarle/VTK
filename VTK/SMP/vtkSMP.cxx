@@ -445,7 +445,7 @@ struct Merger : public vtkSMPCommand
       map->SetId( i, newId );
       }
 
-    self->CellsMerge( tid );
+//    self->CellsMerge( tid );
     }
 protected:
   Merger() {}
@@ -453,6 +453,42 @@ protected:
 private:
   Merger(const Merger&);
   void operator =(const Merger&);
+};
+
+struct Merger2 : public vtkSMPCommand
+{
+  vtkTypeMacro(Merger2,vtkSMPCommand);
+  static Merger2* New() { return new Merger2; }
+  void PrintSelf(ostream &os, vtkIndent indent)
+    {
+    this->Superclass::PrintSelf(os,indent);
+    }
+
+  void Execute(const vtkObject *caller, unsigned long eventId, void *callData) const
+    {
+    const DummyMergeFunctor* self = static_cast<const DummyMergeFunctor*>(caller);
+    vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
+
+//    vtkPointData* ptData = self->InPd->GetLocal( tid );
+//    vtkPoints* Points = self->InPoints->GetLocal( tid );
+//    vtkIdType newId, NumberOfPoints = Points->GetNumberOfPoints();
+//    vtkIdList* map = self->Maps->GetLocal( tid );
+
+//    for ( vtkIdType i = 0; i < NumberOfPoints; ++i )
+//      {
+//      double *pt = Points->GetPoint( i );
+//      if ( self->outputLocator->SetUniquePoint( pt, newId ) ) self->outputPd->SetTuple( newId, i, ptData );
+//      map->SetId( i, newId );
+//      }
+
+    self->CellsMerge( tid );
+    }
+protected:
+  Merger2() {}
+  ~Merger2() {}
+private:
+  Merger2(const Merger2&);
+  void operator =(const Merger2&);
 };
 
 namespace vtkSMP
@@ -506,6 +542,11 @@ namespace vtkSMP
     Merger* TheMerge = Merger::New();
     Parallel( Functor, TheMerge, SkipThreads );
     TheMerge->Delete();
+    timer->end_bench_timer();
+    timer->start_bench_timer();
+    Merger2* OtherMerge = Merger2::New();
+    Parallel( Functor, OtherMerge, SkipThreads );
+    OtherMerge->Delete();
     timer->end_bench_timer();
 
     // Correcting size of arrays
