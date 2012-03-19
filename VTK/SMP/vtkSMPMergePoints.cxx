@@ -247,30 +247,20 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
     CreatorLock->Lock();
     if ( !(lock = this->LockTable[idx]) ) // If no other thread created it before
       {
-      lock = vtkMutexLock::New();
-      lock->Lock();
-      this->LockTable[idx] = lock;
-      this->HashTable[idx] = bucket = vtkIdList::New();
-      bucket->Allocate(this->NumberOfPointsPerBucket/2, this->NumberOfPointsPerBucket/3);
-      }
-    else
-      {
-      lock->Lock();
-      bucket = this->HashTable[idx];
+      this->HashTable[idx] = vtkIdList::New();
+      this->HashTable[idx]->Allocate(this->NumberOfPointsPerBucket/2, this->NumberOfPointsPerBucket/3);
+      this->LockTable[idx] = lock = vtkMutexLock::New();;
       }
     CreatorLock->Unlock();
     }
-  else
-    {
-    lock->Lock();
-    bucket = this->HashTable[idx];
-    }
+
+  bucket = this->HashTable[idx];
 
   //
   // Check the list of points in that bucket.
   //
   vtkIdType ptId;
-  int nbOfIds = bucket->GetNumberOfIds ();
+  int nbOfIds = bucket->GetNumberOfIds();
 
   // For efficiency reasons, we break the data abstraction for points
   // and ids (we are assuming vtkPoints stores a vtkIdList
@@ -280,13 +270,14 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
 
   if (dataArray->GetDataType() == VTK_FLOAT)
     {
+    // Using the float interface
     float f[3];
     f[0] = static_cast<float>(x[0]);
     f[1] = static_cast<float>(x[1]);
     f[2] = static_cast<float>(x[2]);
     vtkFloatArray *floatArray = static_cast<vtkFloatArray *>(dataArray);
     float *pt;
-    for (i=0; i < nbOfIds; i++)
+    for (i=0; i < nbOfIds; ++i)
       {
       ptId = idArray[i];
       pt = floatArray->GetPointer(0) + 3*ptId;
@@ -294,16 +285,36 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
         {
         // point is already in the list, return 0 and set the id parameter
         id = ptId;
-        lock->Unlock();
         return 0;
         }
       }
+
+    // point has to be added
+    lock->Lock();
+    if ( bucket->GetNumberOfIds() != nbOfIds )
+      {
+      // Check again
+      for ( i = nbOfIds; i < bucket->GetNumberOfIds(); ++i)
+        {
+        ptId = idArray[i];
+        pt = floatArray->GetPointer(0) + 3*ptId;
+        if ( f[0] == pt[0] && f[1] == pt[1] && f[2] == pt[2] )
+          {
+          // point is already in the list, return 0 and set the id parameter
+          id = ptId;
+          return 0;
+          }
+        }
+      }
+    id = __sync_fetch_and_add(&(this->InsertionPointId), 1);
+    bucket->InsertNextId(id);
+    lock->Unlock();
     }
   else
     {
     // Using the double interface
     double *pt;
-    for (i=0; i < nbOfIds; i++)
+    for (i=0; i < nbOfIds; ++i)
       {
       ptId = idArray[i];
       pt = dataArray->GetTuple(ptId);
@@ -311,16 +322,32 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
         {
         // point is already in the list, return 0 and set the id parameter
         id = ptId;
-        lock->Unlock();
         return 0;
         }
       }
+
+    // point has to be added
+    lock->Lock();
+    if ( bucket->GetNumberOfIds() != nbOfIds )
+      {
+      // Check again
+      for ( i = nbOfIds; i < bucket->GetNumberOfIds(); ++i )
+        {
+        ptId = idArray[i];
+        pt = dataArray->GetTuple(ptId);
+        if ( x[0] == pt[0] && x[1] == pt[1] && x[2] == pt[2] )
+          {
+          // point is already in the list, return 0 and set the id parameter
+          id = ptId;
+          return 0;
+          }
+        }
+      }
+    id = __sync_fetch_and_add(&(this->InsertionPointId), 1);
+    bucket->InsertNextId(id);
+    lock->Unlock();
     }
 
-  // point has to be added
-  id = __sync_fetch_and_add(&(this->InsertionPointId), 1);
-  bucket->InsertNextId(id);
-  lock->Unlock();
   this->Points->SetPoint( id, x );
 
   return 1;
