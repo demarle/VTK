@@ -44,60 +44,6 @@ void vtkSMPContourFilter::PrintSelf(ostream& os, vtkIndent indent)
 /* ================================================================================
   Generic contouring: Functors for parallel execution without ScalarTree
  ================================================================================ */
-class OffMan : public vtkObject
-{
-  OffMan( const OffMan& );
-  void operator =( const OffMan& );
-  vtkstd::vector<vtkIdType> cells;
-  vtkstd::vector<vtkIdType> tuples;
-  vtkIdType CellsOffset;
-  vtkIdType TuplesOffset;
-
-protected:
-  OffMan() : vtkObject(), cells(vtkSMP::GetNumberOfThreads(), 0), tuples(vtkSMP::GetNumberOfThreads(), 0)
-    {
-    CellsOffset = 0;
-    TuplesOffset = 0;
-    }
-  ~OffMan() { }
-public:
-  vtkTypeMacro(OffMan,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf( os, indent );
-    os << indent << "Offsets for cells index: " << endl;
-    for ( size_t i; i < cells.size(); ++i )
-      {
-      os << indent.GetNextIndent() << "Thread " << i << ": " << cells[i] << endl;
-      }
-    os << indent << "Offsets for tuples: " << endl;
-    for ( size_t i; i < tuples.size(); ++i )
-      {
-      os << indent.GetNextIndent() << "Thread " << i << ": " << tuples[i] << endl;
-      }
-    os << indent << "Number of cells: " << CellsOffset << endl;
-    os << indent << "Number of tuples: " << TuplesOffset << endl;
-    }
-  static OffMan* New();
-
-  void ManageValues ( vtkSMPThreadID tid, vtkCellArray* ca )
-    {
-    vtkIdType c = ca->GetNumberOfCells();
-    vtkIdType t = ca->GetData()->GetNumberOfTuples();
-    cells[tid] = CellsOffset;
-    tuples[tid] = TuplesOffset;
-    CellsOffset += c;
-    TuplesOffset += t;
-    }
-
-  vtkIdType GetNumberOfCells() { return CellsOffset; }
-  vtkIdType GetNumberOfTuples() { return TuplesOffset; }
-  vtkIdType GetCellsOffset ( vtkSMPThreadID tid ) { return cells[tid]; }
-  vtkIdType GetTuplesOffset ( vtkSMPThreadID tid ) { return tuples[tid]; }
-};
-
-vtkStandardNewMacro(OffMan);
-
 class ThreadsFunctor : public vtkFunctor//Initialisable
 {
   ThreadsFunctor( const ThreadsFunctor& );
@@ -115,13 +61,6 @@ protected:
     outCd = vtkSMP::vtkThreadLocal<vtkCellData>::New();
     Cells = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
     CellsScalars = vtkSMP::vtkThreadLocal<vtkDataArray>::New();
-
-//    Maps = vtkSMP::vtkThreadLocal<vtkIdList>::New();
-    vertOffset = OffMan::New();
-    lineOffset = OffMan::New();
-    polyOffset = OffMan::New();
-
-    numberOfPoints = 0;
     }
 
   ~ThreadsFunctor()
@@ -155,12 +94,6 @@ public:
   vtkSMP::vtkThreadLocal<vtkGenericCell>* Cells;
   vtkSMP::vtkThreadLocal<vtkDataArray>* CellsScalars;
 
-//  vtkSMP::vtkThreadLocal<vtkIdList>* Maps;
-  OffMan* vertOffset;
-  OffMan* lineOffset;
-  OffMan* polyOffset;
-  vtkIdType NumberOfCells;
-
   vtkDataArray* inScalars;
   vtkDataSet* input;
   vtkPointData* inPd;
@@ -169,8 +102,6 @@ public:
   double* values;
   int numContours;
   int computeScalars;
-  vtkIdType numberOfPoints;
-
 
   vtkIncrementalPointLocator* refLocator;
   vtkCellArray* outputVerts;
@@ -258,120 +189,6 @@ public:
       }
     }
 
-  void PreMerge()
-    {
-    vtkSMPMergePoints* smpLocator = vtkSMPMergePoints::New();
-    vtkPoints* refPoints = newPts->GetLocal(0);
-    smpLocator->InitLockInsertion(refPoints, input->GetBounds(), refPoints->GetNumberOfPoints());
-    for (vtkIdType i = 0; i < refPoints->GetNumberOfPoints(); ++i)
-      {
-      smpLocator->AddPointIdInBucket(i);
-      }
-
-    vtkIdType NumberOfPoints = 0;
-    vtkSMPThreadID max = vtkSMP::GetNumberOfThreads();
-    for ( vtkSMPThreadID tid = 0; tid < max; ++tid )
-      {
-      vertOffset->ManageValues( tid, this->newVerts->GetLocal( tid ) );
-      lineOffset->ManageValues( tid, this->newLines->GetLocal( tid ) );
-      polyOffset->ManageValues( tid, this->newPolys->GetLocal( tid ) );
-
-      vtkIdType n = this->newPts->GetLocal( tid )->GetNumberOfPoints();
-//      vtkIdList* map = this->Maps->NewLocal( tid );
-//      map->Allocate( n );
-      NumberOfPoints += n;
-      }
-
-    NumberOfCells = vertOffset->GetNumberOfCells() +
-        lineOffset->GetNumberOfCells() +
-        polyOffset->GetNumberOfCells();
-
-    this->outputVerts->GetData()->Resize( vertOffset->GetNumberOfTuples() );
-    this->outputLines->GetData()->Resize( lineOffset->GetNumberOfTuples() );
-    this->outputPolys->GetData()->Resize( polyOffset->GetNumberOfTuples() );
-    // Copy on itself means resize
-    this->outputPd->CopyAllocate( this->outputPd, NumberOfPoints, NumberOfPoints );
-    this->outputCd->CopyAllocate( this->outputCd, NumberOfCells, NumberOfCells );
-    refPoints->GetData()->Resize( NumberOfPoints );
-    refPoints->SetNumberOfPoints( NumberOfPoints );
-
-    refLocator = smpLocator;
-    }
-
-  void MergeCells ( vtkSMPThreadID tid ) const
-    {
-    vtkPointData* ptData = this->outPd->GetLocal( tid );
-    vtkPoints* Points = this->newPts->GetLocal( tid );
-    vtkIdType newId, NumberOfPoints = Points->GetNumberOfPoints();
-    vtkstd::vector<vtkIdType> map( NumberOfPoints );
-//    vtkIdList* map = this->Maps->NewLocal( tid );
-//    map->Allocate( NumberOfPoints );
-    vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::SafeDownCast(this->refLocator);
-
-    for ( vtkIdType i = 0; i < NumberOfPoints; ++i )
-      {
-      double *pt = Points->GetPoint( i );
-      if ( outputLocator->SetUniquePoint( pt, newId ) ) this->outputPd->SetTuple( newId, i, ptData );
-      map[i] = newId;
-      }
-
-    vtkCellData* clData = this->outCd->GetLocal( tid );
-
-    vtkIdType *pts, totalNumber, n, clIndex;
-    vtkCellArray* computedCells;
-
-    computedCells = this->newVerts->GetLocal( tid );
-    computedCells->InitTraversal();
-    totalNumber = this->vertOffset->GetTuplesOffset( tid );
-    newId = this->vertOffset->GetCellsOffset( tid ) - 1; // usage of ++newId instead of newId++
-    while (computedCells->GetNextCell( n, pts ))
-      {
-      vtkIdType* writePtr = this->outputVerts->WritePointer( 0, totalNumber );
-      writePtr += totalNumber;
-      *writePtr++ = n;
-      for (vtkIdType i = 0; i < n; ++i)
-        {
-        *writePtr++ = map[pts[i]];
-        }
-      this->outputCd->SetTuple(++newId, ++clIndex, clData);
-      totalNumber += n + 1;
-      }
-
-    computedCells = this->newLines->GetLocal( tid );
-    computedCells->InitTraversal();
-    totalNumber = this->lineOffset->GetTuplesOffset( tid );
-    newId = this->lineOffset->GetCellsOffset( tid ) - 1 + this->vertOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
-    while (computedCells->GetNextCell( n, pts ))
-      {
-      vtkIdType* writePtr = this->outputLines->WritePointer( 0, totalNumber );
-      writePtr += totalNumber;
-      *writePtr++ = n;
-      for (vtkIdType i = 0; i < n; ++i)
-        {
-        *writePtr++ = map[pts[i]];
-        }
-      this->outputCd->SetTuple(++newId, ++clIndex, clData);
-      totalNumber += n + 1;
-      }
-
-    computedCells = this->newPolys->GetLocal( tid );
-    computedCells->InitTraversal();
-    totalNumber = this->polyOffset->GetTuplesOffset( tid );
-    newId = this->polyOffset->GetCellsOffset( tid ) - 1 + this->lineOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
-    while (computedCells->GetNextCell( n, pts ))
-      {
-      vtkIdType* writePtr = this->outputPolys->WritePointer( 0, totalNumber );
-      writePtr += totalNumber;
-      *writePtr++ = n;
-      for (vtkIdType i = 0; i < n; ++i)
-        {
-        *writePtr++ = map[pts[i]];
-        }
-      this->outputCd->SetTuple(++newId, ++clIndex, clData);
-      totalNumber += n + 1;
-      }
-    }
-
 };
 
 vtkStandardNewMacro(ThreadsFunctor);
@@ -423,33 +240,6 @@ protected:
 private:
   MyInit(const MyInit&);
   void operator =(const MyInit&);
-};
-
-struct MyMerge : public vtkSMPCommand
-{
-  vtkTypeMacro(MyMerge,vtkSMPCommand);
-  static MyMerge* New() { return new MyMerge; }
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os,indent);
-    }
-
-  void Execute(const vtkObject *caller, unsigned long eventId, void *callData) const
-    {
-    const ThreadsFunctor* self = static_cast<const ThreadsFunctor*>(caller);
-    vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
-
-    self->MergeCells(tid);
-    }
-
-protected:
-  MyMerge() {}
-  ~MyMerge() {}
-
-private:
-  MyMerge(const MyMerge&);
-  void operator =(const MyMerge&);
-
 };
 
 /* ================================================================================
@@ -732,25 +522,12 @@ int vtkSMPContourFilter::RequestData(
         }
       else
         {
-        timer->start_bench_timer();
-        my_contour->PreMerge();
-        timer->end_bench_timer();
-        MyMerge* TheMerge = MyMerge::New();
-        vtkSMP::Parallel( my_contour, TheMerge );
-        TheMerge->Delete();
-//        vtkSMP::MergePoints( newPts, my_contour->newPts, input->GetBounds(),
-//                             outPd, my_contour->outPd,
-//                             newVerts, my_contour->newVerts,
-//                             newLines, my_contour->newLines,
-//                             newPolys, my_contour->newPolys,
-//                             0, 0, outCd, my_contour->outCd, 1 );
-        vtkSMPMergePoints::SafeDownCast(my_contour->refLocator)->FixSizeOfPointArray();
-        my_contour->refLocator->Delete();
-        outPd->SetNumberOfTuples( newPts->GetNumberOfPoints() );
-        outCd->SetNumberOfTuples( my_contour->NumberOfCells );
-        newVerts->SetNumberOfCells( my_contour->vertOffset->GetNumberOfCells() );
-        newLines->SetNumberOfCells( my_contour->lineOffset->GetNumberOfCells() );
-        newPolys->SetNumberOfCells( my_contour->polyOffset->GetNumberOfCells() );
+        vtkSMP::MergePoints( newPts, my_contour->newPts, input->GetBounds(),
+                             outPd, my_contour->outPd,
+                             newVerts, my_contour->newVerts,
+                             newLines, my_contour->newLines,
+                             newPolys, my_contour->newPolys,
+                             0, 0, outCd, my_contour->outCd, 1 );
         }
       timer->end_bench_timer();
 
