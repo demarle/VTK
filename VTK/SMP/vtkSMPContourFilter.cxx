@@ -116,7 +116,7 @@ protected:
     Cells = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
     CellsScalars = vtkSMP::vtkThreadLocal<vtkDataArray>::New();
 
-    Maps = vtkSMP::vtkThreadLocal<vtkIdList>::New();
+//    Maps = vtkSMP::vtkThreadLocal<vtkIdList>::New();
     vertOffset = OffMan::New();
     lineOffset = OffMan::New();
     polyOffset = OffMan::New();
@@ -155,7 +155,7 @@ public:
   vtkSMP::vtkThreadLocal<vtkGenericCell>* Cells;
   vtkSMP::vtkThreadLocal<vtkDataArray>* CellsScalars;
 
-  vtkSMP::vtkThreadLocal<vtkIdList>* Maps;
+//  vtkSMP::vtkThreadLocal<vtkIdList>* Maps;
   OffMan* vertOffset;
   OffMan* lineOffset;
   OffMan* polyOffset;
@@ -298,9 +298,9 @@ public:
     refLocator = smpLocator;
     }
 
-  void MergeCells( vtkSMPThreadID tid ) const
+  void MergeCells( vtkSMPThreadID tid, vtkIdType* map ) const
     {
-    vtkIdList* map = this->Maps->GetLocal( tid );
+//    vtkIdList* map = this->Maps->GetLocal( tid );
     vtkCellData* clData = this->outCd->GetLocal( tid );
 
     vtkIdType *pts, totalNumber, newId, n, clIndex;
@@ -317,7 +317,7 @@ public:
       *writePtr++ = n;
       for (vtkIdType i = 0; i < n; ++i)
         {
-        *writePtr++ = map->GetId(pts[i]);
+        *writePtr++ = map[pts[i]];
         }
       outputCd->SetTuple(++newId, ++clIndex, clData);
       totalNumber += n + 1;
@@ -334,7 +334,7 @@ public:
       *writePtr++ = n;
       for (vtkIdType i = 0; i < n; ++i)
         {
-        *writePtr++ = map->GetId(pts[i]);
+        *writePtr++ = map[pts[i]];
         }
       outputCd->SetTuple(++newId, ++clIndex, clData);
       totalNumber += n + 1;
@@ -351,7 +351,7 @@ public:
       *writePtr++ = n;
       for (vtkIdType i = 0; i < n; ++i)
         {
-        *writePtr++ = map->GetId(pts[i]);
+        *writePtr++ = map[pts[i]];
         }
       outputCd->SetTuple(++newId, ++clIndex, clData);
       totalNumber += n + 1;
@@ -427,18 +427,19 @@ struct MyMerge : public vtkSMPCommand
     vtkPointData* ptData = self->outPd->GetLocal( tid );
     vtkPoints* Points = self->newPts->GetLocal( tid );
     vtkIdType newId, NumberOfPoints = Points->GetNumberOfPoints();
-    vtkIdList* map = self->Maps->NewLocal( tid );
-    map->Allocate( NumberOfPoints );
+    vtkstd::vector<vtkIdType> map( NumberOfPoints );
+//    vtkIdList* map = self->Maps->NewLocal( tid );
+//    map->Allocate( NumberOfPoints );
     vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::SafeDownCast(self->refLocator);
 
     for ( vtkIdType i = 0; i < NumberOfPoints; ++i )
       {
       double *pt = Points->GetPoint( i );
       if ( outputLocator->SetUniquePoint( pt, newId ) ) self->outputPd->SetTuple( newId, i, ptData );
-      map->SetId( i, newId );
+      map[i] = newId;
       }
 
-    self->MergeCells( tid );
+    self->MergeCells( tid, &map[0] );
     }
 protected:
   MyMerge() {}
