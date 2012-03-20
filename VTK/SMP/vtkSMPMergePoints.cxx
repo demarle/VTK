@@ -147,7 +147,6 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
 
 void vtkSMPMergePoints::FreeSearchStructure()
   {
-  this->Superclass::FreeSearchStructure();
   vtkIdList *ptIds;
   vtkMutexLock *lock;
   vtkIdType i;

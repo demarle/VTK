@@ -238,7 +238,7 @@ public:
 
       vtkIdType n = (_points ? this->InPoints->GetLocal( tid ) : this->Locators->GetLocal( tid )->GetPoints())->GetNumberOfPoints();
       vtkIdList* map = this->Maps->NewLocal( tid );
-      map->Allocate( n );
+//      map->Allocate( n );
       NumberOfPoints += n;
       }
 
@@ -437,6 +437,7 @@ struct Merger : public vtkSMPCommand
     vtkPoints* Points = self->InPoints->GetLocal( tid );
     vtkIdType newId, NumberOfPoints = Points->GetNumberOfPoints();
     vtkIdList* map = self->Maps->GetLocal( tid );
+    map->Allocate( NumberOfPoints );
 
     for ( vtkIdType i = 0; i < NumberOfPoints; ++i )
       {
@@ -535,10 +536,10 @@ namespace vtkSMP
     vtkIdType PointsAlreadyPresent = outPoints->GetNumberOfPoints();
     if ( PointsAlreadyPresent ) ForEach( 0, PointsAlreadyPresent, Functor );
 
+    Functor->InitializeNeeds( 0, inPoints, outputLocator, inVerts, outVerts, inLines, outLines, inPolys, outPolys, inStrips, outStrips, inPtsData, outPtsData, inCellsData, outCellsData );
     timer->end_bench_timer();
 
     timer->start_bench_timer();
-    Functor->InitializeNeeds( 0, inPoints, outputLocator, inVerts, outVerts, inLines, outLines, inPolys, outPolys, inStrips, outStrips, inPtsData, outPtsData, inCellsData, outCellsData );
     Merger* TheMerge = Merger::New();
     Parallel( Functor, TheMerge, SkipThreads );
     TheMerge->Delete();
