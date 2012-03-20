@@ -298,65 +298,6 @@ public:
     refLocator = smpLocator;
     }
 
-  void MergeCells( vtkSMPThreadID tid, vtkIdType* map ) const
-    {
-//    vtkIdList* map = this->Maps->GetLocal( tid );
-    vtkCellData* clData = this->outCd->GetLocal( tid );
-
-    vtkIdType *pts, totalNumber, newId, n, clIndex;
-    vtkCellArray* computedCells;
-
-    computedCells = this->newVerts->GetLocal( tid );
-    computedCells->InitTraversal();
-    totalNumber = vertOffset->GetTuplesOffset( tid );
-    newId = vertOffset->GetCellsOffset( tid ) - 1; // usage of ++newId instead of newId++
-    while (computedCells->GetNextCell( n, pts ))
-      {
-      vtkIdType* writePtr = outputVerts->WritePointer( 0, totalNumber );
-      writePtr += totalNumber;
-      *writePtr++ = n;
-      for (vtkIdType i = 0; i < n; ++i)
-        {
-        *writePtr++ = map[pts[i]];
-        }
-      outputCd->SetTuple(++newId, ++clIndex, clData);
-      totalNumber += n + 1;
-      }
-
-    computedCells = this->newLines->GetLocal( tid );
-    computedCells->InitTraversal();
-    totalNumber = lineOffset->GetTuplesOffset( tid );
-    newId = lineOffset->GetCellsOffset( tid ) - 1 + vertOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
-    while (computedCells->GetNextCell( n, pts ))
-      {
-      vtkIdType* writePtr = outputLines->WritePointer( 0, totalNumber );
-      writePtr += totalNumber;
-      *writePtr++ = n;
-      for (vtkIdType i = 0; i < n; ++i)
-        {
-        *writePtr++ = map[pts[i]];
-        }
-      outputCd->SetTuple(++newId, ++clIndex, clData);
-      totalNumber += n + 1;
-      }
-
-    computedCells = this->newPolys->GetLocal( tid );
-    computedCells->InitTraversal();
-    totalNumber = polyOffset->GetTuplesOffset( tid );
-    newId = polyOffset->GetCellsOffset( tid ) - 1 + lineOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
-    while (computedCells->GetNextCell( n, pts ))
-      {
-      vtkIdType* writePtr = outputPolys->WritePointer( 0, totalNumber );
-      writePtr += totalNumber;
-      *writePtr++ = n;
-      for (vtkIdType i = 0; i < n; ++i)
-        {
-        *writePtr++ = map[pts[i]];
-        }
-      outputCd->SetTuple(++newId, ++clIndex, clData);
-      totalNumber += n + 1;
-      }
-    }
 };
 
 vtkStandardNewMacro(ThreadsFunctor);
@@ -439,14 +380,71 @@ struct MyMerge : public vtkSMPCommand
       map[i] = newId;
       }
 
-    self->MergeCells( tid, &map[0] );
+    vtkCellData* clData = self->outCd->GetLocal( tid );
+
+    vtkIdType *pts, totalNumber, n, clIndex;
+    vtkCellArray* computedCells;
+
+    computedCells = self->newVerts->GetLocal( tid );
+    computedCells->InitTraversal();
+    totalNumber = self->vertOffset->GetTuplesOffset( tid );
+    newId = self->vertOffset->GetCellsOffset( tid ) - 1; // usage of ++newId instead of newId++
+    while (computedCells->GetNextCell( n, pts ))
+      {
+      vtkIdType* writePtr = self->outputVerts->WritePointer( 0, totalNumber );
+      writePtr += totalNumber;
+      *writePtr++ = n;
+      for (vtkIdType i = 0; i < n; ++i)
+        {
+        *writePtr++ = map[pts[i]];
+        }
+      self->outputCd->SetTuple(++newId, ++clIndex, clData);
+      totalNumber += n + 1;
+      }
+
+    computedCells = self->newLines->GetLocal( tid );
+    computedCells->InitTraversal();
+    totalNumber = self->lineOffset->GetTuplesOffset( tid );
+    newId = self->lineOffset->GetCellsOffset( tid ) - 1 + self->vertOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
+    while (computedCells->GetNextCell( n, pts ))
+      {
+      vtkIdType* writePtr = self->outputLines->WritePointer( 0, totalNumber );
+      writePtr += totalNumber;
+      *writePtr++ = n;
+      for (vtkIdType i = 0; i < n; ++i)
+        {
+        *writePtr++ = map[pts[i]];
+        }
+      self->outputCd->SetTuple(++newId, ++clIndex, clData);
+      totalNumber += n + 1;
+      }
+
+    computedCells = self->newPolys->GetLocal( tid );
+    computedCells->InitTraversal();
+    totalNumber = self->polyOffset->GetTuplesOffset( tid );
+    newId = self->polyOffset->GetCellsOffset( tid ) - 1 + self->lineOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
+    while (computedCells->GetNextCell( n, pts ))
+      {
+      vtkIdType* writePtr = self->outputPolys->WritePointer( 0, totalNumber );
+      writePtr += totalNumber;
+      *writePtr++ = n;
+      for (vtkIdType i = 0; i < n; ++i)
+        {
+        *writePtr++ = map[pts[i]];
+        }
+      self->outputCd->SetTuple(++newId, ++clIndex, clData);
+      totalNumber += n + 1;
+      }
     }
+
 protected:
   MyMerge() {}
   ~MyMerge() {}
+
 private:
   MyMerge(const MyMerge&);
   void operator =(const MyMerge&);
+
 };
 
 /* ================================================================================
