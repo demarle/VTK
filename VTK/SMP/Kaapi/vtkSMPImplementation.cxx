@@ -33,6 +33,8 @@ void my_init ( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable*
   }
 }
 
+const int GRAIN = 1024;
+
 //--------------------------------------------------------------------------------
 namespace vtkSMP
 {
@@ -41,7 +43,7 @@ namespace vtkSMP
     {
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
-    kaapic_foreach_attr_set_grains(&attr, 32, 32);
+    kaapic_foreach_attr_set_grains(&attr, GRAIN, GRAIN);
     kaapic_foreach( 0, last - first, &attr, 2, func_call, op, first );
     kaapic_foreach_attr_destroy(&attr);
     }
@@ -58,7 +60,7 @@ namespace vtkSMP
       }
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
-    kaapic_foreach_attr_set_grains(&attr, 32, 32);
+    kaapic_foreach_attr_set_grains(&attr, GRAIN, GRAIN);
     kaapic_foreach( 0, last - first, &attr, 2, func_call, op, first );
     kaapic_foreach_attr_destroy(&attr);
     }

@@ -419,6 +419,38 @@ private:
   void operator =(const ParallelCellMerger&);
 };
 
+struct MergerHelper : public vtkFunctor
+{
+  vtkPointData* ptData;
+  vtkPoints* Points;
+  vtkIdList* Map;
+  vtkSMPMergePoints* Locator;
+  vtkPointData* OutputPd;
+
+  vtkTypeMacro(MergerHelper,vtkFunctor);
+  static MergerHelper* New();
+  void PrintSelf(ostream &os, vtkIndent indent)
+    {
+    this->Superclass::PrintSelf(os,indent);
+    }
+  void operator() (vtkIdType id, vtkSMPThreadID tid) const
+    {
+    vtkIdType NewId;
+    double* pt = Points->GetPoint( id );
+    if ( Locator->SetUniquePoint( pt, NewId ) )
+      OutputPd->SetTuple( NewId, id, ptData );
+    Map->SetId( id, NewId );
+    }
+protected:
+  MergerHelper() {}
+  ~MergerHelper() {}
+private:
+  MergerHelper( const MergerHelper& );
+  void operator =( const MergerHelper& );
+};
+
+vtkStandardNewMacro(MergerHelper);
+
 struct Merger : public vtkSMPCommand
 {
   vtkTypeMacro(Merger,vtkSMPCommand);
@@ -433,18 +465,14 @@ struct Merger : public vtkSMPCommand
     const DummyMergeFunctor* self = static_cast<const DummyMergeFunctor*>(caller);
     vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
 
-    vtkPointData* ptData = self->InPd->GetLocal( tid );
-    vtkPoints* Points = self->InPoints->GetLocal( tid );
-    vtkIdType newId, NumberOfPoints = Points->GetNumberOfPoints();
-    vtkIdList* map = self->Maps->GetLocal( tid );
-    map->Allocate( NumberOfPoints );
+    MergerHelper* PointsMerge = MergerHelper::New();
+    PointsMerge->ptData = self->InPd->GetLocal( tid );
+    PointsMerge->Points = self->InPoints->GetLocal( tid );
+    PointsMerge->Map = self->Maps->GetLocal( tid );
+    PointsMerge->Locator = self->outputLocator;
+    PointsMerge->OutputPd = self->outputPd;
 
-    for ( vtkIdType i = 0; i < NumberOfPoints; ++i )
-      {
-      double *pt = Points->GetPoint( i );
-      if ( self->outputLocator->SetUniquePoint( pt, newId ) ) self->outputPd->SetTuple( newId, i, ptData );
-      map->SetId( i, newId );
-      }
+    vtkSMP::ForEach( 0, PointsMerge->Points->GetNumberOfPoints(), PointsMerge );
 
     self->CellsMerge( tid );
     }
