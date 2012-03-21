@@ -67,12 +67,12 @@ void vtkSMPMinMaxTree::PrintSelf(ostream &os, vtkIndent indent)
   this->Superclass::PrintSelf(os, indent);
   }
 
-double vtkSMPMinMaxTree::GetTraversedCell( vtkIdType callNumber, vtkIdType *realCellId, vtkCell *cell, vtkDataArray* cellScalars )
+double vtkSMPMinMaxTree::GetTraversedCell( vtkIdType callNumber, vtkIdType& realCellId, vtkCell *cell, vtkDataArray* cellScalars )
   {
   vtkIdType SkipLeaf = callNumber/this->BranchingFactor;
   vtkIdType TraversedLeafOffset = this->GetFirstCell( SkipLeaf );
-  *realCellId = TraversedLeafOffset ? TraversedLeafOffset + (callNumber - SkipLeaf*this->BranchingFactor) : callNumber;
-  cell = this->DataSet->GetCell( *realCellId );
+  realCellId = TraversedLeafOffset ? TraversedLeafOffset + (callNumber - SkipLeaf*this->BranchingFactor) : callNumber;
+  cell = this->DataSet->GetCell( realCellId );
   vtkIdList* cellPts = cell->GetPointIds();
   cellScalars->SetNumberOfTuples( cellPts->GetNumberOfIds() );
   this->Scalars->GetTuples( cellPts, cellScalars );
@@ -90,7 +90,7 @@ vtkIdType vtkSMPMinMaxTree::GetFirstCell( vtkIdType skip )
       --skip;
     }
 
-  return ( index - 1) * this->BranchingFactor + 1;
+  return index;//( index - 1) * this->BranchingFactor + 1;
   }
 
 vtkIdType vtkSMPMinMaxTree::GetNumberOfTraversedCells( double value )

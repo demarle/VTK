@@ -14,6 +14,7 @@
   #include "vtkSMPTransformFilter.h"
   #include "vtkSMPContourFilter.h"
   #include "vtkSMPMergePoints.h"
+  #include "vtkSMPMinMaxTree.h"
 #else
   #include "vtkTransformFilter.h"
   #include "vtkContourFilter.h"
@@ -118,14 +119,17 @@ int main( int argc, char** argv )
 #ifdef VTK_CAN_USE_SMP
   vtkContourFilter* isosurface = parallel != 1 ? vtkSMPContourFilter::New() : vtkContourFilter::New();
   vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
-//  isosurface->SetLocator( locator );
+  isosurface->SetLocator( locator );
   locator->Delete();
+  vtkSMPMinMaxTree* tree = vtkSMPMinMaxTree::New();
+//  isosurface->SetScalarTree(tree);
+  tree->Delete();
 #else
   vtkContourFilter* isosurface = vtkContourFilter::New();
 #endif
   isosurface->SetInputConnection( transform->GetOutputPort() );
   isosurface->GenerateValues( 11, 0.0, 1.0 );
-  isosurface->UseScalarTreeOff();
+  isosurface->UseScalarTreeOn();
   transform->Delete();
 
 #ifdef HIDE_VTK_WINDOW

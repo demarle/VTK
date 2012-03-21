@@ -21,7 +21,7 @@ public:
   static vtkSMPMinMaxTree* New();
   void PrintSelf(ostream &os, vtkIndent indent);
 
-  double GetTraversedCell( vtkIdType callNumber, vtkIdType* realCellId, vtkCell* cell, vtkDataArray* cellScalars );
+  double GetTraversedCell( vtkIdType callNumber, vtkIdType& realCellId, vtkCell* cell, vtkDataArray* cellScalars );
   vtkIdType GetNumberOfTraversedCells( double value );
 
 protected:

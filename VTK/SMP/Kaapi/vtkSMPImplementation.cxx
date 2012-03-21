@@ -39,12 +39,10 @@ namespace vtkSMP
 
   void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op )
     {
-    kaapic_begin_parallel();
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
     kaapic_foreach_attr_set_grains(&attr, 32, 32);
     kaapic_foreach( 0, last - first, &attr, 2, func_call, op, first );
-    kaapic_end_parallel( 0 );
     kaapic_foreach_attr_destroy(&attr);
     }
 
@@ -52,20 +50,16 @@ namespace vtkSMP
     {
     if (op->CheckAndSetInitialized())
       {
-      kaapic_begin_parallel();
       kaapic_foreach_attr_t att;
       kaapic_foreach_attr_init(&att);
       kaapic_foreach_attr_set_grains(&att, 1, 1);
       kaapic_foreach( 0, kaapic_get_concurrency(), &att, 1, my_init, op );
-      kaapic_end_parallel( 0 );
       kaapic_foreach_attr_destroy(&att);
       }
-    kaapic_begin_parallel();
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
     kaapic_foreach_attr_set_grains(&attr, 32, 32);
     kaapic_foreach( 0, last - first, &attr, 2, func_call, op, first );
-    kaapic_end_parallel( 0 );
     kaapic_foreach_attr_destroy(&attr);
     }
 
@@ -76,12 +70,10 @@ namespace vtkSMP
 
   void Parallel( const vtkFunctor* f, const vtkSMPCommand* callback , vtkSMPThreadID skipThreads )
     {
-    kaapic_begin_parallel();
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
     kaapic_foreach_attr_set_grains(&attr, 1, 1);
     kaapic_foreach( skipThreads, kaapic_get_concurrency(), &attr, 2, my_parallel, f, callback );
-    kaapic_end_parallel( 0 );
     kaapic_foreach_attr_destroy(&attr);
     }
 

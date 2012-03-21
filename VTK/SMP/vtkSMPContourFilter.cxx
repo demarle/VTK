@@ -27,7 +27,7 @@
 #include "vtkSMP.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkCommand.h"
-#include "vtkMutexLock.h"
+#include "vtkSMPMinMaxTree.h"
 
 #include "vtkBenchTimer.h"
 
@@ -245,7 +245,6 @@ private:
 /* ================================================================================
   Generic contouring: Functors for parallel execution with ScalarTree
  ================================================================================ */
-
 class TreeFuntor : public ThreadsFunctor
 {
   TreeFuntor( const TreeFuntor& );
@@ -261,6 +260,20 @@ public:
   void PrintSelf(ostream &os, vtkIndent indent)
     {
     this->Superclass::PrintSelf(os,indent);
+    }
+
+  vtkSMPMinMaxTree* Tree;
+
+  void operator ()( vtkIdType id, vtkSMPThreadID tid ) const
+    {
+    vtkGenericCell* cell = this->Cells->GetLocal( tid );
+    vtkDataArray* scalars = this->CellsScalars->GetLocal( tid );
+    vtkIdType realCellId;
+    double v = this->Tree->GetTraversedCell( id, realCellId, cell, scalars );
+    cell->Contour( v, scalars, this->Locator->GetLocal(tid),
+                   this->newVerts->GetLocal(tid), this->newLines->GetLocal(tid), this->newPolys->GetLocal(tid),
+                   this->inPd, this->outPd->GetLocal(tid),
+                   this->inCd, realCellId, this->outCd->GetLocal(tid));
     }
 };
 
@@ -477,7 +490,8 @@ int vtkSMPContourFilter::RequestData(
 
     // If enabled, build a scalar tree to accelerate search
     //
-    if ( !this->UseScalarTree )
+    vtkSMPMinMaxTree* parallelTree = vtkSMPMinMaxTree::SafeDownCast(this->ScalarTree);
+    if ( !this->UseScalarTree || parallelTree )
       {
       vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast( this->Locator );
 
@@ -486,11 +500,14 @@ int vtkSMPContourFilter::RequestData(
 
       timer->start_bench_timer();
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
-      ThreadsFunctor* my_contour = ThreadsFunctor::New();
+      ThreadsFunctor* my_contour;
+      if ( parallelTree )
+        my_contour = TreeFuntor::New();
+      else
+        my_contour = ThreadsFunctor::New();
       my_contour->SetData( input, newPts, inCd, inPd, this->Locator,
                            estimatedSize, values, numContours, inScalars, this->ComputeScalars,
                            newVerts, newLines, newPolys, outCd, outPd );
-
 
       // Init
       MyInit* TheInit = MyInit::New();
@@ -500,9 +517,23 @@ int vtkSMPContourFilter::RequestData(
 
       // Exec
       timer->start_bench_timer();
-      for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
+      if ( parallelTree )
         {
-        vtkSMP::ForEach( 0, numCells, my_contour );
+        TreeFuntor* TreeContour = static_cast<TreeFuntor*>(my_contour);
+        TreeContour->Tree = parallelTree;
+        parallelTree->SetDataSet(input);
+        for ( i = 0; i < numContours; ++i )
+          {
+          vtkIdType NumberOfTraversedCells = parallelTree->GetNumberOfTraversedCells( values[i] );
+          vtkSMP::ForEach( 0, NumberOfTraversedCells, TreeContour );
+          }
+        }
+      else
+        {
+        for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
+          {
+          vtkSMP::ForEach( 0, numCells, my_contour );
+          }
         }
       timer->end_bench_timer();
 
