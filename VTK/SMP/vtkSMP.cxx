@@ -238,7 +238,7 @@ public:
 
       vtkIdType n = (_points ? this->InPoints->GetLocal( tid ) : this->Locators->GetLocal( tid )->GetPoints())->GetNumberOfPoints();
       vtkIdList* map = this->Maps->NewLocal( tid );
-//      map->Allocate( n );
+      map->Allocate( n );
       NumberOfPoints += n;
       }
 
