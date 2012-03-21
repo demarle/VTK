@@ -436,10 +436,12 @@ struct MergerHelper : public vtkFunctor
   void operator() (vtkIdType id, vtkSMPThreadID tid) const
     {
     vtkIdType NewId;
-    double* pt = Points->GetPoint( id );
+    double* pt = new double[3];
+    Points->GetPoint( id, pt );
     if ( Locator->SetUniquePoint( pt, NewId ) )
       OutputPd->SetTuple( NewId, id, ptData );
     Map->SetId( id, NewId );
+    delete [] pt;
     }
 protected:
   MergerHelper() {}
@@ -465,15 +467,21 @@ struct Merger : public vtkSMPCommand
     const DummyMergeFunctor* self = static_cast<const DummyMergeFunctor*>(caller);
     vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
 
-    MergerHelper* PointsMerge = MergerHelper::New();
-    PointsMerge->ptData = self->InPd->GetLocal( tid );
-    PointsMerge->Points = self->InPoints->GetLocal( tid );
-    PointsMerge->Map = self->Maps->GetLocal( tid );
-    PointsMerge->Locator = self->outputLocator;
-    PointsMerge->OutputPd = self->outputPd;
+    vtkIdType NumberOfPoints = self->InPoints->GetLocal( tid )->GetNumberOfPoints();
 
-    vtkSMP::ForEach( 0, PointsMerge->Points->GetNumberOfPoints(), PointsMerge );
+    if ( NumberOfPoints )
+      {
+      MergerHelper* PointsMerge = MergerHelper::New();
+      PointsMerge->ptData = self->InPd->GetLocal( tid );
+      PointsMerge->Points = self->InPoints->GetLocal( tid );
+      PointsMerge->Map = self->Maps->GetLocal( tid );
+      PointsMerge->Locator = self->outputLocator;
+      PointsMerge->OutputPd = self->outputPd;
 
+      vtkSMP::ForEach( 0, NumberOfPoints, PointsMerge );
+
+      PointsMerge->Delete();
+      }
     self->CellsMerge( tid );
     }
 protected:
