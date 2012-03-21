@@ -129,7 +129,7 @@ int main( int argc, char** argv )
 #endif
   isosurface->SetInputConnection( transform->GetOutputPort() );
   isosurface->GenerateValues( 11, 0.0, 1.0 );
-  isosurface->UseScalarTreeOn();
+  isosurface->UseScalarTreeOff();
   transform->Delete();
 
 #ifdef HIDE_VTK_WINDOW
