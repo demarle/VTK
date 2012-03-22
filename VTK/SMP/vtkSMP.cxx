@@ -115,6 +115,7 @@ class DummyMergeFunctor : public vtkFunctor
 
 protected:
   vtkIdType NumberOfCells;
+  vtkIdType NumberOfPoints;
 
   DummyMergeFunctor ()
     {
@@ -191,6 +192,7 @@ public:
     }
 
   vtkIdType GetNumberOfCells() const { return NumberOfCells; }
+  vtkIdType GetNumberOfPoints() const { return NumberOfPoints; }
 
   void InitializeNeeds( vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* _locator,
                         vtkSMP::vtkThreadLocal<vtkPoints>* _points,
@@ -227,7 +229,7 @@ public:
     InCd = _incd;
     outputCd = _outcd;
 
-    vtkIdType NumberOfPoints = 0;
+    NumberOfPoints = 0;
     vtkSMPThreadID max = vtkSMP::GetNumberOfThreads();
     for ( vtkSMPThreadID tid = 0; tid < max; ++tid )
       {
@@ -419,78 +421,45 @@ private:
   void operator =(const ParallelCellMerger&);
 };
 
-struct MergerHelper : public vtkFunctor
+struct LockPointMerger : public vtkFunctor
 {
-  vtkPointData* ptData;
-  vtkPoints* Points;
-  vtkIdList* Map;
-  vtkSMPMergePoints* Locator;
-  vtkPointData* OutputPd;
+  DummyMergeFunctor* Functor;
+  vtkIdType NumberOfPointsFirstThread;
 
-  vtkTypeMacro(MergerHelper,vtkFunctor);
-  static MergerHelper* New();
+  vtkTypeMacro(LockPointMerger,vtkFunctor);
+  static LockPointMerger* New();
   void PrintSelf(ostream &os, vtkIndent indent)
     {
     this->Superclass::PrintSelf(os,indent);
     }
-  void operator() (vtkIdType id, vtkSMPThreadID tid) const
+
+  void operator()( vtkIdType id, vtkSMPThreadID tid ) const
     {
-    vtkIdType NewId;
+    vtkSMPThreadID threadID = 0;
+    vtkIdType NumberOfPoints = NumberOfPointsFirstThread, NewId;
+    while ( id >= NumberOfPoints )
+      {
+      id -= NumberOfPoints;
+      ++threadID;
+      NumberOfPoints = this->Functor->InPoints->GetLocal(threadID)->GetNumberOfPoints();
+      }
+
     double* pt = new double[3];
-    Points->GetPoint( id, pt );
-    if ( Locator->SetUniquePoint( pt, NewId ) )
-      OutputPd->SetTuple( NewId, id, ptData );
-    Map->SetId( id, NewId );
+    this->Functor->InPoints->GetLocal( threadID )->GetPoint( id, pt );
+    if ( this->Functor->outputLocator->SetUniquePoint( pt, NewId ) )
+      this->Functor->outputPd->SetTuple( NewId, id, this->Functor->InPd->GetLocal( threadID ) );
+    this->Functor->Maps->GetLocal( threadID )->SetId( id, NewId );
     delete [] pt;
     }
 protected:
-  MergerHelper() {}
-  ~MergerHelper() {}
+  LockPointMerger() {}
+  ~LockPointMerger() {}
 private:
-  MergerHelper( const MergerHelper& );
-  void operator =( const MergerHelper& );
+  LockPointMerger(const LockPointMerger&);
+  void operator =(const LockPointMerger&);
 };
 
-vtkStandardNewMacro(MergerHelper);
-
-struct Merger : public vtkSMPCommand
-{
-  vtkTypeMacro(Merger,vtkSMPCommand);
-  static Merger* New() { return new Merger; }
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os,indent);
-    }
-
-  void Execute(const vtkObject *caller, unsigned long eventId, void *callData) const
-    {
-    const DummyMergeFunctor* self = static_cast<const DummyMergeFunctor*>(caller);
-    vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
-
-    vtkIdType NumberOfPoints = self->InPoints->GetLocal( tid )->GetNumberOfPoints();
-
-    if ( NumberOfPoints )
-      {
-      MergerHelper* PointsMerge = MergerHelper::New();
-      PointsMerge->ptData = self->InPd->GetLocal( tid );
-      PointsMerge->Points = self->InPoints->GetLocal( tid );
-      PointsMerge->Map = self->Maps->GetLocal( tid );
-      PointsMerge->Locator = self->outputLocator;
-      PointsMerge->OutputPd = self->outputPd;
-
-      vtkSMP::ForEach( 0, NumberOfPoints, PointsMerge );
-
-      PointsMerge->Delete();
-      }
-    self->CellsMerge( tid );
-    }
-protected:
-  Merger() {}
-  ~Merger() {}
-private:
-  Merger(const Merger&);
-  void operator =(const Merger&);
-};
+vtkStandardNewMacro(LockPointMerger);
 
 namespace vtkSMP
 {
@@ -530,7 +499,8 @@ namespace vtkSMP
     timer->start_bench_timer();
     DummyMergeFunctor* Functor = DummyMergeFunctor::New();
     vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::New();
-    outputLocator->InitLockInsertion( outPoints, bounds, inPoints->GetLocal(0)->GetNumberOfPoints() );
+    vtkIdType NumberOfInPointsThread0 = inPoints->GetLocal(0)->GetNumberOfPoints();
+    outputLocator->InitLockInsertion( outPoints, bounds, NumberOfInPointsThread0 );
     Functor->outputLocator = outputLocator;
 
     vtkIdType PointsAlreadyPresent = outPoints->GetNumberOfPoints();
@@ -540,9 +510,16 @@ namespace vtkSMP
     timer->end_bench_timer();
 
     timer->start_bench_timer();
-    Merger* TheMerge = Merger::New();
-    Parallel( Functor, TheMerge, SkipThreads );
+    vtkIdType StartPoint = SkipThreads ? NumberOfInPointsThread0 : 0;
+    LockPointMerger* TheMerge = LockPointMerger::New();
+    TheMerge->Functor = Functor;
+    TheMerge->NumberOfPointsFirstThread = NumberOfInPointsThread0;
+    ForEach( StartPoint, Functor->GetNumberOfPoints(), TheMerge );
     TheMerge->Delete();
+
+    ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
+    Parallel( Functor, TheCellMerge, SkipThreads );
+    TheCellMerge->Delete();
     timer->end_bench_timer();
 
     // Correcting size of arrays
