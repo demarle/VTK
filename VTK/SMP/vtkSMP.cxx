@@ -23,16 +23,19 @@ void vtkFunctor::PrintSelf(ostream &os, vtkIndent indent)
 //--------------------------------------------------------------------------------
 vtkFunctorInitialisable::vtkFunctorInitialisable() : vtkFunctor()
   {
-  IsInitialized = false;
+  vtkSMPThreadID NumThreads = vtkSMP::GetNumberOfThreads();
+  IsInitialized = new vtkIdType[NumThreads];
+  memset( IsInitialized, 0, NumThreads * sizeof(vtkIdType) );
   }
 
-vtkFunctorInitialisable::~vtkFunctorInitialisable() { }
-
-bool vtkFunctorInitialisable::CheckAndSetInitialized() const
+vtkFunctorInitialisable::~vtkFunctorInitialisable()
   {
-  bool ret = IsInitialized;
-  IsInitialized = true;
-  return ret;
+  delete [] IsInitialized;
+  }
+
+bool vtkFunctorInitialisable::ShouldInitialize( vtkSMPThreadID tid ) const
+  {
+  return !IsInitialized[tid];
   }
 
 void vtkFunctorInitialisable::PrintSelf(ostream &os, vtkIndent indent)

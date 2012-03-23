@@ -17,6 +17,9 @@ class vtkSMPMergePoints;
 
 class VTK_SMP_EXPORT vtkFunctor : public vtkObject
 {
+  vtkFunctor ( const vtkFunctor& );
+  void operator =( const vtkFunctor& );
+
 public:
   vtkTypeMacro(vtkFunctor,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
@@ -30,19 +33,21 @@ protected:
 
 class VTK_SMP_EXPORT vtkFunctorInitialisable : public vtkFunctor
 {
+  vtkFunctorInitialisable ( const vtkFunctorInitialisable& );
+  void operator =( const vtkFunctorInitialisable& );
+
 public:
   vtkTypeMacro(vtkFunctorInitialisable,vtkFunctor);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   virtual void Init ( vtkSMPThreadID ) const = 0;
-  bool CheckAndSetInitialized() const;
+  bool ShouldInitialize( vtkSMPThreadID tid ) const;
 
 protected:
+  mutable vtkIdType* IsInitialized;
+
   vtkFunctorInitialisable();
   ~vtkFunctorInitialisable();
-
-private:
-  mutable bool IsInitialized;
 };
 
 class VTK_SMP_EXPORT vtkSMPCommand : public vtkCommand

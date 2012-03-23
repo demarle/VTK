@@ -44,7 +44,7 @@ void vtkSMPContourFilter::PrintSelf(ostream& os, vtkIndent indent)
 /* ================================================================================
   Generic contouring: Functors for parallel execution without ScalarTree
  ================================================================================ */
-class ThreadsFunctor : public vtkFunctor//Initialisable
+class ThreadsFunctor : public vtkFunctorInitialisable
 {
   ThreadsFunctor( const ThreadsFunctor& );
   void operator =( const ThreadsFunctor& );
@@ -156,6 +156,8 @@ public:
     vtkDataArray* cScalars = CellsScalars->NewLocal( 0, inScalars );
     cScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
     cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
+
+    this->IsInitialized[0] = 1;
     }
 
   void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
@@ -189,6 +191,38 @@ public:
       }
     }
 
+  void Init( vtkSMPThreadID tid ) const
+    {
+    vtkPoints* pts = this->newPts->NewLocal( tid );
+    pts->Allocate( this->estimatedSize, this->estimatedSize );
+    vtkIncrementalPointLocator* l = this->Locator->NewLocal( tid, this->refLocator );
+    l->InitPointInsertion( pts, this->input->GetBounds(), this->estimatedSize );
+
+    vtkCellArray* c = this->newVerts->NewLocal( tid );
+    c->Allocate( this->estimatedSize, this->estimatedSize );
+    c = this->newLines->NewLocal( tid );
+    c->Allocate( this->estimatedSize, this->estimatedSize );
+    c = this->newPolys->NewLocal( tid );
+    c->Allocate( this->estimatedSize, this->estimatedSize );
+
+    vtkPointData* pd = this->outPd->NewLocal( tid );
+    if ( !this->computeScalars )
+      {
+      pd->CopyScalarsOff();
+      }
+    pd->InterpolateAllocate( this->inPd, this->estimatedSize, this->estimatedSize );
+
+    vtkCellData* cd = this->outCd->NewLocal( tid );
+    cd->CopyAllocate( this->inCd, this->estimatedSize, this->estimatedSize );
+
+    this->Cells->NewLocal( tid );
+
+    vtkDataArray* cScalars = this->CellsScalars->NewLocal( tid, this->inScalars );
+    cScalars->SetNumberOfComponents( this->inScalars->GetNumberOfComponents() );
+    cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
+
+    this->IsInitialized[tid] = 1;
+    }
 };
 
 vtkStandardNewMacro(ThreadsFunctor);
@@ -510,9 +544,9 @@ int vtkSMPContourFilter::RequestData(
                            newVerts, newLines, newPolys, outCd, outPd );
 
       // Init
-      MyInit* TheInit = MyInit::New();
-      vtkSMP::Parallel( my_contour, TheInit );
-      TheInit->Delete();
+//      MyInit* TheInit = MyInit::New();
+//      vtkSMP::Parallel( my_contour, TheInit );
+//      TheInit->Delete();
       timer->end_bench_timer();
 
       // Exec

@@ -3,35 +3,41 @@
 #include <kaapic.h>
 
 void smpInit(void)
-{
+  {
   kaapic_init( 1 );
-}
+  }
 void smpFini(void)
-{
+  {
   kaapic_finalize();
-}
+  }
 
 void func_call ( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdType f )
-{
+  {
   for ( int32_t k = b; k < e; ++k )
+    {
     (*o)( f + k, tid );
-}
+    }
+  }
 
 void my_parallel ( int32_t b, int32_t e, int32_t tid, const vtkFunctor* f, const vtkSMPCommand* callback )
-{
-  for ( int32_t k = b; k < e; ++k )
   {
+  for ( int32_t k = b; k < e; ++k )
+    {
     callback->Execute( f, vtkCommand::UserEvent + 42, &k );
+    }
   }
-}
 
-void my_init ( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* f )
-{
-  for ( int32_t k = b; k < e; ++k )
+void func_call_init ( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o, vtkIdType f )
   {
-    f->Init( k );
+  if ( o->ShouldInitialize(tid) )
+    {
+    o->Init( tid );
+    }
+  for ( int32_t k = b; k < e; ++k )
+    {
+    (*o)( f + k, tid );
+    }
   }
-}
 
 const int GRAIN = 1024;
 
@@ -50,18 +56,10 @@ namespace vtkSMP
 
   void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op )
     {
-    if (op->CheckAndSetInitialized())
-      {
-      kaapic_foreach_attr_t att;
-      kaapic_foreach_attr_init(&att);
-      kaapic_foreach_attr_set_grains(&att, 1, 1);
-      kaapic_foreach( 0, kaapic_get_concurrency(), &att, 1, my_init, op );
-      kaapic_foreach_attr_destroy(&att);
-      }
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
     kaapic_foreach_attr_set_grains(&attr, GRAIN, GRAIN);
-    kaapic_foreach( 0, last - first, &attr, 2, func_call, op, first );
+    kaapic_foreach( 0, last - first, &attr, 2, func_call_init, op, first );
     kaapic_foreach_attr_destroy(&attr);
     }
 
