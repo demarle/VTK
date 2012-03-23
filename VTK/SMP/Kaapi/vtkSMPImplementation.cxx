@@ -19,11 +19,11 @@ void func_call ( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdTy
     }
   }
 
-void my_parallel ( int32_t b, int32_t e, int32_t tid, const vtkFunctor* f, const vtkSMPCommand* callback )
+void my_parallel ( int32_t b, int32_t e, int32_t tid, const vtkObject* data, const vtkSMPCommand* function )
   {
   for ( int32_t k = b; k < e; ++k )
     {
-    callback->Execute( f, vtkCommand::UserEvent + 42, &k );
+    function->Execute( k, data );
     }
   }
 
@@ -68,12 +68,12 @@ namespace vtkSMP
     return kaapic_get_concurrency();
     }
 
-  void Parallel( const vtkFunctor* f, const vtkSMPCommand* callback , vtkSMPThreadID skipThreads )
+  void Parallel( const vtkSMPCommand* function, const vtkObject* data, vtkSMPThreadID skipThreads )
     {
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
     kaapic_foreach_attr_set_grains(&attr, 1, 1);
-    kaapic_foreach( skipThreads, kaapic_get_concurrency(), &attr, 2, my_parallel, f, callback );
+    kaapic_foreach( skipThreads, kaapic_get_concurrency(), &attr, 2, my_parallel, data, function );
     kaapic_foreach_attr_destroy(&attr);
     }
 

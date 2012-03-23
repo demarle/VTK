@@ -49,8 +49,6 @@ vtkSMPCommand::vtkSMPCommand() { }
 
 vtkSMPCommand::~vtkSMPCommand() { }
 
-void vtkSMPCommand::Execute(vtkObject *caller, unsigned long eventId, void *callData) { }
-
 void vtkSMPCommand::PrintSelf(ostream &os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os,indent);
@@ -373,10 +371,9 @@ struct ParallelPointMerger : public vtkSMPCommand
     this->Superclass::PrintSelf(os,indent);
     }
 
-  void Execute(const vtkObject *caller, unsigned long eventId, void *callData) const
+  void Execute( vtkSMPThreadID tid, const vtkObject* data ) const
     {
-    const DummyMergeFunctor* self = static_cast<const DummyMergeFunctor*>(caller);
-    vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
+    const DummyMergeFunctor* self = static_cast<const DummyMergeFunctor*>(data);
 
     vtkSMPThreadID NumberOfThreads = vtkSMP::GetNumberOfThreads();
     vtkIdType NumberOfBuckets = self->outputLocator->GetNumberOfBuckets();
@@ -394,8 +391,6 @@ protected:
   ~ParallelPointMerger() { }
 
 private:
-
-
   ParallelPointMerger(const ParallelPointMerger&);
   void operator =(const ParallelPointMerger&);
 };
@@ -409,12 +404,9 @@ struct ParallelCellMerger : public vtkSMPCommand
     this->Superclass::PrintSelf(os,indent);
     }
 
-  void Execute(const vtkObject *caller, unsigned long eventId, void *callData) const
+  void Execute( vtkSMPThreadID tid, const vtkObject* data ) const
     {
-    const DummyMergeFunctor* self = static_cast<const DummyMergeFunctor*>(caller);
-    vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
-
-    self->CellsMerge( tid );
+    static_cast<const DummyMergeFunctor*>(data)->CellsMerge( tid );
     }
 protected:
   ParallelCellMerger() {}
@@ -475,11 +467,11 @@ namespace vtkSMP
     DummyFunctor->InitializeNeeds( inPoints, 0, outPoints, inVerts, outVerts, inLines, outLines, inPolys, outPolys, inStrips, outStrips, inPtsData, outPtsData, inCellsData, outCellsData );
 
     ParallelPointMerger* TheMerge = ParallelPointMerger::New();
-    Parallel( DummyFunctor, TheMerge, SkipThreads );
+    Parallel( TheMerge, DummyFunctor, SkipThreads );
     TheMerge->Delete();
 
     ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
-    Parallel( DummyFunctor, TheCellMerge, SkipThreads );
+    Parallel( TheCellMerge, DummyFunctor, SkipThreads );
     TheCellMerge->Delete();
 
     // Correcting size of arrays
@@ -521,7 +513,7 @@ namespace vtkSMP
     TheMerge->Delete();
 
     ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
-    Parallel( Functor, TheCellMerge, SkipThreads );
+    Parallel( TheCellMerge, Functor, SkipThreads );
     TheCellMerge->Delete();
     timer->end_bench_timer();
 

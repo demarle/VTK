@@ -50,20 +50,20 @@ protected:
   ~vtkFunctorInitialisable();
 };
 
-class VTK_SMP_EXPORT vtkSMPCommand : public vtkCommand
+class VTK_SMP_EXPORT vtkSMPCommand : public vtkObjectBase
 {
-  vtkTypeMacro(vtkSMPCommand,vtkCommand);
+  vtkSMPCommand(const vtkSMPCommand&);
+  void operator =(const vtkSMPCommand&);
+
+public:
+  vtkTypeMacro(vtkSMPCommand, vtkObjectBase);
   void PrintSelf(ostream &os, vtkIndent indent);
 
-  virtual void Execute(vtkObject *caller, unsigned long eventId, void *callData); // Not used in vtkSMP internals
-  virtual void Execute(const vtkObject *caller, unsigned long eventId, void *callData) const = 0;
+  virtual void Execute( vtkSMPThreadID tid, const vtkObject *data ) const = 0;
 
 protected:
   vtkSMPCommand();
   ~vtkSMPCommand();
-private:
-  vtkSMPCommand(const vtkSMPCommand&);
-  void operator =(const vtkSMPCommand&);
 };
 
 namespace vtkSMP
@@ -182,7 +182,7 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f );
 
-  void VTK_SMP_EXPORT Parallel( const vtkFunctor* f, const vtkSMPCommand* callback, vtkSMPThreadID skipThreads = 1 );
+  void VTK_SMP_EXPORT Parallel( const vtkSMPCommand* function, const vtkObject* data = NULL, vtkSMPThreadID skipThreads = 1 );
 
   void VTK_SMP_EXPORT MergePoints( vtkPoints* outPoints, vtkThreadLocal<vtkPoints>* inPoints, const double bounds[6],
                                    vtkPointData* outPtsData, vtkThreadLocal<vtkPointData>* inPtsData,

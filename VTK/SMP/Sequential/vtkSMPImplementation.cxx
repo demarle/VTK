@@ -11,7 +11,7 @@ namespace vtkSMP
 
   void ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable *f )
     {
-    if (f->CheckAndSetInitialized())
+    if ( f->ShouldInitialize(0) )
       f->Init( 0 );
     for ( ; first < last; ++first )
       (*f)( first, 0 );
@@ -22,10 +22,10 @@ namespace vtkSMP
     return 1;
     }
 
-  void Parallel( const vtkFunctor* f, const vtkSMPCommand* callback , vtkSMPThreadID skipThreads )
+  void Parallel( const vtkSMPCommand* function, const vtkObject* data, vtkSMPThreadID skipThreads )
     {
     if (!skipThreads)
-      callback->Execute( f, vtkCommand::UserEvent + 42, &skipThreads );
+      function->Execute( 0, data );
     }
 
 }

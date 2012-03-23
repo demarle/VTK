@@ -1130,12 +1130,12 @@ ENDIF(VTK_WRAP_JAVA)
 # Manage VtkSMP options
 OPTION(VTK_USE_SMP "Enable Shared Memory Parallelism optimisations (testing)" OFF)
 SET(VTK_SMP_IMPLEMENTATION_TYPE "Sequential" CACHE STRING
-  "Name of the implementation of SMP techniques. Valid name is Kaapi. Other names backup to sequential implementation"
+  "Name of the implementation of SMP techniques. Valid name are Kaapi, OpenMP and TBB. Other names backup to sequential implementation"
 )
 IF(VTK_USE_SMP)
-  IF( NOT ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Kaapi" OR "${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "OpenMP"))
+  IF( NOT ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Kaapi" OR "${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "OpenMP" OR "${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "TBB"))
     SET(VTK_SMP_IMPLEMENTATION_TYPE "Sequential")
-  ENDIF( NOT ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Kaapi" OR "${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "OpenMP"))
+  ENDIF( NOT ("${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "Kaapi" OR "${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "OpenMP" OR "${VTK_SMP_IMPLEMENTATION_TYPE}" STREQUAL "TBB"))
 ENDIF(VTK_USE_SMP)
 
 #-----------------------------------------------------------------------------

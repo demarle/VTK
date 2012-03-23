@@ -227,55 +227,6 @@ public:
 
 vtkStandardNewMacro(ThreadsFunctor);
 
-struct MyInit : public vtkSMPCommand
-{
-  vtkTypeMacro(MyInit,vtkSMPCommand);
-  static MyInit* New() { return new MyInit; }
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os,indent);
-    }
-
-  void Execute(const vtkObject *caller, unsigned long eventId, void *callData) const
-    {
-    const ThreadsFunctor* self = static_cast<const ThreadsFunctor*>(caller);
-    vtkSMPThreadID tid = *(static_cast<vtkSMPThreadID*>(callData));
-    vtkPoints* pts = self->newPts->NewLocal( tid );
-    pts->Allocate( self->estimatedSize, self->estimatedSize );
-    vtkIncrementalPointLocator* l = self->Locator->NewLocal( tid, self->refLocator );
-    l->InitPointInsertion( pts, self->input->GetBounds(), self->estimatedSize );
-
-    vtkCellArray* c = self->newVerts->NewLocal( tid );
-    c->Allocate( self->estimatedSize, self->estimatedSize );
-    c = self->newLines->NewLocal( tid );
-    c->Allocate( self->estimatedSize, self->estimatedSize );
-    c = self->newPolys->NewLocal( tid );
-    c->Allocate( self->estimatedSize, self->estimatedSize );
-
-    vtkPointData* pd = self->outPd->NewLocal( tid );
-    if ( !self->computeScalars )
-      {
-      pd->CopyScalarsOff();
-      }
-    pd->InterpolateAllocate( self->inPd, self->estimatedSize, self->estimatedSize );
-
-    vtkCellData* cd = self->outCd->NewLocal( tid );
-    cd->CopyAllocate( self->inCd, self->estimatedSize, self->estimatedSize );
-
-    self->Cells->NewLocal( tid );
-
-    vtkDataArray* cScalars = self->CellsScalars->NewLocal( tid, self->inScalars );
-    cScalars->SetNumberOfComponents( self->inScalars->GetNumberOfComponents() );
-    cScalars->Allocate( cScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
-    }
-protected:
-  MyInit() {}
-  ~MyInit() {}
-private:
-  MyInit(const MyInit&);
-  void operator =(const MyInit&);
-};
-
 /* ================================================================================
   Generic contouring: Functors for parallel execution with ScalarTree
  ================================================================================ */
@@ -533,6 +484,7 @@ int vtkSMPContourFilter::RequestData(
       cout << endl;
 
       timer->start_bench_timer();
+      // Init (thread local init is drown into first ForEach)
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
       ThreadsFunctor* my_contour;
       if ( parallelTree )
@@ -543,10 +495,6 @@ int vtkSMPContourFilter::RequestData(
                            estimatedSize, values, numContours, inScalars, this->ComputeScalars,
                            newVerts, newLines, newPolys, outCd, outPd );
 
-      // Init
-//      MyInit* TheInit = MyInit::New();
-//      vtkSMP::Parallel( my_contour, TheInit );
-//      TheInit->Delete();
       timer->end_bench_timer();
 
       // Exec
