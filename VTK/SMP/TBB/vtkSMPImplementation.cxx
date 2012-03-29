@@ -1,7 +1,37 @@
 #include "vtkSMP.h"
 #include <task_scheduler_init.h>
+#include <task_group.h>
 #include <parallel_for.h>
 #include <blocked_range.h>
+#include <compat/thread>
+#include <atomic.h>
+
+tbb::tbb_thread::id* real_ids = 0;
+tbb::atomic<int> CurrentId;
+
+void smpInit(void)
+  {
+  real_ids = new tbb::tbb_thread::id[vtkSMP::GetNumberOfThreads()];
+  }
+
+void smpFini(void)
+  {
+  delete [] real_ids;
+  real_ids = 0;
+  }
+
+vtkSMPThreadID ExtractRealID ( const tbb::tbb_thread::id& HiddenId )
+  {
+  vtkSMPThreadID id, max = CurrentId.load();
+  for ( id = 0; id < max; ++id )
+    {
+    if ( real_ids[id] == HiddenId )
+      return id;
+    }
+  id = CurrentId += 1;
+  real_ids[id] = HiddenId;
+  return id;
+  }
 
 class FuncCall
 {
@@ -10,7 +40,8 @@ class FuncCall
 public:
   void operator() ( const tbb::blocked_range<vtkIdType>& r ) const
     {
-    vtkSMPThreadID tid = 0;
+    vtkSMPThreadID tid = ExtractRealID(tbb::this_tbb_thread::get_id());
+    cout << "Extraction: " << tbb::this_tbb_thread::get_id() << " maps to " << tid << endl;
     for ( vtkIdType k = r.begin(); k < r.end(); ++k )
       {
       (*o)( k, tid );
@@ -28,7 +59,8 @@ class FuncCallInit
 public:
   void operator() ( const tbb::blocked_range<vtkIdType>& r ) const
     {
-    vtkSMPThreadID tid = 0;
+    vtkSMPThreadID tid = ExtractRealID(tbb::this_tbb_thread::get_id());
+    cout << "Extraction: " << tbb::this_tbb_thread::get_id() << " maps to " << tid << endl;
     if ( o->ShouldInitialize(tid) )
       {
       o->Init( tid );
@@ -81,7 +113,7 @@ namespace vtkSMP
 
   vtkSMPThreadID GetNumberOfThreads()
     {
-    return tbb::task_scheduler_init::default_num_threads();
+    return tbb::task_scheduler_init::default_num_threads() * 2;
     }
 
   void Parallel( const vtkSMPCommand* function, const vtkObject* data, vtkSMPThreadID skipThreads )

@@ -264,6 +264,7 @@ public:
   void CellsMerge ( vtkSMPThreadID tid ) const
     {
     vtkIdList* map = this->Maps->GetLocal( tid );
+    if ( !map ) return;
     vtkCellData* clData = this->InCd->GetLocal( tid );
 
     vtkIdType *pts, totalNumber, newId, n, clIndex;
@@ -377,13 +378,15 @@ struct ParallelPointMerger : public vtkSMPCommand
 
     vtkSMPThreadID NumberOfThreads = vtkSMP::GetNumberOfThreads();
     vtkIdType NumberOfBuckets = self->outputLocator->GetNumberOfBuckets();
+    vtkSMPMergePoints* l;
 
     for ( vtkIdType i = 0; i < NumberOfBuckets; ++i )
       {
       if ( self->Locators->GetLocal(tid)->GetNumberOfIdInBucket(i) )
         if ( MustTreatBucket(i) )
           for ( vtkSMPThreadID j = 1; j < NumberOfThreads; ++j )
-            self->outputLocator->Merge( self->Locators->GetLocal(j), i, self->outputPd, self->InPd->GetLocal(j), self->Maps->GetLocal(j) );
+            if ( (l = self->Locators->GetLocal(j)) )
+              self->outputLocator->Merge( l, i, self->outputPd, self->InPd->GetLocal(j), self->Maps->GetLocal(j) );
       }
     }
 protected:
