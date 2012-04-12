@@ -31,7 +31,7 @@ void func_call_init ( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitial
     }
   }
 
-void my_parallel ( const vtkSMPCommand* function, const vtkObject* data, vtkSMPThreadID tid )
+void my_parallel ( const vtkTask* function, const vtkObject* data, vtkSMPThreadID tid )
   {
   function->Execute( tid, data );
   }
@@ -65,7 +65,7 @@ namespace vtkSMP
     return kaapic_get_concurrency();
     }
 
-  void Parallel( const vtkSMPCommand* function, const vtkObject* data, vtkSMPThreadID skipThreads )
+  void Parallel( const vtkTask* function, const vtkObject* data, vtkSMPThreadID skipThreads )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);

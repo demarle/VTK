@@ -22,7 +22,7 @@ namespace vtkSMP
     return 1;
     }
 
-  void Parallel( const vtkSMPCommand* function, const vtkObject* data, vtkSMPThreadID skipThreads )
+  void Parallel( const vtkTask* function, const vtkObject* data, vtkSMPThreadID skipThreads )
     {
     if (!skipThreads)
       function->Execute( 0, data );

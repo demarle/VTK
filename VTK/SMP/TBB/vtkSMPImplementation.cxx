@@ -77,7 +77,7 @@ public:
 
 class ParallelCall
 {
-  const vtkSMPCommand* function;
+  const vtkTask* function;
   const vtkObject* data;
 
 public:
@@ -89,7 +89,7 @@ public:
       }
     }
 
-  ParallelCall ( const vtkSMPCommand* _f, const vtkObject* _o ) : function(_f), data(_o) { }
+  ParallelCall ( const vtkTask* _f, const vtkObject* _o ) : function(_f), data(_o) { }
   ~ParallelCall ( ) { }
 };
 
@@ -116,7 +116,7 @@ namespace vtkSMP
     return tbb::task_scheduler_init::default_num_threads() * 2;
     }
 
-  void Parallel( const vtkSMPCommand* function, const vtkObject* data, vtkSMPThreadID skipThreads )
+  void Parallel( const vtkTask* function, const vtkObject* data, vtkSMPThreadID skipThreads )
     {
     tbb::task_scheduler_init init;
     tbb::parallel_for( tbb::blocked_range<vtkSMPThreadID>( skipThreads, init.default_num_threads(), 1 ), ParallelCall( function, data ) );

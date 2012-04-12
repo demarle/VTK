@@ -3,12 +3,14 @@
 
 #include "vtkSimpleScalarTree.h"
 
-class vtkCell;
-class SumFunctor;
+class vtkGenericCell;
+class TreeFunctor;
+class BuildFunctor;
 
 class VTK_SMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree
 {
-  friend class SumFunctor;
+  friend class TreeFunctor;
+  friend class BuildFunctor;
   vtkSMPMinMaxTree( const vtkSMPMinMaxTree& );
   void operator =( const vtkSMPMinMaxTree& );
 
@@ -21,12 +23,16 @@ public:
   static vtkSMPMinMaxTree* New();
   void PrintSelf(ostream &os, vtkIndent indent);
 
-  double GetTraversedCell( vtkIdType callNumber, vtkIdType& realCellId, vtkCell* cell, vtkDataArray* cellScalars );
+  double GetTraversedCell( vtkIdType callNumber, vtkIdType& realCellId, vtkGenericCell* cell, vtkDataArray* cellScalars );
   vtkIdType GetNumberOfTraversedCells( double value );
+  void BuildTree();
 
 protected:
-  vtkIdType SumOverlapingCells( vtkIdType index, int level );
-  vtkIdType GetFirstCell( vtkIdType skip );
+  void ComputeOverlapingCells( vtkIdType index, int level );
+  void InternalBuildTree( vtkIdType index, int level );
+
+  vtkIdType CurrentCellIdCount;
+  vtkIdList* TraversedCells;
 };
 
 #endif // VTKSMPMINMAXTREE_H

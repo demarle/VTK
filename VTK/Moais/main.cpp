@@ -122,14 +122,14 @@ int main( int argc, char** argv )
   isosurface->SetLocator( locator );
   locator->Delete();
   vtkSMPMinMaxTree* tree = vtkSMPMinMaxTree::New();
-//  isosurface->SetScalarTree(tree);
+  isosurface->SetScalarTree(tree);
   tree->Delete();
 #else
   vtkContourFilter* isosurface = vtkContourFilter::New();
 #endif
   isosurface->SetInputConnection( transform->GetOutputPort() );
   isosurface->GenerateValues( 11, 0.0, 1.0 );
-  isosurface->UseScalarTreeOff();
+  isosurface->UseScalarTreeOn();
   transform->Delete();
 
 #ifdef HIDE_VTK_WINDOW

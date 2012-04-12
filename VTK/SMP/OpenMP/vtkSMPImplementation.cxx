@@ -40,7 +40,7 @@ namespace vtkSMP
     return numThreads;
     }
 
-  void Parallel( const vtkSMPCommand* function, const vtkObject* data, vtkSMPThreadID skipThreads )
+  void Parallel ( const vtkTask* function, const vtkObject* data, vtkSMPThreadID skipThreads )
     {
     #pragma omp parallel shared(skipThreads)
       {
@@ -50,4 +50,14 @@ namespace vtkSMP
       }
     }
 
+  void Spawn ( const vtkTask* function, const vtkObject* data )
+    {
+    #pragma omp parallel
+    #pragma omp single
+      {
+      #pragma omp task
+      function->Execute( omp_get_thread_num(), data );
+      #pragma omp taskwait
+      }
+    }
 }

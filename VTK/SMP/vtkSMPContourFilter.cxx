@@ -264,8 +264,9 @@ public:
 
 vtkStandardNewMacro(TreeFuntor);
 
-// General contouring filter.  Handles arbitrary input.
-//
+/* ================================================================================
+ General contouring filter.  Handles arbitrary input.
+ ================================================================================ */
 int vtkSMPContourFilter::RequestData(
   vtkInformation* request,
   vtkInformationVector** inputVector,
@@ -487,7 +488,7 @@ int vtkSMPContourFilter::RequestData(
       // Init (thread local init is drown into first ForEach)
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
       ThreadsFunctor* my_contour;
-      if ( parallelTree )
+      if ( this->UseScalarTree )
         my_contour = TreeFuntor::New();
       else
         my_contour = ThreadsFunctor::New();
@@ -499,7 +500,7 @@ int vtkSMPContourFilter::RequestData(
 
       // Exec
       timer->start_bench_timer();
-      if ( parallelTree )
+      if ( this->UseScalarTree )
         {
         TreeFuntor* TreeContour = static_cast<TreeFuntor*>(my_contour);
         TreeContour->Tree = parallelTree;
@@ -521,7 +522,7 @@ int vtkSMPContourFilter::RequestData(
 
       // Merge
       timer->start_bench_timer();
-      if (parallelLocator)
+      if ( parallelLocator )
         {
         vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* SMPLocator = vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::New();
         my_contour->Locator->FillDerivedThreadLocal( SMPLocator );

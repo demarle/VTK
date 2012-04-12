@@ -50,20 +50,36 @@ protected:
   ~vtkFunctorInitialisable();
 };
 
-class VTK_SMP_EXPORT vtkSMPCommand : public vtkObjectBase
+class VTK_SMP_EXPORT vtkTask : public vtkObjectBase
 {
-  vtkSMPCommand(const vtkSMPCommand&);
-  void operator =(const vtkSMPCommand&);
+  vtkTask(const vtkTask&);
+  void operator =(const vtkTask&);
 
 public:
-  vtkTypeMacro(vtkSMPCommand, vtkObjectBase);
+  vtkTypeMacro(vtkTask, vtkObjectBase);
   void PrintSelf(ostream &os, vtkIndent indent);
 
   virtual void Execute( vtkSMPThreadID tid, const vtkObject *data ) const = 0;
 
 protected:
-  vtkSMPCommand();
-  ~vtkSMPCommand();
+  vtkTask();
+  ~vtkTask();
+};
+
+class VTK_SMP_EXPORT vtkTaskSplitable : public vtkTask
+{
+  vtkTaskSplitable ( const vtkTaskSplitable& );
+  void operator =( const vtkTaskSplitable& );
+
+public:
+  vtkTypeMacro(vtkTaskSplitable, vtkTask);
+  void PrintSelf(ostream &os, vtkIndent indent);
+
+  virtual void SplitTask() const = 0;
+
+protected:
+  vtkTaskSplitable();
+  ~vtkTaskSplitable();
 };
 
 namespace vtkSMP
@@ -182,7 +198,7 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f );
 
-  void VTK_SMP_EXPORT Parallel( const vtkSMPCommand* function, const vtkObject* data = NULL, vtkSMPThreadID skipThreads = 1 );
+  void VTK_SMP_EXPORT Parallel( const vtkTask* function, const vtkObject* data = NULL, vtkSMPThreadID skipThreads = 1 );
 
   void VTK_SMP_EXPORT MergePoints( vtkPoints* outPoints, vtkThreadLocal<vtkPoints>* inPoints, const double bounds[6],
                                    vtkPointData* outPtsData, vtkThreadLocal<vtkPointData>* inPtsData,

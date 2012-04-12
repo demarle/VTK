@@ -45,11 +45,11 @@ void vtkFunctorInitialisable::PrintSelf(ostream &os, vtkIndent indent)
   }
 
 //--------------------------------------------------------------------------------
-vtkSMPCommand::vtkSMPCommand() { }
+vtkTask::vtkTask() { }
 
-vtkSMPCommand::~vtkSMPCommand() { }
+vtkTask::~vtkTask() { }
 
-void vtkSMPCommand::PrintSelf(ostream &os, vtkIndent indent)
+void vtkTask::PrintSelf(ostream &os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os,indent);
   }
@@ -363,9 +363,9 @@ int MustTreatBucket( vtkIdType idx )
   return !__sync_fetch_and_add(&(TreatedTable[idx]), 1);
   }
 
-struct ParallelPointMerger : public vtkSMPCommand
+struct ParallelPointMerger : public vtkTask
 {
-  vtkTypeMacro(ParallelPointMerger,vtkSMPCommand);
+  vtkTypeMacro(ParallelPointMerger,vtkTask);
   static ParallelPointMerger* New() { return new ParallelPointMerger; }
   void PrintSelf(ostream &os, vtkIndent indent)
     {
@@ -398,9 +398,9 @@ private:
   void operator =(const ParallelPointMerger&);
 };
 
-struct ParallelCellMerger : public vtkSMPCommand
+struct ParallelCellMerger : public vtkTask
 {
-  vtkTypeMacro(ParallelCellMerger,vtkSMPCommand);
+  vtkTypeMacro(ParallelCellMerger,vtkTask);
   static ParallelCellMerger* New() { return new ParallelCellMerger; }
   void PrintSelf(ostream &os, vtkIndent indent)
     {
