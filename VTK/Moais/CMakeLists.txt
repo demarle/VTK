@@ -24,14 +24,24 @@ IF(VTK_USE_SMP)
   add_definitions(-DVTK_CAN_USE_SMP=1 -DVTK_WINDOW_NAME=\"${SMP_NAME}\")
 
   add_executable(${SMP_NAME}Bench MACOSX_BUNDLE "main.cpp" ${HDRS})
-  target_link_libraries(${SMP_NAME}Bench vtkIO vtkRendering vtkSMP)
+  target_link_libraries(${SMP_NAME}Bench vtkIO vtkRendering vtkSMP vtkParallel)
 
   install(TARGETS ${SMP_NAME}Bench RUNTIME DESTINATION bin)
 ELSE(VTK_USE_SMP)
-  add_definitions(-DVTK_WINDOW_NAME=\"VTKreference\")
+  IF(VTK_USE_MPI)
+    set(HDRS ${HDRS} "vtkPEnSightGoldBinaryReader.h" "vtkPEnSightGoldReader.h" "vtkPEnSightReader.h" "vtkPGenericEnSightReader.h")
+    set(SRCS "main_mpi.cpp" "vtkPEnSightGoldBinaryReader.cxx" "vtkPEnSightGoldReader.cxx" "vtkPEnSightReader.cxx" "vtkPGenericEnSightReader.cxx")
 
-  add_executable(purevtkBench MACOSX_BUNDLE "main.cpp" ${HDRS})
-  target_link_libraries(purevtkBench vtkIO vtkRendering vtkGraphics)
+    add_executable(mpiBench MACOSX_BUNDLE ${SRCS} ${HDRS})
+    target_link_libraries(mpiBench vtkIO vtkRendering vtkGraphics vtkParallel)
 
-  install(TARGETS purevtkBench RUNTIME DESTINATION bin)
+    install(TARGETS mpiBench RUNTIME DESTINATION bin)
+  ELSE(VTK_USE_MPI)
+    add_definitions(-DVTK_WINDOW_NAME=\"VTKreference\")
+
+    add_executable(purevtkBench MACOSX_BUNDLE "main.cpp" ${HDRS})
+    target_link_libraries(purevtkBench vtkIO vtkRendering vtkGraphics)
+
+    install(TARGETS purevtkBench RUNTIME DESTINATION bin)
+  ENDIF(VTK_USE_MPI)
 ENDIF(VTK_USE_SMP)

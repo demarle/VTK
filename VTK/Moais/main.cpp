@@ -20,6 +20,13 @@
   #include "vtkContourFilter.h"
 #endif
 
+#include "vtkEnSightWriter.h"
+#include "vtkUnstructuredGrid.h"
+#include "vtkDataSetMapper.h"
+#include "vtkAppendFilter.h"
+#include "vtkUnsignedIntArray.h"
+#include "vtkCellData.h"
+
 #include "vtkCellArray.h"
 #include "vtkGenericCell.h"
 #include <cstdlib>
@@ -47,52 +54,32 @@ int main( int argc, char** argv )
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();
   polyReader->SetFileName(argv[1]);
 
-  /* === Testing transform filter === */
+  vtkAppendFilter* filter = vtkAppendFilter::New();
+  filter->AddInputConnection(polyReader->GetOutputPort());
+  polyReader->Delete();
 
-  vtkTransformFilter* pre_transform = vtkTransformFilter::New();
-  pre_transform->SetInputConnection( polyReader->GetOutputPort() );
+  // Adding BlockID (BlockID = 1 for all cells)
+  filter->Update();
+  vtkUnstructuredGrid* usd = filter->GetOutput();
+  vtkIdType number_cells = usd->GetNumberOfCells();
+  vtkIdType blockSize = vtkIdType(number_cells / parallel);
+  ++blockSize;
 
-  vtkTransformFilter* transform = vtkTransformFilter::New();
-  transform->SetInputConnection( pre_transform->GetOutputPort() );
-
-  pre_transform->Delete();
-
-#ifdef VTK_CAN_USE_SMP
-  if ( parallel != 1 )
-  {
-    vtkSMPTransform* t = vtkSMPTransform::New();
-    t->Scale( -1., -1., -1. );
-    pre_transform->SetTransform( t );
-    transform->SetTransform( t );
-    t->Delete();
-  }
-  else
-  {
-#endif
-    vtkTransform* t = vtkTransform::New();
-    t->Scale( -1., -1., -1. );
-    pre_transform->SetTransform( t );
-    transform->SetTransform( t );
-    t->Delete();
-#ifdef VTK_CAN_USE_SMP
-  }
-#endif
-
-  /* === Testing contour filter === */
-  transform->Update();
-  polyReader->Update();
+  vtkUnsignedIntArray* blockIDs = vtkUnsignedIntArray::New();
+  blockIDs->SetNumberOfTuples(number_cells);
+  blockIDs->SetNumberOfComponents(1);
+  blockIDs->SetName("BlockId");
   vtkDataArray* s = vtkDoubleArray::New();
   s->SetNumberOfComponents(1);
-  s->SetNumberOfTuples(transform->GetOutput()->GetNumberOfPoints());
+  s->SetNumberOfTuples(usd->GetNumberOfPoints());
   s->SetName("scalars");
-  vtkPointSet* data = transform->GetOutput();
-  vtkIdType num = data->GetNumberOfCells() / parallel, n;
-  ++num;
+  vtkIdType n;
   vtkGenericCell* cell = vtkGenericCell::New();
   vtkIdList* cellPts;
-  for ( vtkIdType i = 0; i < num; ++i )
+  for ( vtkIdType i = 0; i < blockSize; ++i )
   {
-    data->GetCell( i, cell );
+    blockIDs->SetValue ( i, 1 );
+    usd->GetCell( i, cell );
     cellPts = cell->GetPointIds();
     n = 0;
     while ( n != cellPts->GetNumberOfIds() )
@@ -101,9 +88,10 @@ int main( int argc, char** argv )
       ++n;
     }
   }
-  for ( vtkIdType i = num; i < data->GetNumberOfCells(); ++i )
+  for ( vtkIdType i = blockSize; i < number_cells; ++i )
   {
-    data->GetCell( i, cell );
+    blockIDs->SetValue ( i, 1 + (i/blockSize) );
+    usd->GetCell( i, cell );
     cellPts = cell->GetPointIds();
     n = 0;
     while ( n != cellPts->GetNumberOfIds() )
@@ -113,69 +101,15 @@ int main( int argc, char** argv )
     }
   }
   cell->Delete();
-  data->GetPointData()->SetScalars( s );
+  usd->GetPointData()->SetScalars( s );
   s->Delete();
+  usd->GetCellData()->AddArray(blockIDs);
+  blockIDs->Delete();
 
-#ifdef VTK_CAN_USE_SMP
-  vtkContourFilter* isosurface = parallel != 1 ? vtkSMPContourFilter::New() : vtkContourFilter::New();
-  vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
-  isosurface->SetLocator( locator );
-  locator->Delete();
-  vtkSMPMinMaxTree* tree = vtkSMPMinMaxTree::New();
-  isosurface->SetScalarTree(tree);
-  tree->Delete();
-#else
-  vtkContourFilter* isosurface = vtkContourFilter::New();
-#endif
-  isosurface->SetInputConnection( transform->GetOutputPort() );
-  isosurface->GenerateValues( 11, 0.0, 1.0 );
-  isosurface->UseScalarTreeOn();
-  transform->Delete();
-
-#ifdef HIDE_VTK_WINDOW
-  // Simulate a call to vtkRenderWindow::Render()
-  polyReader->Delete();
-  isosurface->Update();
-  isosurface->Delete();
-#else
-  vtkPolyDataMapper* map = vtkPolyDataMapper::New();
-  map->SetInputConnection( isosurface->GetOutputPort() );
-  isosurface->Delete();
-
-  vtkActor* object = vtkActor::New();
-  object->SetMapper( map );
-  map->Delete();
-
-  vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
-  mapper->SetInputConnection( transform->GetOutputPort() );
-  polyReader->Delete();
-
-  vtkActor* reference = vtkActor::New();
-  reference->SetMapper( mapper );
-  reference->AddPosition( .2, 0., 0. );
-  mapper->Delete();
-
-  vtkRenderer* viewport = vtkRenderer::New();
-  viewport->SetBackground( .5, .5, .5 );
-  viewport->AddActor( object );
-  viewport->AddActor( reference );
-  object->Delete();
-  reference->Delete();
-
-  vtkRenderWindow* window = vtkRenderWindow::New();
-  window->AddRenderer( viewport );
-  window->SetWindowName(VTK_WINDOW_NAME);
-  viewport->Delete();
-
-  vtkRenderWindowInteractor* eventsCatcher = vtkRenderWindowInteractor::New();
-  eventsCatcher->SetRenderWindow( window );
-  window->Delete();
-
-  eventsCatcher->Initialize();
-  eventsCatcher->Start();
-
-  eventsCatcher->Delete();
-#endif
-  cout << "should exit (" << parallel << ")" << endl;
-  return 0;
+  vtkEnSightWriter* writer = vtkEnSightWriter::New();
+  writer->SetFileName(argv[1]);
+  writer->SetInputConnection(filter->GetOutputPort());
+  writer->SetNumberOfBlocks(8);
+  writer->Write();
+  writer->WriteCaseFile(1);
 }

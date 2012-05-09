@@ -194,9 +194,9 @@ namespace vtkSMP
     };
 
   // ForEach template : parallel loop over an iterator
-  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op );
+  void VTK_SMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain = 0 );
 
-  void VTK_SMP_EXPORT ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f );
+  void VTK_SMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f, int grain = 0 );
 
   void VTK_SMP_EXPORT Parallel( const vtkTask* function, const vtkObject* data = NULL, vtkSMPThreadID skipThreads = 1 );
 
@@ -215,6 +215,10 @@ namespace vtkSMP
                                    vtkCellArray* outPolys, vtkThreadLocal<vtkCellArray>* inPolys,
                                    vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
                                    vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData, int SkipThreads );
+
+  void VTK_SMP_EXPORT BeginSpawnRegion();
+  void VTK_SMP_EXPORT Spawn( const vtkTask* function );
+  void VTK_SMP_EXPORT Sync();
 
 }
 

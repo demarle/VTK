@@ -1,10 +1,11 @@
 #include "vtkSMP.h"
 #include "vtkCommand.h"
 #include <kaapic.h>
+#include <cmath>
 
 void smpInit(void)
   {
-  kaapic_init( 1 );
+  kaapic_init( KAAPIC_START_ONLY_MAIN );
   }
 void smpFini(void)
   {
@@ -36,27 +37,34 @@ void my_parallel ( const vtkTask* function, const vtkObject* data, vtkSMPThreadI
   function->Execute( tid, data );
   }
 
-const int GRAIN = 1024;
+void my_spawn ( const vtkTask* function )
+  {
+  function->Execute( kaapic_get_thread_num(), 0 );
+  }
 
 //--------------------------------------------------------------------------------
 namespace vtkSMP
 {
 
-  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op )
+  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
     {
+    vtkIdType n = last - first;
+    uint32_t granularity = grain ? grain : sqrt(n);
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
-    kaapic_foreach_attr_set_grains(&attr, GRAIN, GRAIN);
-    kaapic_foreach( 0, last - first, &attr, 2, func_call, op, first );
+    kaapic_foreach_attr_set_grains(&attr, granularity, granularity);
+    kaapic_foreach( 0, n, &attr, 2, func_call, op, first );
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op )
+  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op, int grain )
     {
+    vtkIdType n = last - first;
+    uint32_t granularity = grain ? grain : sqrt(n);
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
-    kaapic_foreach_attr_set_grains(&attr, GRAIN, GRAIN);
-    kaapic_foreach( 0, last - first, &attr, 2, func_call_init, op, first );
+    kaapic_foreach_attr_set_grains(&attr, granularity, granularity);
+    kaapic_foreach( 0, n, &attr, 2, func_call_init, op, first );
     kaapic_foreach_attr_destroy(&attr);
     }
 
@@ -90,4 +98,21 @@ namespace vtkSMP
     kaapic_spawn_attr_destroy(&attr);
     }
 
+  void BeginSpawnRegion()
+    {
+    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
+    }
+
+  void Spawn( const vtkTask *function )
+    {
+    kaapic_spawn_attr_t attr;
+    kaapic_spawn_attr_init(&attr);
+    kaapic_spawn( &attr, 1, my_spawn, KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR );
+    kaapic_spawn_attr_destroy(&attr);
+    }
+
+  void Sync( )
+    {
+    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
+    }
 }

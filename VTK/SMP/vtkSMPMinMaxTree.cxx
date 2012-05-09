@@ -140,10 +140,16 @@ void vtkSMPMinMaxTree::ComputeOverlapingCells( vtkIdType index, int level )
     {
     if ( level < this->Level )
       {
-      TreeFunctor* SearchCells = TreeFunctor::New();
-      SearchCells->InitializeData( this, level+1, this->BranchingFactor*index+1 );
-      vtkSMP::ForEach( 0, this->BranchingFactor, SearchCells );
-      SearchCells->Delete();
+      vtkIdType offset = this->BranchingFactor * index + 1;
+      vtkIdType NbSons = this->TreeSize - offset;
+      if ( NbSons > 0 )
+        {
+        NbSons = NbSons > this->BranchingFactor ? this->BranchingFactor : NbSons;
+        TreeFunctor* SearchCells = TreeFunctor::New();
+        SearchCells->InitializeData( this, level + 1, offset );
+        vtkSMP::ForEach( 0, NbSons, SearchCells, 1 );
+        SearchCells->Delete();
+        }
       }
     else
       {
@@ -213,7 +219,6 @@ void vtkSMPMinMaxTree::BuildTree()
 
 void vtkSMPMinMaxTree::InternalBuildTree( vtkIdType index, int level )
   {
-  cout << "internal build " << index << ", " << level << endl;
   vtkScalarRange<double> *tree = static_cast<vtkScalarRange<double>*>(this->Tree) + index;
   tree->min = VTK_DOUBLE_MAX;
   tree->max = -VTK_DOUBLE_MAX;
@@ -226,13 +231,13 @@ void vtkSMPMinMaxTree::InternalBuildTree( vtkIdType index, int level )
     if ( NbSons > 0 )
       {
       NbSons = NbSons > this->BranchingFactor ? this->BranchingFactor : NbSons;
-      BuildFunctor* SearchCells = BuildFunctor::New();
-      SearchCells->InitializeData( this, level+1, offset );
-      vtkSMP::ForEach( 0, NbSons, SearchCells );
-      SearchCells->Delete();
+      BuildFunctor* BuildCells = BuildFunctor::New();
+      BuildCells->InitializeData( this, level + 1, offset );
+      vtkSMP::ForEach( 0, NbSons, BuildCells, 1 );
+      BuildCells->Delete();
 
       vtkScalarRange<double> *son = static_cast<vtkScalarRange<double>*>(this->Tree) + offset;
-      for ( j = 0; j < this->BranchingFactor; ++j )
+      for ( j = 0; j < NbSons; ++j )
         {
         if ( son[j].min < tree->min )
           {
