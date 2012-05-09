@@ -35,7 +35,7 @@
 
 #include "vtkBenchTimer.h"
 
-const int vtKaapiRuns = 1;
+const int vtKaapiRuns = 50;
 
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_AFTER_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_BEFORE_FORWARD, Integer);
@@ -754,7 +754,9 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
        !this->Algorithm->IsA("vtkImageReader2") &&
        !this->Algorithm->IsA("vtkDataReader") &&
        !this->Algorithm->IsA("vtkWriter") &&
-       !this->Algorithm->IsA("vtkAbstractMapper") )
+       !this->Algorithm->IsA("vtkAbstractMapper") &&
+       !this->Algorithm->IsA("vtkGenericEnSightReader") &&
+       !this->Algorithm->IsA("vtkContourGrid") )
     { // We want to monitor all but these
 
     cout << this->Algorithm->GetClassName() << endl;

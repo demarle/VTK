@@ -29,11 +29,14 @@ IF(VTK_USE_SMP)
   install(TARGETS ${SMP_NAME}Bench RUNTIME DESTINATION bin)
 ELSE(VTK_USE_SMP)
   IF(VTK_USE_MPI)
+    find_package(MPI REQUIRED)
+    include_directories(${MPI_CXX_INCLUDE_PATH})
+
     set(HDRS ${HDRS} "vtkPEnSightGoldBinaryReader.h" "vtkPEnSightGoldReader.h" "vtkPEnSightReader.h" "vtkPGenericEnSightReader.h")
     set(SRCS "main_mpi.cpp" "vtkPEnSightGoldBinaryReader.cxx" "vtkPEnSightGoldReader.cxx" "vtkPEnSightReader.cxx" "vtkPGenericEnSightReader.cxx")
 
     add_executable(mpiBench MACOSX_BUNDLE ${SRCS} ${HDRS})
-    target_link_libraries(mpiBench vtkIO vtkRendering vtkGraphics vtkParallel)
+    target_link_libraries(mpiBench vtkIO vtkRendering vtkGraphics vtkParallel MapReduceMPI)
 
     install(TARGETS mpiBench RUNTIME DESTINATION bin)
   ELSE(VTK_USE_MPI)
