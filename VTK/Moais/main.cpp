@@ -118,12 +118,12 @@ int main( int argc, char** argv )
 
 #ifdef VTK_CAN_USE_SMP
   vtkContourFilter* isosurface = parallel != 1 ? vtkSMPContourFilter::New() : vtkContourFilter::New();
-  vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
+  /*vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
   isosurface->SetLocator( locator );
   locator->Delete();
   vtkSMPMinMaxTree* tree = vtkSMPMinMaxTree::New();
   isosurface->SetScalarTree(tree);
-  tree->Delete();
+  tree->Delete();*/
 #else
   vtkContourFilter* isosurface = vtkContourFilter::New();
 #endif
