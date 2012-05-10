@@ -53,6 +53,7 @@ namespace vtkSMP
   void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
     {
     vtkIdType n = last - first;
+    if (!n) return;
     uint32_t granularity = grain ? grain : sqrt(n);
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
@@ -64,6 +65,7 @@ namespace vtkSMP
   void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op, int grain )
     {
     vtkIdType n = last - first;
+    if (!n) return;
     uint32_t granularity = grain ? grain : sqrt(n);
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
