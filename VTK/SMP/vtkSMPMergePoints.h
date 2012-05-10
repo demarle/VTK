@@ -33,6 +33,8 @@ public:
   vtkIdType GetNumberOfIdInBucket ( vtkIdType idx );
   vtkIdType GetNumberOfBuckets();
 
+  void PrintSizeOfThis();
+
   void FreeSearchStructure();
 };
 

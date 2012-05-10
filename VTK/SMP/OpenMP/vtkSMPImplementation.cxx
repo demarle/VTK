@@ -4,7 +4,12 @@
 namespace vtkSMP
 {
 
-  void ForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op)
+  vtkSMPThreadID InternalGetTID()
+    {
+    return omp_get_thread_num();
+    }
+
+  void ForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain)
     {
     #pragma omp default(none)
     #pragma omp parallel for
@@ -12,7 +17,7 @@ namespace vtkSMP
       (*op)(i, omp_get_thread_num());
     }
 
-  void ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op)
+  void ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op, int grain)
     {
     #pragma omp parallel
     {

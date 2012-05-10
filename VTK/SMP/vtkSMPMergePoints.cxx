@@ -357,3 +357,16 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
 
   return 1;
   }
+
+void vtkSMPMergePoints::PrintSizeOfThis()
+  {
+  cout << "this: " << sizeof(*this) << endl;
+  cout << "doubles et int: " << 9 * sizeof(double) + 3 * sizeof(int) << endl;
+  cout << "number of buckets: " << this->NumberOfBuckets << " (" << sizeof(vtkIdList*) << ")" << endl;
+  cout << "vtkMutexLock: " << sizeof(*(this->CreatorLock)) << endl;
+  int numOfEffectiveBuckets = 0;
+  for (int i = 0; i < this->NumberOfBuckets; ++i)
+    if (this->HashTable[i])
+      ++numOfEffectiveBuckets;
+  cout << "number of vtkIdList and vtkMutexLock: " << numOfEffectiveBuckets << endl;
+  }

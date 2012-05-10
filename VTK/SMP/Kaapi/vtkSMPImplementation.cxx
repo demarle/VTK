@@ -45,6 +45,10 @@ void my_spawn ( const vtkTask* function )
 //--------------------------------------------------------------------------------
 namespace vtkSMP
 {
+  vtkSMPThreadID InternalGetTID()
+    {
+    return kaapic_get_thread_num();
+    }
 
   void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
     {

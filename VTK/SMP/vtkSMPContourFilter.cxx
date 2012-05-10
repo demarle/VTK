@@ -230,39 +230,66 @@ vtkStandardNewMacro(ThreadsFunctor);
 /* ================================================================================
   Generic contouring: Functors for parallel execution with ScalarTree
  ================================================================================ */
-class TreeFuntor : public ThreadsFunctor
+class AcceleratedFunctor : public ThreadsFunctor
 {
-  TreeFuntor( const TreeFuntor& );
-  void operator =( const TreeFuntor& );
+  AcceleratedFunctor( const AcceleratedFunctor& );
+  void operator =( const AcceleratedFunctor& );
 
 protected:
-  TreeFuntor() { }
-  ~TreeFuntor() { }
+  AcceleratedFunctor() { }
+  ~AcceleratedFunctor() { }
 
 public:
-  vtkTypeMacro(TreeFuntor,ThreadsFunctor);
-  static TreeFuntor* New();
+  vtkTypeMacro(AcceleratedFunctor,ThreadsFunctor);
+  static AcceleratedFunctor* New();
   void PrintSelf(ostream &os, vtkIndent indent)
     {
     this->Superclass::PrintSelf(os,indent);
     }
 
-  vtkSMPMinMaxTree* Tree;
+  double ScalarValue;
 
   void operator ()( vtkIdType id, vtkSMPThreadID tid ) const
     {
-    vtkGenericCell* cell = this->Cells->GetLocal( tid );
-    vtkDataArray* scalars = this->CellsScalars->GetLocal( tid );
-    vtkIdType realCellId;
-    double v = this->Tree->GetTraversedCell( id, realCellId, cell, scalars );
-    cell->Contour( v, scalars, this->Locator->GetLocal(tid),
-                   this->newVerts->GetLocal(tid), this->newLines->GetLocal(tid), this->newPolys->GetLocal(tid),
-                   this->inPd, this->outPd->GetLocal(tid),
-                   this->inCd, realCellId, this->outCd->GetLocal(tid));
+    vtkGenericCell* cell = this->Cells->GetLocal( );
+    vtkDataArray* scalars = this->CellsScalars->GetLocal( );
+
+    this->input->GetCell( id, cell );
+    vtkIdList* cellPts = cell->GetPointIds();
+    if ( scalars->GetSize() / scalars->GetNumberOfComponents() < cellPts->GetNumberOfIds() )
+      {
+      scalars->Allocate(scalars->GetNumberOfComponents()*cellPts->GetNumberOfIds());
+      }
+    this->inScalars->GetTuples( cellPts, scalars );
+    cell->Contour( ScalarValue, scalars, this->Locator->GetLocal( ),
+                   this->newVerts->GetLocal( ), this->newLines->GetLocal( ), this->newPolys->GetLocal( ),
+                   this->inPd, this->outPd->GetLocal( ),
+                   this->inCd, id, this->outCd->GetLocal( ));
     }
 };
 
-vtkStandardNewMacro(TreeFuntor);
+vtkStandardNewMacro(AcceleratedFunctor);
+
+class InitializeTask : public vtkTask
+{
+  InitializeTask(const InitializeTask&);
+  void operator =(const InitializeTask&);
+public:
+  vtkTypeMacro(InitializeTask,vtkTask);
+  static InitializeTask* New() { return new InitializeTask; }
+  void PrintSelf(ostream &os, vtkIndent indent)
+    {
+    this->Superclass::PrintSelf(os, indent);
+    }
+
+  virtual void Execute( vtkSMPThreadID tid, const vtkObject *data ) const
+    {
+    static_cast<const ThreadsFunctor*>(data)->Init(tid);
+    }
+protected:
+  InitializeTask() {}
+  ~InitializeTask() {}
+};
 
 /* ================================================================================
  General contouring filter.  Handles arbitrary input.
@@ -489,26 +516,30 @@ int vtkSMPContourFilter::RequestData(
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
       ThreadsFunctor* my_contour;
       if ( this->UseScalarTree )
-        my_contour = TreeFuntor::New();
+        my_contour = AcceleratedFunctor::New();
       else
         my_contour = ThreadsFunctor::New();
       my_contour->SetData( input, newPts, inCd, inPd, this->Locator,
                            estimatedSize, values, numContours, inScalars, this->ComputeScalars,
                            newVerts, newLines, newPolys, outCd, outPd );
-
+      InitializeTask* InitTLS = InitializeTask::New();
+      vtkSMP::Parallel(InitTLS, my_contour);
+      InitTLS->Delete();
       timer->end_bench_timer();
 
       // Exec
       timer->start_bench_timer();
       if ( this->UseScalarTree )
         {
-        TreeFuntor* TreeContour = static_cast<TreeFuntor*>(my_contour);
-        TreeContour->Tree = parallelTree;
+        AcceleratedFunctor* TreeContour = static_cast<AcceleratedFunctor*>(my_contour);
         parallelTree->SetDataSet(input);
+        parallelTree->SetRemainingCellsOp(TreeContour);
         for ( i = 0; i < numContours; ++i )
           {
-          vtkIdType NumberOfTraversedCells = parallelTree->GetNumberOfTraversedCells( values[i] );
-          vtkSMP::ForEach( 0, NumberOfTraversedCells, TreeContour );
+          TreeContour->ScalarValue = values[i];
+          cout << "one" << i << endl;
+          parallelTree->ComputeOperationOverCellsOfInterest(values[i]);
+          cout << "two" << i << endl;
           }
         }
       else
@@ -532,6 +563,11 @@ int vtkSMPContourFilter::RequestData(
                              newLines, my_contour->newLines,
                              newPolys, my_contour->newPolys,
                              0, 0, outCd, my_contour->outCd, 1 );
+        for (vtkSMPThreadID i = 0; i < vtkSMP::GetNumberOfThreads(); ++i)
+          {
+          cout << endl << "Locator " << i << endl;
+          SMPLocator->GetLocal(i)->PrintSizeOfThis();
+          }
         SMPLocator->Delete();
         }
       else

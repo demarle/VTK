@@ -174,6 +174,10 @@ int main( int argc, char** argv )
   eventsCatcher->Initialize();
   eventsCatcher->Start();
 
+#ifdef VTK_CAN_USE_SMP
+  locator->Print( cout );
+  cout << "size " << sizeof(*locator) << endl;
+#endif
   eventsCatcher->Delete();
 #endif
   cout << "should exit (" << parallel << ")" << endl;

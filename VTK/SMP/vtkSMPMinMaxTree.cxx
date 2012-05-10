@@ -96,19 +96,17 @@ vtkStandardNewMacro(vtkSMPMinMaxTree);
 
 vtkSMPMinMaxTree::vtkSMPMinMaxTree()
   {
-  TraversedCells = vtkIdList::New();
   }
 
 vtkSMPMinMaxTree::~vtkSMPMinMaxTree()
   {
-  TraversedCells->Delete();
   }
 
 void vtkSMPMinMaxTree::PrintSelf(ostream &os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os, indent);
   }
-
+/*
 double vtkSMPMinMaxTree::GetTraversedCell( vtkIdType callNumber, vtkIdType& realCellId, vtkGenericCell *cell, vtkDataArray* cellScalars )
   {
   realCellId = TraversedCells->GetId( callNumber );
@@ -118,18 +116,14 @@ double vtkSMPMinMaxTree::GetTraversedCell( vtkIdType callNumber, vtkIdType& real
   this->Scalars->GetTuples( cellPts, cellScalars );
   return this->ScalarValue;
   }
-
-vtkIdType vtkSMPMinMaxTree::GetNumberOfTraversedCells( double value )
+*/
+void vtkSMPMinMaxTree::ComputeOperationOverCellsOfInterest( double value )
   {
   this->BuildTree();
   this->ScalarValue = value;
   this->TreeIndex = this->TreeSize;
 
-  this->CurrentCellIdCount = 0;
-  this->TraversedCells->Allocate( this->DataSet->GetNumberOfCells() );
   this->ComputeOverlapingCells( 0, 0 );
-  this->TraversedCells->SetNumberOfIds( this->CurrentCellIdCount );
-  return this->CurrentCellIdCount;
   }
 
 void vtkSMPMinMaxTree::ComputeOverlapingCells( vtkIdType index, int level )
@@ -156,10 +150,10 @@ void vtkSMPMinMaxTree::ComputeOverlapingCells( vtkIdType index, int level )
       vtkIdType cellId = (index - this->LeafOffset) * this->BranchingFactor;
       vtkIdType maxCells = this->DataSet->GetNumberOfCells();
       vtkIdType NumberOfCellsInLeaf = cellId + this->BranchingFactor < maxCells ? this->BranchingFactor : maxCells - cellId;
-      vtkIdType index = __sync_fetch_and_add( &(this->CurrentCellIdCount), NumberOfCellsInLeaf );
-      for ( ; NumberOfCellsInLeaf > 0; --NumberOfCellsInLeaf, ++cellId, ++index )
+      for ( ; NumberOfCellsInLeaf > 0; --NumberOfCellsInLeaf, ++cellId )
         {
-        this->TraversedCells->SetId( index, cellId );
+        cout << "operation applied on cell " << cellId  << " (" << maxCells <<  ")" << endl;
+        this->RemainingCellsOp->operator ()(cellId, -1);
         }
       }
     }

@@ -86,6 +86,7 @@ namespace vtkSMP
 {
   vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
 
+  vtkSMPThreadID InternalGetTID();
 
   template<class T>
   class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
@@ -176,6 +177,11 @@ namespace vtkSMP
       T* GetLocal( vtkSMPThreadID tid )
         {
         return this->ThreadLocalStorage[tid];
+        }
+
+      T* GetLocal()
+        {
+        return GetLocal(InternalGetTID());
         }
 
       template<class Derived>
