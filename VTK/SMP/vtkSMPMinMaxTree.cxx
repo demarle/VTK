@@ -96,17 +96,19 @@ vtkStandardNewMacro(vtkSMPMinMaxTree);
 
 vtkSMPMinMaxTree::vtkSMPMinMaxTree()
   {
+  TraversedCells = vtkIdList::New();
   }
 
 vtkSMPMinMaxTree::~vtkSMPMinMaxTree()
   {
+  TraversedCells->Delete();
   }
 
 void vtkSMPMinMaxTree::PrintSelf(ostream &os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os, indent);
   }
-/*
+
 double vtkSMPMinMaxTree::GetTraversedCell( vtkIdType callNumber, vtkIdType& realCellId, vtkGenericCell *cell, vtkDataArray* cellScalars )
   {
   realCellId = TraversedCells->GetId( callNumber );
@@ -116,18 +118,36 @@ double vtkSMPMinMaxTree::GetTraversedCell( vtkIdType callNumber, vtkIdType& real
   this->Scalars->GetTuples( cellPts, cellScalars );
   return this->ScalarValue;
   }
-*/
-void vtkSMPMinMaxTree::ComputeOperationOverCellsOfInterest( double value )
+
+vtkIdType vtkSMPMinMaxTree::ComputeNumberOfTraversedCells( double value )
   {
   this->BuildTree();
   this->ScalarValue = value;
   this->TreeIndex = this->TreeSize;
 
-  this->ComputeOverlapingCells( 0, 0 );
+  this->NumberOfTraversedCells = 0;
+  this->TraversedCells->Allocate(this->DataSet->GetNumberOfCells());
+
+  vtkSMPThreadID numThreads = vtkSMP::GetNumberOfThreads();
+  vtkIdType idx = 0;
+  int lvl = 0;
+  while ( idx < numThreads )
+    {
+    idx = this->BranchingFactor * idx + 1;
+    ++lvl;
+    }
+  TreeFunctor* ComputeCells = TreeFunctor::New();
+  ComputeCells->InitializeData( this, lvl, idx );
+  vtkSMP::ForEach(0, this->BranchingFactor * idx + 1, ComputeCells);
+  ComputeCells->Delete();
+
+  this->TraversedCells->SetNumberOfIds(this->NumberOfTraversedCells);
+  return this->NumberOfTraversedCells;
   }
 
 void vtkSMPMinMaxTree::ComputeOverlapingCells( vtkIdType index, int level )
   {
+//  printf( "Computing cells: index %d and level %d\n", index, level);
   vtkScalarRange<double> *tree = static_cast<vtkScalarRange<double>*>(this->Tree) + index;
 
   if ( tree->min <= this->ScalarValue && tree->max >= this->ScalarValue )
@@ -139,10 +159,10 @@ void vtkSMPMinMaxTree::ComputeOverlapingCells( vtkIdType index, int level )
       if ( NbSons > 0 )
         {
         NbSons = NbSons > this->BranchingFactor ? this->BranchingFactor : NbSons;
-        TreeFunctor* SearchCells = TreeFunctor::New();
-        SearchCells->InitializeData( this, level + 1, offset );
-        vtkSMP::ForEach( 0, NbSons, SearchCells, 1 );
-        SearchCells->Delete();
+        for ( vtkIdType i = 0; i < NbSons; ++i )
+          {
+          this->ComputeOverlapingCells( offset, level + 1 );
+          }
         }
       }
     else
@@ -150,10 +170,10 @@ void vtkSMPMinMaxTree::ComputeOverlapingCells( vtkIdType index, int level )
       vtkIdType cellId = (index - this->LeafOffset) * this->BranchingFactor;
       vtkIdType maxCells = this->DataSet->GetNumberOfCells();
       vtkIdType NumberOfCellsInLeaf = cellId + this->BranchingFactor < maxCells ? this->BranchingFactor : maxCells - cellId;
-      for ( ; NumberOfCellsInLeaf > 0; --NumberOfCellsInLeaf, ++cellId )
+      vtkIdType insertionId = __sync_fetch_and_add(&(this->NumberOfTraversedCells), NumberOfCellsInLeaf);
+      for ( ; NumberOfCellsInLeaf > 0; --NumberOfCellsInLeaf, ++cellId, ++insertionId )
         {
-        cout << "operation applied on cell " << cellId  << " (" << maxCells <<  ")" << endl;
-        this->RemainingCellsOp->operator ()(cellId, -1);
+        this->TraversedCells->SetId(insertionId, cellId);
         }
       }
     }
@@ -206,7 +226,39 @@ void vtkSMPMinMaxTree::BuildTree()
   this->TreeSize = numNodes - (prod - numLeafs);
   this->Tree = TTree = new vtkScalarRange<double>[this->TreeSize];
 
-  this->InternalBuildTree( 0, 0 );
+  vtkSMPThreadID numThreads = vtkSMP::GetNumberOfThreads();
+  vtkIdType idx = 0;
+  int lvl = 0;
+  while ( idx < numThreads )
+    {
+    idx = this->BranchingFactor * idx + 1;
+    ++lvl;
+    }
+  cout << "this->Level=" << this->Level << " start: " << idx << ", " << lvl << endl;
+  BuildFunctor* BuildCells = BuildFunctor::New();
+  BuildCells->InitializeData( this, lvl, idx );
+  vtkSMP::ForEach(0, this->BranchingFactor * idx + 1, BuildCells);
+  BuildCells->Delete();
+
+  vtkIdType old_idx;
+  while ( lvl )
+    {
+    --lvl;
+    old_idx = idx;
+    idx = ( idx - 1 ) / this->BranchingFactor;
+    for ( offset = idx; offset < old_idx; ++offset )
+      {
+      TTree[offset].min = VTK_DOUBLE_MAX;
+      TTree[offset].max = -VTK_DOUBLE_MAX;
+      vtkIdType firstSon = offset * this->BranchingFactor + 1;
+      for ( int i = 0; i < this->BranchingFactor; ++i )
+        {
+        if ( TTree[firstSon + i].min < TTree[offset].min ) TTree[offset].min = TTree[firstSon].min;
+        if ( TTree[firstSon + i].max > TTree[offset].max ) TTree[offset].max = TTree[firstSon].max;
+        }
+      }
+    }
+  cout << "End building: min " << TTree->min << ", max " << TTree->max << endl;
 
   this->BuildTime.Modified();
 }
@@ -225,14 +277,11 @@ void vtkSMPMinMaxTree::InternalBuildTree( vtkIdType index, int level )
     if ( NbSons > 0 )
       {
       NbSons = NbSons > this->BranchingFactor ? this->BranchingFactor : NbSons;
-      BuildFunctor* BuildCells = BuildFunctor::New();
-      BuildCells->InitializeData( this, level + 1, offset );
-      vtkSMP::ForEach( 0, NbSons, BuildCells, 1 );
-      BuildCells->Delete();
-
       vtkScalarRange<double> *son = static_cast<vtkScalarRange<double>*>(this->Tree) + offset;
       for ( j = 0; j < NbSons; ++j )
         {
+        this->InternalBuildTree( offset + j, level + 1 );
+
         if ( son[j].min < tree->min )
           {
           tree->min = son[j].min;

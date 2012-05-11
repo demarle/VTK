@@ -247,49 +247,24 @@ public:
     this->Superclass::PrintSelf(os,indent);
     }
 
-  double ScalarValue;
+  vtkSMPMinMaxTree* Tree;
 
   void operator ()( vtkIdType id, vtkSMPThreadID tid ) const
     {
     vtkGenericCell* cell = this->Cells->GetLocal( );
     vtkDataArray* scalars = this->CellsScalars->GetLocal( );
+    vtkIdType realId = 0;
 
-    this->input->GetCell( id, cell );
-    vtkIdList* cellPts = cell->GetPointIds();
-    if ( scalars->GetSize() / scalars->GetNumberOfComponents() < cellPts->GetNumberOfIds() )
-      {
-      scalars->Allocate(scalars->GetNumberOfComponents()*cellPts->GetNumberOfIds());
-      }
-    this->inScalars->GetTuples( cellPts, scalars );
-    cell->Contour( ScalarValue, scalars, this->Locator->GetLocal( ),
-                   this->newVerts->GetLocal( ), this->newLines->GetLocal( ), this->newPolys->GetLocal( ),
-                   this->inPd, this->outPd->GetLocal( ),
-                   this->inCd, id, this->outCd->GetLocal( ));
+    double s = Tree->GetTraversedCell( id, realId, cell, scalars );
+
+    cell->Contour( s, scalars, this->Locator->GetLocal( tid ),
+                   this->newVerts->GetLocal( tid ), this->newLines->GetLocal( tid ), this->newPolys->GetLocal( tid ),
+                   this->inPd, this->outPd->GetLocal( tid ),
+                   this->inCd, realId, this->outCd->GetLocal( tid ));
     }
 };
 
 vtkStandardNewMacro(AcceleratedFunctor);
-
-class InitializeTask : public vtkTask
-{
-  InitializeTask(const InitializeTask&);
-  void operator =(const InitializeTask&);
-public:
-  vtkTypeMacro(InitializeTask,vtkTask);
-  static InitializeTask* New() { return new InitializeTask; }
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os, indent);
-    }
-
-  virtual void Execute( vtkSMPThreadID tid, const vtkObject *data ) const
-    {
-    static_cast<const ThreadsFunctor*>(data)->Init(tid);
-    }
-protected:
-  InitializeTask() {}
-  ~InitializeTask() {}
-};
 
 /* ================================================================================
  General contouring filter.  Handles arbitrary input.
@@ -522,9 +497,6 @@ int vtkSMPContourFilter::RequestData(
       my_contour->SetData( input, newPts, inCd, inPd, this->Locator,
                            estimatedSize, values, numContours, inScalars, this->ComputeScalars,
                            newVerts, newLines, newPolys, outCd, outPd );
-      InitializeTask* InitTLS = InitializeTask::New();
-      vtkSMP::Parallel(InitTLS, my_contour);
-      InitTLS->Delete();
       timer->end_bench_timer();
 
       // Exec
@@ -532,14 +504,13 @@ int vtkSMPContourFilter::RequestData(
       if ( this->UseScalarTree )
         {
         AcceleratedFunctor* TreeContour = static_cast<AcceleratedFunctor*>(my_contour);
+        TreeContour->Tree = parallelTree;
         parallelTree->SetDataSet(input);
-        parallelTree->SetRemainingCellsOp(TreeContour);
         for ( i = 0; i < numContours; ++i )
           {
-          TreeContour->ScalarValue = values[i];
-          cout << "one" << i << endl;
-          parallelTree->ComputeOperationOverCellsOfInterest(values[i]);
-          cout << "two" << i << endl;
+          vtkIdType NumberOfCells = parallelTree->ComputeNumberOfTraversedCells( values[i] );
+          cout << "value " << values[i] << ": " << NumberOfCells << " cells." << endl;
+          vtkSMP::ForEach( 0, NumberOfCells, TreeContour );
           }
         }
       else
@@ -563,11 +534,6 @@ int vtkSMPContourFilter::RequestData(
                              newLines, my_contour->newLines,
                              newPolys, my_contour->newPolys,
                              0, 0, outCd, my_contour->outCd, 1 );
-        for (vtkSMPThreadID i = 0; i < vtkSMP::GetNumberOfThreads(); ++i)
-          {
-          cout << endl << "Locator " << i << endl;
-          SMPLocator->GetLocal(i)->PrintSizeOfThis();
-          }
         SMPLocator->Delete();
         }
       else
