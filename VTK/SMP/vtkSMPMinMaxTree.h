@@ -2,15 +2,17 @@
 #define VTKSMPMINMAXTREE_H
 
 #include "vtkSimpleScalarTree.h"
+#include "vtkSMP.h"
 
 class vtkGenericCell;
 class TreeFunctor;
 class BuildFunctor;
 
-class VTK_SMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree
+class VTK_SMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree, public vtkParallelTree
 {
   friend class TreeFunctor;
   friend class BuildFunctor;
+  friend class BuildLeafFunctor;
   vtkSMPMinMaxTree( const vtkSMPMinMaxTree& );
   void operator =( const vtkSMPMinMaxTree& );
 
@@ -23,16 +25,15 @@ public:
   static vtkSMPMinMaxTree* New();
   void PrintSelf(ostream &os, vtkIndent indent);
 
-  double GetTraversedCell( vtkIdType callNumber, vtkIdType& realCellId, vtkGenericCell* cell, vtkDataArray* cellScalars );
-  vtkIdType ComputeNumberOfTraversedCells( double value );
   void BuildTree();
+  void InitTraversal(double scalarValue);
 
-protected:
-  void ComputeOverlapingCells( vtkIdType index, int level );
-  void InternalBuildTree( vtkIdType index, int level );
+  virtual vtkIdType GetAncestor( vtkIdType id, int lvl, int desiredLvl ) const;
+  virtual vtkIdType GetLastDescendant( vtkIdType id, int lvl ) const;
+  // In place transformation of indices and levels
+  virtual void GetNextStealableNode( vtkIdType* stealedId, int* stealedLvl ) const;
+  virtual void TraverseNode( vtkIdType* index, int* level, vtkFunctor* function, vtkSMPThreadID tid ) const;
 
-  vtkIdType NumberOfTraversedCells;
-  vtkIdList* TraversedCells;
 };
 
 #endif // VTKSMPMINMAXTREE_H

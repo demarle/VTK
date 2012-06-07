@@ -82,6 +82,16 @@ protected:
   ~vtkTaskSplitable();
 };
 
+class VTK_SMP_EXPORT vtkParallelTree
+{
+public:
+  virtual vtkIdType GetAncestor( vtkIdType id, int lvl, int desiredLvl ) const = 0;
+  virtual vtkIdType GetLastDescendant( vtkIdType id, int lvl ) const = 0;
+  // In place transformation of indices and levels
+  virtual void GetNextStealableNode( vtkIdType* stealedId, int* stealedLvl ) const = 0;
+  virtual void TraverseNode( vtkIdType* index, int* level, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;
+};
+
 namespace vtkSMP
 {
   vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
@@ -119,6 +129,7 @@ namespace vtkSMP
         for ( size_t i = 0; i < this->ThreadLocalStorage.size(); ++i )
           {
           os << indent.GetNextIndent() << "id " << i << ": (" << ThreadLocalStorage[i] << ")" << endl;
+          if ( !ThreadLocalStorage[i] ) continue;
           ThreadLocalStorage[i]->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
           }
         }
@@ -225,6 +236,8 @@ namespace vtkSMP
   void VTK_SMP_EXPORT BeginSpawnRegion();
   void VTK_SMP_EXPORT Spawn( const vtkTask* function );
   void VTK_SMP_EXPORT Sync();
+
+  void VTK_SMP_EXPORT Traverse( const vtkParallelTree* Tree, vtkFunctor* func );
 
 }
 

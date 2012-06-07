@@ -77,7 +77,7 @@ protected:
     }
 
 public:
-  vtkTypeMacro(ThreadsFunctor,vtkFunctor);
+  vtkTypeMacro(ThreadsFunctor,vtkFunctorInitialisable);
   static ThreadsFunctor* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {
@@ -247,20 +247,22 @@ public:
     this->Superclass::PrintSelf(os,indent);
     }
 
-  vtkSMPMinMaxTree* Tree;
+  double ScalarValue;
 
   void operator ()( vtkIdType id, vtkSMPThreadID tid ) const
     {
     vtkGenericCell* cell = this->Cells->GetLocal( );
     vtkDataArray* scalars = this->CellsScalars->GetLocal( );
-    vtkIdType realId = 0;
 
-    double s = Tree->GetTraversedCell( id, realId, cell, scalars );
+    this->input->GetCell( id, cell );
+    vtkIdList* cellPts = cell->GetPointIds();
+    scalars->SetNumberOfTuples( cellPts->GetNumberOfIds() );
+    this->inScalars->GetTuples( cellPts, scalars );
 
-    cell->Contour( s, scalars, this->Locator->GetLocal( tid ),
+    cell->Contour( ScalarValue, scalars, this->Locator->GetLocal( tid ),
                    this->newVerts->GetLocal( tid ), this->newLines->GetLocal( tid ), this->newPolys->GetLocal( tid ),
                    this->inPd, this->outPd->GetLocal( tid ),
-                   this->inCd, realId, this->outCd->GetLocal( tid ));
+                   this->inCd, id, this->outCd->GetLocal( tid ));
     }
 };
 
@@ -504,13 +506,12 @@ int vtkSMPContourFilter::RequestData(
       if ( this->UseScalarTree )
         {
         AcceleratedFunctor* TreeContour = static_cast<AcceleratedFunctor*>(my_contour);
-        TreeContour->Tree = parallelTree;
         parallelTree->SetDataSet(input);
         for ( i = 0; i < numContours; ++i )
           {
-          vtkIdType NumberOfCells = parallelTree->ComputeNumberOfTraversedCells( values[i] );
-          cout << "value " << values[i] << ": " << NumberOfCells << " cells." << endl;
-          vtkSMP::ForEach( 0, NumberOfCells, TreeContour );
+          TreeContour->ScalarValue = values[i];
+          parallelTree->InitTraversal( values[i] );
+          vtkSMP::Traverse( parallelTree, TreeContour );
           }
         }
       else
@@ -521,6 +522,8 @@ int vtkSMPContourFilter::RequestData(
           }
         }
       timer->end_bench_timer();
+
+      my_contour->Locator->Print( cout );
 
       // Merge
       timer->start_bench_timer();
