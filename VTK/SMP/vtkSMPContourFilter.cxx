@@ -523,8 +523,6 @@ int vtkSMPContourFilter::RequestData(
         }
       timer->end_bench_timer();
 
-      my_contour->Locator->Print( cout );
-
       // Merge
       timer->start_bench_timer();
       if ( parallelLocator )

@@ -1,6 +1,7 @@
 #include "vtkSMP.h"
 #include "vtkCommand.h"
 #include <kaapic.h>
+#include <kaapi_atomic.h>
 #include <cmath>
 
 void smpInit(void)
@@ -44,19 +45,18 @@ void my_spawn ( const vtkTask* function )
 
 typedef struct tree_work
 {
-  vtkIdType cur_id;
-  int cur_lvl;
-  vtkIdType steal_id;
-  int steal_lvl;
+  vtkTreeIndex current;
+  vtkTreeIndex steal;
   const vtkParallelTree* Tree;
   vtkFunctor* op;
+  kaapi_lock_t lock;
 } work_t;
 
 static int check_remaining_work( work_t* work )
   {
-  if ( work->cur_id == -1 ) return 1;
+  if ( work->current.index == -1 ) return 1;
 
-  if ( work->steal_lvl == work->cur_lvl && work->cur_id > work->steal_id ) return 1;
+  if ( work->steal.level == work->current.level && work->current.index > work->steal.index ) return 1;
 
   return 0; /* success */
   }
@@ -64,6 +64,7 @@ static int check_remaining_work( work_t* work )
 static void thief_entrypoint( void* args, kaapi_thread_t* thread )
   {
   work_t* const work = (work_t*)(args);
+
   vtkSMPThreadID kid = (vtkSMPThreadID) kaapi_get_self_kid();
 
   vtkFunctorInitialisable* iop = vtkFunctorInitialisable::SafeDownCast( work->op );
@@ -72,43 +73,52 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
 
   while ( !check_remaining_work( work ) )
     {
-    work->Tree->TraverseNode( &(work->cur_id), &(work->cur_lvl), work->op, kid );
+    vtkTreeIndex next_node = work->Tree->TraverseNode( work->current, work->op, kid );
+    kaapi_atomic_lock( &(work->lock) );
+    work->current = next_node;
+    kaapi_atomic_unlock( &(work->lock) );
     }
+
+  kaapi_atomic_destroylock( &(work->lock) );
   }
 
 static int kaapi_tree_steal( work_t* work, int w_req, vtkIdType* out_id, int* out_lvl )
   {
   /* Disable steals on branches beeing develloped by master thread */
-  if ( work->steal_id == work->cur_id || work->cur_id == -1 ) return 0;
+  if ( work->steal.index == work->current.index || work->current.index == -1 ) return 0;
 
   int result = w_req;
 
-  int sl = work->steal_lvl;
-  vtkIdType cur_id_for_next_lvl = work->Tree->GetAncestor( work->cur_id, work->cur_lvl, sl + 1 );
-  vtkIdType cur_id_for_steal_lvl = work->Tree->GetAncestor( cur_id_for_next_lvl, sl + 1, sl );
+  kaapi_atomic_lock( &(work->lock) );
+  int sl = work->steal.level;
+  vtkTreeIndex index_next = work->Tree->GetAncestor( work->current, sl + 1 );
+  vtkTreeIndex index_steal = work->Tree->GetAncestor( index_next, sl );
+  kaapi_atomic_unlock( &(work->lock) );
 
-  int n_req = work->steal_id - cur_id_for_steal_lvl;
+  printf("steal: %d %d\n", index_next.index, index_steal.index);
+
+  int n_req = work->steal.index - index_steal.index;
 
   if ( n_req >= w_req )
     {
-    work->steal_id -= w_req;
-    *out_id = work->steal_id;
-    *out_lvl = work->steal_lvl;
+    work->steal.index -= w_req;
+    *out_id = work->steal.index;
+    *out_lvl = work->steal.level;
     }
   else
     {
-    vtkIdType si = work->Tree->GetLastDescendant( cur_id_for_steal_lvl, sl );
+    vtkTreeIndex si = work->Tree->GetLastDescendant( index_steal );
 
-    int nn_req = si - cur_id_for_next_lvl;
-    work->steal_lvl = *out_lvl = sl + 1;
+    int nn_req = si.index - index_steal.index;
+    work->steal.level = *out_lvl = sl + 1;
     if ( nn_req + n_req < w_req ) // not enought
       {
-      work->steal_id = *out_id = cur_id_for_next_lvl;
+      work->steal.index = *out_id = index_next.index;
       result = nn_req + n_req;
       }
     else
       {
-      work->steal_id = *out_id = si - ( w_req - n_req );
+      work->steal.index = *out_id = si.index - ( w_req - n_req );
       }
     }
 
@@ -131,26 +141,29 @@ static int splitter(
   vtkIdType stolen_id = -1;
   int stolen_lvl = -1;
   nreq = kaapi_tree_steal( work, nreq, &stolen_id, &stolen_lvl );
+  printf("splitter called: %d, %d, %d, %d -> %d\n",
+         work->current.index, work->current.level,
+         work->steal.index, work->steal.level, nreq );
   if ( nreq == 0 ) return 0; /* Nothing to steal */
 
   kaapi_request_t* req = kaapi_api_listrequest_iterator_get(lr, lri);
+  vtkTreeIndex root = vtkTreeIndex( stolen_id, stolen_lvl );
   while ( req != 0 )
     {
     /* thief work: not adaptive result because no preemption is used here  */
     work_t* const tw = (work_t*)kaapi_request_pushdata(req, sizeof(work_t));
     tw->Tree = work->Tree;
-    tw->cur_id = stolen_id;
-    tw->cur_lvl = stolen_lvl;
-    tw->steal_id = stolen_id;
-    tw->steal_lvl = stolen_lvl;
+    tw->current = root;
+    tw->steal = root;
     tw->op = work->op;
+    kaapi_atomic_initlock( &(tw->lock) );
 
     kaapi_task_init( kaapi_request_toptask(req), thief_entrypoint, tw);
     kaapi_request_pushtask_adaptive( req, victim_task, splitter, 0 );
 
     if ( --nreq == 0 ) break; /* Not enought branches to steal */
     req = kaapi_api_listrequest_iterator_next(lr, lri);
-    work->Tree->GetNextStealableNode( &stolen_id, &stolen_lvl );
+    root = work->Tree->GetNextStealableNode( root );
     }
 
   return 0;
@@ -240,16 +253,20 @@ namespace vtkSMP
     {
     work_t work;
 
+    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
+
     /* get the self thread */
     kaapi_thread_t* thread = kaapi_self_thread();
 
     /* initialize work */
-    work.cur_id = 0;
-    work.cur_lvl = 0;
-    work.steal_id = 0;
-    work.steal_lvl = 0;
+    work.current.index = 0;
+    work.current.level = 0;
+    work.steal.index = 0;
+    work.steal.level = 0;
     work.Tree = Tree;
     work.op = func;
+    kaapi_atomic_initlock( &(work.lock) );
+
 
     /* push an adaptive task */
     void* sc = kaapi_task_begin_adaptive(
@@ -261,12 +278,20 @@ namespace vtkSMP
 
     while ( !check_remaining_work( &work ) )
       {
-      Tree->TraverseNode( &(work.cur_id), &(work.cur_lvl), func, kaapic_get_thread_num() );
+      vtkTreeIndex next_node = Tree->TraverseNode( work.current, func, kaapic_get_thread_num() );
+      kaapi_atomic_lock( &(work.lock) );
+      work.current = next_node;
+      kaapi_atomic_unlock( &(work.lock) );
       }
 
     kaapi_task_end_adaptive(thread, sc);
 
+    kaapi_atomic_destroylock( &(work.lock) );
+
     /* wait for thieves */
     kaapi_sched_sync( );
+
+    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
+
     }
 }

@@ -28,11 +28,11 @@ public:
   void BuildTree();
   void InitTraversal(double scalarValue);
 
-  virtual vtkIdType GetAncestor( vtkIdType id, int lvl, int desiredLvl ) const;
-  virtual vtkIdType GetLastDescendant( vtkIdType id, int lvl ) const;
+  virtual vtkTreeIndex GetAncestor( vtkTreeIndex id, int desiredLvl ) const;
+  virtual vtkTreeIndex GetLastDescendant( vtkTreeIndex id ) const;
   // In place transformation of indices and levels
-  virtual void GetNextStealableNode( vtkIdType* stealedId, int* stealedLvl ) const;
-  virtual void TraverseNode( vtkIdType* index, int* level, vtkFunctor* function, vtkSMPThreadID tid ) const;
+  virtual vtkTreeIndex GetNextStealableNode( vtkTreeIndex id ) const;
+  virtual vtkTreeIndex TraverseNode( vtkTreeIndex id, vtkFunctor* function, vtkSMPThreadID tid ) const;
 
 };
 

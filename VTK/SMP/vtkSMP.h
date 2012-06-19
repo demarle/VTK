@@ -82,14 +82,27 @@ protected:
   ~vtkTaskSplitable();
 };
 
+struct VTK_SMP_EXPORT vtkTreeIndex
+{
+  vtkIdType index;
+  int level;
+
+  vtkTreeIndex(vtkIdType i, int l)
+    {
+    index = i;
+    level = l;
+    }
+  vtkTreeIndex() { index = -1; level = -1; }
+};
+
 class VTK_SMP_EXPORT vtkParallelTree
 {
 public:
-  virtual vtkIdType GetAncestor( vtkIdType id, int lvl, int desiredLvl ) const = 0;
-  virtual vtkIdType GetLastDescendant( vtkIdType id, int lvl ) const = 0;
-  // In place transformation of indices and levels
-  virtual void GetNextStealableNode( vtkIdType* stealedId, int* stealedLvl ) const = 0;
-  virtual void TraverseNode( vtkIdType* index, int* level, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;
+  virtual vtkTreeIndex GetAncestor( vtkTreeIndex id, int desiredLvl ) const = 0;
+  virtual vtkTreeIndex GetLastDescendant( vtkTreeIndex id ) const = 0;
+
+  virtual vtkTreeIndex GetNextStealableNode( vtkTreeIndex id ) const = 0;
+  virtual vtkTreeIndex TraverseNode( vtkTreeIndex id, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;
 };
 
 namespace vtkSMP
@@ -108,6 +121,7 @@ namespace vtkSMP
         for ( typename vtkstd::vector<T*>::iterator it = ThreadLocalStorage.begin();
               it != ThreadLocalStorage.end(); ++it )
           {
+          if ( !(*it) ) continue;
           (*it)->UnRegister( this );
           *it = 0;
           }

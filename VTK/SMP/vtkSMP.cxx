@@ -234,7 +234,9 @@ public:
     vtkSMPThreadID max = vtkSMP::GetNumberOfThreads();
     for ( vtkSMPThreadID tid = 0; tid < max; ++tid )
       {
-      if ( this->InVerts ) vertOffset->ManageValues( tid, this->InVerts->GetLocal( tid ) );
+      vtkCellArray* _ca_ = this->InVerts->GetLocal( tid );
+      if ( !_ca_ ) continue;
+      if ( this->InVerts ) vertOffset->ManageValues( tid, _ca_ );
       if ( this->InLines ) lineOffset->ManageValues( tid, this->InLines->GetLocal( tid ) );
       if ( this->InPolys ) polyOffset->ManageValues( tid, this->InPolys->GetLocal( tid ) );
       if ( this->InStrips ) stripOffset->ManageValues( tid, this->InStrips->GetLocal( tid ) );
@@ -375,10 +377,11 @@ struct ParallelPointMerger : public vtkTask
   void Execute( vtkSMPThreadID tid, const vtkObject* data ) const
     {
     const DummyMergeFunctor* self = static_cast<const DummyMergeFunctor*>(data);
+    vtkSMPMergePoints *l, *locator = self->Locators->GetLocal( tid );
+    if ( !locator ) return;
 
     vtkSMPThreadID NumberOfThreads = vtkSMP::GetNumberOfThreads();
     vtkIdType NumberOfBuckets = self->outputLocator->GetNumberOfBuckets();
-    vtkSMPMergePoints* l;
 
     for ( vtkIdType i = 0; i < NumberOfBuckets; ++i )
       {

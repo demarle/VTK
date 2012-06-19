@@ -230,76 +230,76 @@ void vtkSMPMinMaxTree::InitTraversal(double scalarValue)
   }
 
 
-vtkIdType vtkSMPMinMaxTree::GetAncestor( vtkIdType id, int lvl, int desiredLvl ) const
+vtkTreeIndex vtkSMPMinMaxTree::GetAncestor( vtkTreeIndex id, int desiredLvl ) const
   {
-  vtkIdType result = id;
+  vtkIdType result = id.index;
+  int lvl = id.level;
+  printf("ancestor: (%d, %d) %d\n", id.index, id.level, desiredLvl);
 
-  while ( lvl < desiredLvl )
+  while ( lvl > desiredLvl )
     {
     result = ( result - 1 ) / this->BranchingFactor;
     --lvl;
     }
 
-  return result;
+  return vtkTreeIndex(result, lvl);
   }
 
-vtkIdType vtkSMPMinMaxTree::GetLastDescendant( vtkIdType id, int lvl ) const
+vtkTreeIndex vtkSMPMinMaxTree::GetLastDescendant( vtkTreeIndex id ) const
   {
-  return ( id + 1 ) * this->BranchingFactor;
+  if ( id.level == this->Level )
+    return vtkTreeIndex( -1, -1 );
+  return vtkTreeIndex(( id.index + 1 ) * this->BranchingFactor, id.level + 1);
   }
 
-// In place transformation of indices and levels
-void vtkSMPMinMaxTree::GetNextStealableNode( vtkIdType* stealedId, int* stealedLvl ) const
+vtkTreeIndex vtkSMPMinMaxTree::GetNextStealableNode( vtkTreeIndex id ) const
   {
 redo:
-  if ( *stealedId == 0 )
+  if ( id.index == 0 )
     {
-    *stealedId = -1;
-    *stealedLvl = -1;
-    return;
+    return vtkTreeIndex( -1, -1 );
     }
-  vtkIdType father = *stealedId / this->BranchingFactor;
-  vtkIdType previous_father = ( *stealedId - 1 ) / this->BranchingFactor;
+  vtkIdType father = id.index / this->BranchingFactor;
+  vtkIdType previous_father = ( id.index - 1 ) / this->BranchingFactor;
   if ( previous_father != father )
     {
-    *stealedId = previous_father;
-    --(*stealedLvl);
+    id.index = previous_father;
+    --(id.level);
     goto redo;
     }
 
-  ++(*stealedId);
+  ++(id.index);
+  return id;
   }
 
-void vtkSMPMinMaxTree::TraverseNode( vtkIdType* index, int* level, vtkFunctor* function, vtkSMPThreadID tid ) const
+vtkTreeIndex vtkSMPMinMaxTree::TraverseNode( vtkTreeIndex id, vtkFunctor* function, vtkSMPThreadID tid ) const
   {
-  if ( *index >= this->TreeSize )
+  if ( id.index >= this->TreeSize )
     {
-    *index = -1;
-    *level = -1;
+    return vtkTreeIndex( -1, -1 );
     }
   else
     {
-    vtkScalarRange<double> *t = static_cast<vtkScalarRange<double>*>(this->Tree) + *index;
+    vtkScalarRange<double> *t = static_cast<vtkScalarRange<double>*>(this->Tree) + id.index;
     if ( t->min > this->ScalarValue || t->max < this->ScalarValue )
       {
-      this->GetNextStealableNode( index, level );
+      return this->GetNextStealableNode( id );
       }
     else
       {
-      if ( *level == this->Level )
+      if ( id.level == this->Level )
         {
-        vtkIdType cell_id = ( *index - this->LeafOffset ) * this->BranchingFactor;
+        vtkIdType cell_id = ( id.index - this->LeafOffset ) * this->BranchingFactor;
         vtkIdType max_id = this->DataSet->GetNumberOfCells();
         for ( vtkIdType i = 0; i < this->BranchingFactor && cell_id < max_id; ++i, ++cell_id )
           {
           (*function)( cell_id, tid );
           }
-        this->GetNextStealableNode( index, level );
+        return this->GetNextStealableNode( id );
         }
       else
         {
-        *index = ( *index * this->BranchingFactor ) + 1;
-        ++(*level);
+        return vtkTreeIndex( ( id.index * this->BranchingFactor ) + 1, id.level + 1 );
         }
       }
     }
