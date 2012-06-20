@@ -47,6 +47,7 @@ typedef struct tree_work
 {
   vtkTreeIndex current;
   vtkTreeIndex steal;
+  int max_level;
   const vtkParallelTree* Tree;
   vtkFunctor* op;
   kaapi_lock_t lock;
@@ -80,49 +81,49 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
     }
 
   kaapi_atomic_destroylock( &(work->lock) );
+
   }
 
-static int kaapi_tree_steal( work_t* work, int w_req, vtkIdType* out_id, int* out_lvl )
+static int kaapi_tree_steal( work_t* work, int w_req )
   {
   /* Disable steals on branches beeing develloped by master thread */
-  if ( work->steal.index == work->current.index || work->current.index == -1 ) return 0;
+  if ( work->steal.index == work->current.index || work->current.index == -1 || work->steal.level == work->max_level )
+    return 0;
 
   int result = w_req;
 
-  kaapi_atomic_lock( &(work->lock) );
   int sl = work->steal.level;
+  kaapi_atomic_lock( &(work->lock) );
   vtkTreeIndex index_next = work->Tree->GetAncestor( work->current, sl + 1 );
-  vtkTreeIndex index_steal = work->Tree->GetAncestor( index_next, sl );
   kaapi_atomic_unlock( &(work->lock) );
-
-  printf("steal: %d %d\n", index_next.index, index_steal.index);
+  vtkTreeIndex index_steal = work->Tree->GetAncestor( index_next, sl );
 
   int n_req = work->steal.index - index_steal.index;
 
   if ( n_req >= w_req )
     {
     work->steal.index -= w_req;
-    *out_id = work->steal.index;
-    *out_lvl = work->steal.level;
     }
   else
     {
     vtkTreeIndex si = work->Tree->GetLastDescendant( index_steal );
 
-    int nn_req = si.index - index_steal.index;
-    work->steal.level = *out_lvl = sl + 1;
+    int nn_req = si.index - index_next.index;
+    work->steal.level = sl + 1;
     if ( nn_req + n_req < w_req ) // not enought
       {
-      work->steal.index = *out_id = index_next.index;
       result = nn_req + n_req;
+      if ( !result )
+        work->steal.level = sl;
+      else
+        work->steal.index = index_next.index;
       }
     else
       {
-      work->steal.index = *out_id = si.index - ( w_req - n_req );
+      work->steal.index = si.index - ( w_req - n_req );
       }
     }
 
-  ++(*out_id);
   return result;
   }
 
@@ -138,30 +139,25 @@ static int splitter(
   /* nrequests count */
   int nreq = kaapi_api_listrequest_iterator_count( lri );
 
-  vtkIdType stolen_id = -1;
-  int stolen_lvl = -1;
-  nreq = kaapi_tree_steal( work, nreq, &stolen_id, &stolen_lvl );
-  printf("splitter called: %d, %d, %d, %d -> %d\n",
-         work->current.index, work->current.level,
-         work->steal.index, work->steal.level, nreq );
-  if ( nreq == 0 ) return 0; /* Nothing to steal */
+  nreq = kaapi_tree_steal( work, nreq );
+  if ( nreq++ == 0 ) return 0; /* Nothing to steal + hack for --nreq later */
 
   kaapi_request_t* req = kaapi_api_listrequest_iterator_get(lr, lri);
-  vtkTreeIndex root = vtkTreeIndex( stolen_id, stolen_lvl );
-  while ( req != 0 )
+  vtkTreeIndex root = work->Tree->GetNextStealableNode( work->steal );
+  while ( --nreq && req != 0 )
     {
-    /* thief work: not adaptive result because no preemption is used here  */
     work_t* const tw = (work_t*)kaapi_request_pushdata(req, sizeof(work_t));
     tw->Tree = work->Tree;
     tw->current = root;
     tw->steal = root;
     tw->op = work->op;
+    tw->max_level = work->max_level;
     kaapi_atomic_initlock( &(tw->lock) );
 
     kaapi_task_init( kaapi_request_toptask(req), thief_entrypoint, tw);
     kaapi_request_pushtask_adaptive( req, victim_task, splitter, 0 );
+    kaapi_request_committask(req);
 
-    if ( --nreq == 0 ) break; /* Not enought branches to steal */
     req = kaapi_api_listrequest_iterator_next(lr, lri);
     root = work->Tree->GetNextStealableNode( root );
     }
@@ -264,6 +260,7 @@ namespace vtkSMP
     work.steal.index = 0;
     work.steal.level = 0;
     work.Tree = Tree;
+    work.max_level = Tree->GetMaximumSplittableLevel();
     work.op = func;
     kaapi_atomic_initlock( &(work.lock) );
 

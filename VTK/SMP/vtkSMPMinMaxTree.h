@@ -30,6 +30,7 @@ public:
 
   virtual vtkTreeIndex GetAncestor( vtkTreeIndex id, int desiredLvl ) const;
   virtual vtkTreeIndex GetLastDescendant( vtkTreeIndex id ) const;
+  virtual int GetMaximumSplittableLevel() const;
   // In place transformation of indices and levels
   virtual vtkTreeIndex GetNextStealableNode( vtkTreeIndex id ) const;
   virtual vtkTreeIndex TraverseNode( vtkTreeIndex id, vtkFunctor* function, vtkSMPThreadID tid ) const;

@@ -100,6 +100,7 @@ class VTK_SMP_EXPORT vtkParallelTree
 public:
   virtual vtkTreeIndex GetAncestor( vtkTreeIndex id, int desiredLvl ) const = 0;
   virtual vtkTreeIndex GetLastDescendant( vtkTreeIndex id ) const = 0;
+  virtual int GetMaximumSplittableLevel() const = 0;
 
   virtual vtkTreeIndex GetNextStealableNode( vtkTreeIndex id ) const = 0;
   virtual vtkTreeIndex TraverseNode( vtkTreeIndex id, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;

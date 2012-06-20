@@ -234,7 +234,6 @@ vtkTreeIndex vtkSMPMinMaxTree::GetAncestor( vtkTreeIndex id, int desiredLvl ) co
   {
   vtkIdType result = id.index;
   int lvl = id.level;
-  printf("ancestor: (%d, %d) %d\n", id.index, id.level, desiredLvl);
 
   while ( lvl > desiredLvl )
     {
@@ -270,6 +269,11 @@ redo:
 
   ++(id.index);
   return id;
+  }
+
+int vtkSMPMinMaxTree::GetMaximumSplittableLevel() const
+  {
+  return this->Level;
   }
 
 vtkTreeIndex vtkSMPMinMaxTree::TraverseNode( vtkTreeIndex id, vtkFunctor* function, vtkSMPThreadID tid ) const
