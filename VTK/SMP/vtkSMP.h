@@ -82,28 +82,37 @@ protected:
   ~vtkTaskSplitable();
 };
 
-struct VTK_SMP_EXPORT vtkTreeIndex
+struct vtkTreeIndex
 {
   vtkIdType index;
   int level;
+  vtkTreeIndex* next;
+  vtkTreeIndex* prev;
 
-  vtkTreeIndex(vtkIdType i, int l)
-    {
-    index = i;
-    level = l;
-    }
-  vtkTreeIndex() { index = -1; level = -1; }
+  vtkTreeIndex(vtkIdType i, int l);
+  vtkTreeIndex();
+};
+
+class VTK_SMP_EXPORT vtkTreeTraversalHelper
+{
+  vtkTreeIndex* begin;
+  vtkTreeIndex* end;
+
+public:
+  vtkTreeTraversalHelper();
+  ~vtkTreeTraversalHelper();
+
+  void push_head ( vtkIdType index, int level );
+  void push_tail ( vtkIdType index, int level );
+
+  int steal ( int requested, vtkTreeIndex* result );
+  void execute ( vtkIdType* index, int* level );
 };
 
 class VTK_SMP_EXPORT vtkParallelTree
 {
 public:
-  virtual vtkTreeIndex GetAncestor( vtkTreeIndex id, int desiredLvl ) const = 0;
-  virtual vtkTreeIndex GetLastDescendant( vtkTreeIndex id ) const = 0;
-  virtual int GetMaximumSplittableLevel() const = 0;
-
-  virtual vtkTreeIndex GetNextStealableNode( vtkTreeIndex id ) const = 0;
-  virtual vtkTreeIndex TraverseNode( vtkTreeIndex id, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;
+  virtual void TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;
 };
 
 namespace vtkSMP
@@ -122,8 +131,8 @@ namespace vtkSMP
         for ( typename vtkstd::vector<T*>::iterator it = ThreadLocalStorage.begin();
               it != ThreadLocalStorage.end(); ++it )
           {
-          if ( !(*it) ) continue;
-          (*it)->UnRegister( this );
+          if ( *it )
+            (*it)->UnRegister( this );
           *it = 0;
           }
         ThreadLocalStorage.clear();

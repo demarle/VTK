@@ -55,6 +55,100 @@ void vtkTask::PrintSelf(ostream &os, vtkIndent indent)
   }
 
 //--------------------------------------------------------------------------------
+vtkTreeIndex::vtkTreeIndex(vtkIdType i, int l)
+  {
+  index = i;
+  level = l;
+  next = 0;
+  prev = 0;
+  }
+
+vtkTreeIndex::vtkTreeIndex()
+  {
+  index = -1;
+  level = 0;
+  next = 0;
+  prev = 0;
+  }
+
+//--------------------------------------------------------------------------------
+vtkTreeTraversalHelper::vtkTreeTraversalHelper()
+  {
+  this->begin = 0;
+  this->end = 0;
+  }
+
+vtkTreeTraversalHelper::~vtkTreeTraversalHelper()
+  {
+  vtkTreeIndex* current = this->begin;
+  while ( current )
+    {
+    this->begin = current;
+    current = current->next;
+    delete this->begin;
+    }
+  }
+
+void vtkTreeTraversalHelper::execute( vtkIdType* index, int* level )
+  {
+  vtkTreeIndex* result = this->end;
+  if ( !result )
+    {
+    *index = -1;
+    *level = 0;
+    return;
+    }
+  if ( !(this->end == result->prev) )
+    {
+    this->begin = 0;
+    }
+  *index = result->index;
+  *level = result->level;
+
+  delete result;
+  }
+
+void vtkTreeTraversalHelper::push_head ( vtkIdType index, int level )
+  {
+  vtkTreeIndex* insert = new vtkTreeIndex( index, level );
+  insert->prev = 0 ;
+  insert->next = this->begin;
+  this->begin = insert;
+  if ( !insert->next )
+    this->end = insert;
+  }
+
+void vtkTreeTraversalHelper::push_tail ( vtkIdType index, int level )
+  {
+  vtkTreeIndex* insert = new vtkTreeIndex( index, level );
+  insert->next = 0 ;
+  insert->prev = this->end;
+  this->end = insert;
+  if ( !insert->prev )
+    this->begin = insert;
+  }
+
+int vtkTreeTraversalHelper::steal ( int requested, vtkTreeIndex* result )
+  {
+  if ( this->begin == this->end )
+    {
+    result = 0;
+    return 0;
+    }
+
+  int number = 0;
+  result = this->begin;
+  vtkTreeIndex* current = result;
+  while ( number < requested && current->next != this->end )
+    {
+    ++number;
+    current = current->next;
+    }
+
+  return number;
+  }
+
+//--------------------------------------------------------------------------------
 class OffsetManager : public vtkObject
 {
   OffsetManager( const OffsetManager& );

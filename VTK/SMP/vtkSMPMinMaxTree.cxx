@@ -229,82 +229,35 @@ void vtkSMPMinMaxTree::InitTraversal(double scalarValue)
   this->TreeIndex = this->TreeSize;
   }
 
-
-vtkTreeIndex vtkSMPMinMaxTree::GetAncestor( vtkTreeIndex id, int desiredLvl ) const
+void vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const
   {
-  vtkIdType result = id.index;
-  int lvl = id.level;
-
-  while ( lvl > desiredLvl )
+  if ( id >= this->TreeSize )
     {
-    result = ( result - 1 ) / this->BranchingFactor;
-    --lvl;
+    return;
     }
 
-  return vtkTreeIndex(result, lvl);
-  }
-
-vtkTreeIndex vtkSMPMinMaxTree::GetLastDescendant( vtkTreeIndex id ) const
-  {
-  if ( id.level == this->Level )
-    return vtkTreeIndex( -1, -1 );
-  return vtkTreeIndex(( id.index + 1 ) * this->BranchingFactor, id.level + 1);
-  }
-
-vtkTreeIndex vtkSMPMinMaxTree::GetNextStealableNode( vtkTreeIndex id ) const
-  {
-redo:
-  if ( id.index == 0 )
+  vtkScalarRange<double> *t = static_cast<vtkScalarRange<double>*>(this->Tree) + id;
+  if ( t->min > this->ScalarValue || t->max < this->ScalarValue )
     {
-    return vtkTreeIndex( -1, -1 );
-    }
-  vtkIdType father = id.index / this->BranchingFactor;
-  vtkIdType previous_father = ( id.index - 1 ) / this->BranchingFactor;
-  if ( previous_father != father )
-    {
-    id.index = previous_father;
-    --(id.level);
-    goto redo;
+    return;
     }
 
-  ++(id.index);
-  return id;
-  }
-
-int vtkSMPMinMaxTree::GetMaximumSplittableLevel() const
-  {
-  return this->Level;
-  }
-
-vtkTreeIndex vtkSMPMinMaxTree::TraverseNode( vtkTreeIndex id, vtkFunctor* function, vtkSMPThreadID tid ) const
-  {
-  if ( id.index >= this->TreeSize )
+  if ( lvl == this->Level ) //leaf
     {
-    return vtkTreeIndex( -1, -1 );
-    }
-  else
-    {
-    vtkScalarRange<double> *t = static_cast<vtkScalarRange<double>*>(this->Tree) + id.index;
-    if ( t->min > this->ScalarValue || t->max < this->ScalarValue )
+    vtkIdType cell_id = ( id - this->LeafOffset ) * this->BranchingFactor;
+    vtkIdType max_id = this->DataSet->GetNumberOfCells();
+    for ( vtkIdType i = 0; i < this->BranchingFactor && cell_id < max_id; ++i, ++cell_id )
       {
-      return this->GetNextStealableNode( id );
+      (*function)( cell_id, tid );
       }
-    else
+    }
+  else //node
+    {
+    vtkIdType index = ( id + 1 ) * this->BranchingFactor;
+    int level = lvl + 1;
+    for ( vtkIdType i = 0; i < this->BranchingFactor; ++i, --index )
       {
-      if ( id.level == this->Level )
-        {
-        vtkIdType cell_id = ( id.index - this->LeafOffset ) * this->BranchingFactor;
-        vtkIdType max_id = this->DataSet->GetNumberOfCells();
-        for ( vtkIdType i = 0; i < this->BranchingFactor && cell_id < max_id; ++i, ++cell_id )
-          {
-          (*function)( cell_id, tid );
-          }
-        return this->GetNextStealableNode( id );
-        }
-      else
-        {
-        return vtkTreeIndex( ( id.index * this->BranchingFactor ) + 1, id.level + 1 );
-        }
+      th->push_tail( index, level );
       }
     }
   }
