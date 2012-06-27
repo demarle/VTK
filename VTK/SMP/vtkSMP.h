@@ -14,6 +14,7 @@ class vtkPointData;
 class vtkCellArray;
 class vtkCellData;
 class vtkSMPMergePoints;
+class vtkMutexLock;
 
 class VTK_SMP_EXPORT vtkFunctor : public vtkObject
 {
@@ -95,8 +96,10 @@ struct vtkTreeIndex
 
 class VTK_SMP_EXPORT vtkTreeTraversalHelper
 {
-  vtkTreeIndex* begin;
-  vtkTreeIndex* end;
+  vtkTreeIndex* indexes;
+  int current;
+  int max;
+  vtkMutexLock* Lock;
 
 public:
   vtkTreeTraversalHelper();
@@ -105,8 +108,11 @@ public:
   void push_head ( vtkIdType index, int level );
   void push_tail ( vtkIdType index, int level );
 
+//private:
   int steal ( int requested, vtkTreeIndex* result );
   void execute ( vtkIdType* index, int* level );
+
+  void Init ();
 };
 
 class VTK_SMP_EXPORT vtkParallelTree

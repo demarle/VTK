@@ -82,27 +82,25 @@ static int splitter(
   /* nrequests count */
   int nreq = kaapi_api_listrequest_iterator_count( lri );
 
-  vtkTreeIndex* result_iterator;
+  vtkTreeIndex* result_iterator = new vtkTreeIndex[nreq];
   nreq = work->tree_helper.steal( nreq, result_iterator );
-  if ( nreq++ == 0 ) return 0; /* Nothing to steal + hack for --nreq later */
 
   kaapi_request_t* req = kaapi_api_listrequest_iterator_get(lr, lri);
-  vtkTreeIndex* next = result_iterator->next;
-  while ( --nreq )
+  for ( int i = 0; i < nreq; ++i )
     {
     work_t* const tw = (work_t*)kaapi_request_pushdata(req, sizeof(work_t));
     tw->Tree = work->Tree;
     tw->op = work->op;
-    tw->tree_helper.push_head( result_iterator->index, result_iterator->level );
+    tw->tree_helper.Init();
+    tw->tree_helper.push_head( result_iterator[i].index, result_iterator[i].level );
 
     kaapi_task_init( kaapi_request_toptask(req), thief_entrypoint, tw);
     kaapi_request_pushtask_adaptive( req, victim_task, splitter, 0 );
     kaapi_request_committask(req);
 
     req = kaapi_api_listrequest_iterator_next(lr, lri);
-    result_iterator = next;
-    next = result_iterator->next;
     }
+  delete [] result_iterator;
 
   return 0;
   }

@@ -7,6 +7,7 @@
 #include "vtkPointData.h"
 #include "vtkCellData.h"
 #include "vtkCellArray.h"
+#include "vtkMutexLock.h"
 
 #include "vtkBenchTimer.h"
 
@@ -74,78 +75,93 @@ vtkTreeIndex::vtkTreeIndex()
 //--------------------------------------------------------------------------------
 vtkTreeTraversalHelper::vtkTreeTraversalHelper()
   {
-  this->begin = 0;
-  this->end = 0;
+  this->Init();
+  }
+
+void vtkTreeTraversalHelper::Init()
+  {
+  this->max = 5;
+  this->Lock = vtkMutexLock::New();
+  this->indexes = new vtkTreeIndex[this->max];
+  this->current = 0;
   }
 
 vtkTreeTraversalHelper::~vtkTreeTraversalHelper()
   {
-  vtkTreeIndex* current = this->begin;
-  while ( current )
-    {
-    this->begin = current;
-    current = current->next;
-    delete this->begin;
-    }
+  this->Lock->Delete();
+  delete [] this->indexes;
   }
 
 void vtkTreeTraversalHelper::execute( vtkIdType* index, int* level )
   {
-  vtkTreeIndex* result = this->end;
-  if ( !result )
+  if ( this->current )
+    {
+    this->Lock->Lock();
+    vtkTreeIndex result = this->indexes[--(this->current)];
+    this->Lock->Unlock();
+    *index = result.index;
+    *level = result.level;
+    }
+  else
     {
     *index = -1;
     *level = 0;
-    return;
     }
-  if ( !(this->end == result->prev) )
-    {
-    this->begin = 0;
-    }
-  *index = result->index;
-  *level = result->level;
-
-  delete result;
   }
 
 void vtkTreeTraversalHelper::push_head ( vtkIdType index, int level )
   {
-  vtkTreeIndex* insert = new vtkTreeIndex( index, level );
-  insert->prev = 0 ;
-  insert->next = this->begin;
-  this->begin = insert;
-  if ( !insert->next )
-    this->end = insert;
+  this->Lock->Lock();
+  if ( this->current == this->max )
+    {
+    this->max << 1;
+    vtkTreeIndex* nouveau = new vtkTreeIndex[this->max];
+    for ( int i = 0; i < this->current; ++i )
+      {
+      nouveau[i+1] = this->indexes[i];
+      }
+    delete [] this->indexes;
+    this->indexes = nouveau;
+    }
+  else
+    {
+    for ( int i = this->current; i > 0; --i )
+      {
+      this->indexes[i+1] = this->indexes[i];
+      }
+    }
+  this->indexes[0] = vtkTreeIndex( index, level );
+  ++(this->current);
+  this->Lock->Unlock();
   }
 
 void vtkTreeTraversalHelper::push_tail ( vtkIdType index, int level )
   {
-  vtkTreeIndex* insert = new vtkTreeIndex( index, level );
-  insert->next = 0 ;
-  insert->prev = this->end;
-  this->end = insert;
-  if ( !insert->prev )
-    this->begin = insert;
+  this->Lock->Lock();
+  if ( this->current == this->max )
+    {
+    this->max << 1;
+    vtkTreeIndex* nouveau = new vtkTreeIndex[this->max];
+    memcpy( nouveau, this->indexes, sizeof(vtkTreeIndex) * this->current );
+    delete [] (this->indexes);
+    this->indexes = nouveau;
+    }
+  this->indexes[(this->current)++] = vtkTreeIndex( index, level );
+  this->Lock->Unlock();
   }
 
 int vtkTreeTraversalHelper::steal ( int requested, vtkTreeIndex* result )
   {
-  if ( this->begin == this->end )
+  int i = 0;
+  this->Lock->Lock();
+  int m = this->current - 1;
+  for ( ; i < requested && i < m; ++i )
     {
-    result = 0;
-    return 0;
+    result[i] = this->indexes[i];
     }
+  this->Lock->Unlock();
 
-  int number = 0;
-  result = this->begin;
-  vtkTreeIndex* current = result;
-  while ( number < requested && current->next != this->end )
-    {
-    ++number;
-    current = current->next;
-    }
-
-  return number;
+  return i;
   }
 
 //--------------------------------------------------------------------------------
