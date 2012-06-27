@@ -114,7 +114,7 @@ void vtkTreeTraversalHelper::push_head ( vtkIdType index, int level )
   this->Lock->Lock();
   if ( this->current == this->max )
     {
-    this->max << 1;
+    this->max <<= 1;
     vtkTreeIndex* nouveau = new vtkTreeIndex[this->max];
     for ( int i = 0; i < this->current; ++i )
       {
@@ -140,7 +140,7 @@ void vtkTreeTraversalHelper::push_tail ( vtkIdType index, int level )
   this->Lock->Lock();
   if ( this->current == this->max )
     {
-    this->max << 1;
+    this->max <<= 1;
     vtkTreeIndex* nouveau = new vtkTreeIndex[this->max];
     memcpy( nouveau, this->indexes, sizeof(vtkTreeIndex) * this->current );
     delete [] (this->indexes);

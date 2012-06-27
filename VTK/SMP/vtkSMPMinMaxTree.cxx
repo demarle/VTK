@@ -51,6 +51,8 @@ public:
     {
     vtkIdType branchIndex = (index * BF) + 1;
     vtkScalarRange<double> *t = Tree + index, *s = Tree + branchIndex;
+    t->min = VTK_DOUBLE_MAX;
+    t->max = -VTK_DOUBLE_MAX;
     for ( vtkIdType i = 0; i < BF && branchIndex < TreeSize; ++i, ++branchIndex )
       {
       if ( t->min > s[i].min )
