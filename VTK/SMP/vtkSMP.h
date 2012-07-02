@@ -87,8 +87,6 @@ struct vtkTreeIndex
 {
   vtkIdType index;
   int level;
-  vtkTreeIndex* next;
-  vtkTreeIndex* prev;
 
   vtkTreeIndex(vtkIdType i, int l);
   vtkTreeIndex();
@@ -97,9 +95,8 @@ struct vtkTreeIndex
 class VTK_SMP_EXPORT vtkTreeTraversalHelper
 {
   vtkTreeIndex* indexes;
-  int current;
-  int max;
-  vtkMutexLock* Lock;
+  vtkIdType current_head;
+  vtkIdType size;
 
 public:
   vtkTreeTraversalHelper();
@@ -109,16 +106,17 @@ public:
   void push_tail ( vtkIdType index, int level );
 
 //private:
-  int steal ( int requested, vtkTreeIndex* result );
-  void execute ( vtkIdType* index, int* level );
-
-  void Init ();
+  void Init ( vtkIdType s );
+  vtkIdType GetCurrent ();
+  vtkTreeIndex Get ( vtkIdType i );
+  vtkTreeIndex Steal ( vtkIdType i );
 };
 
 class VTK_SMP_EXPORT vtkParallelTree
 {
 public:
   virtual void TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;
+  virtual vtkIdType GetTreeSize () const = 0;
 };
 
 namespace vtkSMP

@@ -263,3 +263,8 @@ void vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelp
       }
     }
   }
+
+vtkIdType vtkSMPMinMaxTree::GetTreeSize() const
+  {
+  return (this->BranchingFactor - 1) * this->Level;
+  }

@@ -29,7 +29,7 @@ public:
   void InitTraversal(double scalarValue);
 
   virtual void TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const;
-
+  virtual vtkIdType GetTreeSize() const;
 };
 
 #endif // VTKSMPMINMAXTREE_H

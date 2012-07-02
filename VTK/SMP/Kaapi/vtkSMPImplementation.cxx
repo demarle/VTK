@@ -1,7 +1,6 @@
 #include "vtkSMP.h"
 #include "vtkCommand.h"
 #include <kaapic.h>
-#include <kaapi_atomic.h>
 #include <cmath>
 
 void smpInit(void)
@@ -45,9 +44,11 @@ void my_spawn ( const vtkTask* function )
 
 typedef struct tree_work
 {
-  vtkTreeTraversalHelper tree_helper;
+  kaapi_workqueue_t wq;
+  vtkTreeTraversalHelper nodes;
   const vtkParallelTree* Tree;
   vtkFunctor* op;
+  vtkIdType size;
 } work_t;
 
 static void thief_entrypoint( void* args, kaapi_thread_t* thread )
@@ -60,12 +61,13 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
   if ( iop && iop->ShouldInitialize( kid ) )
     iop->Init( kid );
 
-  vtkIdType i;
-  int l;
-  while ( i != -1 )
+  kaapi_workqueue_index_t i, nil;
+
+  while ( !kaapi_workqueue_pop(&(work->wq), &i, &nil, 1) )
     {
-    work->Tree->TraverseNode( i, l, &(work->tree_helper), work->op, kid );
-    work->tree_helper.execute( &i, &l );
+    vtkTreeIndex id = work->nodes.Get(i);
+    work->Tree->TraverseNode( id.index, id.level, &(work->nodes), work->op, kid );
+    kaapi_workqueue_push( &(work->wq), (kaapi_workqueue_index_t)work->nodes.GetCurrent() );
     }
 
   }
@@ -78,21 +80,38 @@ static int splitter(
     )
   {
   work_t* const work = (work_t*)(args);
+  kaapi_workqueue_index_t i, j;
 
   /* nrequests count */
   int nreq = kaapi_api_listrequest_iterator_count( lri );
 
-  vtkTreeIndex* result_iterator = new vtkTreeIndex[nreq];
-  nreq = work->tree_helper.steal( nreq, result_iterator );
+redo_steal:
+  kaapi_workqueue_index_t range_size = kaapi_workqueue_size(&work->wq);
+  if ( --range_size < 1 )
+    return 0;
+
+  if ( range_size < nreq )
+    nreq = range_size;
+
+  if (kaapi_workqueue_steal(&work->wq, &i, &j, nreq))
+    goto redo_steal;
 
   kaapi_request_t* req = kaapi_api_listrequest_iterator_get(lr, lri);
-  for ( int i = 0; i < nreq; ++i )
+  for ( ; i < j; ++i )
     {
     work_t* const tw = (work_t*)kaapi_request_pushdata(req, sizeof(work_t));
     tw->Tree = work->Tree;
     tw->op = work->op;
-    tw->tree_helper.Init();
-    tw->tree_helper.push_head( result_iterator[i].index, result_iterator[i].level );
+    tw->size = work->size;
+    tw->nodes.Init( tw->size );
+    kaapi_workqueue_init_with_kproc( &tw->wq,
+                                     (kaapi_workqueue_index_t)tw->size,
+                                     (kaapi_workqueue_index_t)tw->size,
+                                     req->ident );
+    vtkTreeIndex id = work->nodes.Steal(i);
+    tw->nodes.push_tail( id.index, id.level );
+    kaapi_workqueue_push( &tw->wq, (kaapi_workqueue_index_t)tw->nodes.GetCurrent() );
+
 
     kaapi_task_init( kaapi_request_toptask(req), thief_entrypoint, tw);
     kaapi_request_pushtask_adaptive( req, victim_task, splitter, 0 );
@@ -100,7 +119,6 @@ static int splitter(
 
     req = kaapi_api_listrequest_iterator_next(lr, lri);
     }
-  delete [] result_iterator;
 
   return 0;
   }
@@ -188,6 +206,7 @@ namespace vtkSMP
   void Traverse( const vtkParallelTree *Tree, vtkFunctor* func )
     {
     work_t work;
+    kaapi_workqueue_index_t i, nil;
 
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
 
@@ -197,7 +216,11 @@ namespace vtkSMP
     /* initialize work */
     work.Tree = Tree;
     work.op = func;
-
+    work.size = Tree->GetTreeSize();
+    work.nodes.Init(work.size);
+    kaapi_workqueue_init(&work.wq, (kaapi_workqueue_index_t)work.size, (kaapi_workqueue_index_t)work.size);
+    work.nodes.push_tail( 0, 0 );
+    kaapi_workqueue_push( &work.wq, (kaapi_workqueue_index_t)work.nodes.GetCurrent() );
 
     /* push an adaptive task */
     void* sc = kaapi_task_begin_adaptive(
@@ -207,12 +230,11 @@ namespace vtkSMP
           &work     /* arg for splitter = work to split */
           );
 
-    vtkIdType index = 0;
-    int level = 0;
-    while ( index != -1 )
+    while ( !kaapi_workqueue_pop(&work.wq, &i, &nil, 1) )
       {
-      Tree->TraverseNode( index, level, &(work.tree_helper), func, kaapic_get_thread_num() );
-      work.tree_helper.execute( &index, &level );
+      vtkTreeIndex id = work.nodes.Get(i);
+      Tree->TraverseNode( id.index, id.level, &work.nodes, func, kaapic_get_thread_num() );
+      kaapi_workqueue_push( &work.wq, (kaapi_workqueue_index_t)work.nodes.GetCurrent() );
       }
 
     kaapi_task_end_adaptive(thread, sc);
