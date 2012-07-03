@@ -108,7 +108,7 @@ public:
 //private:
   void Init ( vtkIdType s );
   vtkIdType GetCurrent ();
-  vtkTreeIndex Get ( vtkIdType i );
+  vtkTreeIndex Get ( );
   vtkTreeIndex Steal ( vtkIdType i );
 };
 

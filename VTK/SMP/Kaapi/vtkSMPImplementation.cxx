@@ -65,7 +65,7 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
 
   while ( !kaapi_workqueue_pop(&(work->wq), &i, &nil, 1) )
     {
-    vtkTreeIndex id = work->nodes.Get(i);
+    vtkTreeIndex id = work->nodes.Get();
     work->Tree->TraverseNode( id.index, id.level, &(work->nodes), work->op, kid );
     kaapi_workqueue_push( &(work->wq), (kaapi_workqueue_index_t)work->nodes.GetCurrent() );
     }
@@ -232,7 +232,7 @@ namespace vtkSMP
 
     while ( !kaapi_workqueue_pop(&work.wq, &i, &nil, 1) )
       {
-      vtkTreeIndex id = work.nodes.Get(i);
+      vtkTreeIndex id = work.nodes.Get();
       Tree->TraverseNode( id.index, id.level, &work.nodes, func, kaapic_get_thread_num() );
       kaapi_workqueue_push( &work.wq, (kaapi_workqueue_index_t)work.nodes.GetCurrent() );
       }
