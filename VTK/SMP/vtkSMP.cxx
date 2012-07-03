@@ -92,25 +92,35 @@ vtkIdType vtkTreeTraversalHelper::GetCurrent()
   return this->current_head;
   }
 
-vtkTreeIndex vtkTreeTraversalHelper::Get( vtkIdType i )
+vtkTreeIndex vtkTreeTraversalHelper::Get( )
   {
-  ++(this->current_head);
-  return this->indexes[ i % this->size ];
+  vtkIdType i = (this->current_head)++;
+  while ( i < 0 )
+    i += this->size;
+  return this->indexes[ i ];
   }
 
 vtkTreeIndex vtkTreeTraversalHelper::Steal( vtkIdType i )
   {
-  return this->indexes[ i % this->size ];
+  while ( i < 0 )
+    i += this->size;
+  return this->indexes[ i ];
   }
 
 void vtkTreeTraversalHelper::push_head ( vtkIdType index, int level )
   { // currently same as push_tail
-  this->indexes[ --(this->current_head) % this->size ] = vtkTreeIndex( index, level );
+  vtkIdType i = --(this->current_head);
+  while ( i < 0 )
+    i += this->size;
+  this->indexes[ i ] = vtkTreeIndex( index, level );
   }
 
 void vtkTreeTraversalHelper::push_tail ( vtkIdType index, int level )
   {
-  this->indexes[ --(this->current_head) % this->size ] = vtkTreeIndex( index, level );
+  vtkIdType i = --(this->current_head);
+  while ( i < 0 )
+    i += this->size;
+  this->indexes[ i ] = vtkTreeIndex( index, level );
   }
 
 //--------------------------------------------------------------------------------
