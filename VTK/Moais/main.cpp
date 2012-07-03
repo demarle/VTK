@@ -42,6 +42,8 @@ int main( int argc, char** argv )
   }
   int parallel = argc == 2 ? 48 : atoi(argv[2]);
 
+  cout << (-1 % 4) << endl;
+
   /* === Reading 3D model === */
 
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();

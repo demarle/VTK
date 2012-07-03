@@ -21,6 +21,7 @@ endif("${MY_HOSTNAME}" STREQUAL "idfreeze")
 IF(VTK_USE_SMP)
   string(TOLOWER ${VTK_SMP_IMPLEMENTATION_TYPE} SMP_NAME)
 
+  include_directories("~/.local/usr/include")
   add_definitions(-DVTK_CAN_USE_SMP=1 -DVTK_WINDOW_NAME=\"${SMP_NAME}\")
 
   add_executable(${SMP_NAME}Bench MACOSX_BUNDLE "main.cpp" ${HDRS})
