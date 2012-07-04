@@ -42,8 +42,6 @@ int main( int argc, char** argv )
   }
   int parallel = argc == 2 ? 48 : atoi(argv[2]);
 
-  cout << (-1 % 4) << endl;
-
   /* === Reading 3D model === */
 
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();
@@ -88,33 +86,14 @@ int main( int argc, char** argv )
   s->SetNumberOfTuples(transform->GetOutput()->GetNumberOfPoints());
   s->SetName("scalars");
   vtkPointSet* data = transform->GetOutput();
-  vtkIdType num = data->GetNumberOfCells() / parallel, n;
-  ++num;
-  vtkGenericCell* cell = vtkGenericCell::New();
-  vtkIdList* cellPts;
+  vtkIdType num = data->GetNumberOfPoints();
+  
+  double coord[3];
   for ( vtkIdType i = 0; i < num; ++i )
   {
-    data->GetCell( i, cell );
-    cellPts = cell->GetPointIds();
-    n = 0;
-    while ( n != cellPts->GetNumberOfIds() )
-    {
-      s->SetTuple1( cellPts->GetId( n ), 1.);
-      ++n;
-    }
+    data->GetPoint( i, coord );
+    s->SetTuple1( i, coord[2] );
   }
-  for ( vtkIdType i = num; i < data->GetNumberOfCells(); ++i )
-  {
-    data->GetCell( i, cell );
-    cellPts = cell->GetPointIds();
-    n = 0;
-    while ( n != cellPts->GetNumberOfIds() )
-    {
-      s->SetTuple1( cellPts->GetId( n ), -1.);
-      ++n;
-    }
-  }
-  cell->Delete();
   data->GetPointData()->SetScalars( s );
   s->Delete();
 
