@@ -5,8 +5,8 @@
 #include "vtkSMP.h"
 
 class vtkGenericCell;
-class TreeFunctor;
 class BuildFunctor;
+class MyAtomic;
 
 class VTK_SMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree, public vtkParallelTree
 {
@@ -30,6 +30,9 @@ public:
 
   virtual void TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const;
   virtual vtkIdType GetTreeSize() const;
+
+private:
+  MyAtomic* counters;
 };
 
 #endif // VTKSMPMINMAXTREE_H

@@ -19,13 +19,32 @@ public:
   TScalar max;
 };
 
+class MyAtomic
+{
+  vtkIdType atomic_counter;
+
+public:
+  MyAtomic()
+    {
+    atomic_counter = 0;
+    }
+
+  vtkIdType GetMyNumber()
+    {
+    return __sync_add_and_fetch( &(this->atomic_counter), 1 );
+    }
+};
+
 class BuildFunctor : public vtkFunctor
 {
   BuildFunctor( const BuildFunctor& );
   void operator =( const BuildFunctor& );
 
   vtkScalarRange<double>* Tree;
-  vtkIdType BF, TreeSize;
+  vtkIdType BF, Level, LeafOffset, Size;
+  vtkDataSet* DS;
+  vtkDataArray* Scalars;
+  MyAtomic* counters;
 
 protected:
   BuildFunctor() { }
@@ -44,109 +63,91 @@ public:
     {
     Tree = static_cast<vtkScalarRange<double>*>(t->Tree);
     BF = t->BranchingFactor;
-    TreeSize = t->TreeSize;
+    Size = t->TreeSize;
+    Level = t->Level;
+    LeafOffset = t->LeafOffset;
+    DS = t->DataSet;
+    Scalars = t->Scalars;
+    counters = t->counters;
     }
 
   void operator ()( vtkIdType index, vtkSMPThreadID tid ) const
     {
-    vtkIdType branchIndex = (index * BF) + 1;
-    vtkScalarRange<double> *t = Tree + index, *s = Tree + branchIndex;
-    t->min = VTK_DOUBLE_MAX;
-    t->max = -VTK_DOUBLE_MAX;
-    for ( vtkIdType i = 0; i < BF && branchIndex < TreeSize; ++i, ++branchIndex )
+    vtkIdType pos = (index - this->LeafOffset) * this->BF;
+    vtkIdType max = this->DS->GetNumberOfCells() - pos, i, n;
+    int level = this->Level;
+    vtkScalarRange<double> *t, *tt;
+
+    if ( index < this->Size )
       {
-      if ( t->min > s[i].min )
-        t->min = s[i].min;
-      if ( t->max < s[i].max )
-        t->max = s[i].max;
+      t = this->Tree + index;
+      t->min = VTK_DOUBLE_MAX;
+      t->max = -VTK_DOUBLE_MAX;
+
+      vtkGenericCell* cell = vtkGenericCell::New();
+      vtkDoubleArray* cellScalars = vtkDoubleArray::New();
+      double* s;
+      for ( i = 0; i < this->BF && i < max; ++i )
+        {
+        this->DS->GetCell( pos + i, cell );
+        vtkIdList* cellPts = cell->GetPointIds();
+        n = cellPts->GetNumberOfIds();
+        cellScalars->SetNumberOfTuples( n );
+        this->Scalars->GetTuples( cellPts, cellScalars );
+        s = cellScalars->GetPointer( 0 );
+
+        while ( n != 0 )
+          {
+          --n;
+          if ( s[n] < t->min )
+            {
+            t->min = s[n];
+            }
+          if ( s[n] > t->max )
+            {
+            t->max = s[n];
+            }
+          }
+        }
+      }
+
+    while ( level >= 0 )
+      {
+      index = (index - 1) / this->BF;
+      if ( this->counters[index].GetMyNumber() != this->BF )
+        return;
+      t = this->Tree + index;
+      t->min = VTK_DOUBLE_MAX;
+      t->max = -VTK_DOUBLE_MAX;
+
+      i = index * this->BF + 1;
+      tt = this->Tree + i;
+
+      --level;
+      for ( vtkIdType j = 0; j < this->BF && i < this->Size; ++i, ++j )
+        {
+        if ( t->min > tt[j].min )
+          t->min = tt[j].min;
+        if ( t->max < tt[j].max )
+          t->max = tt[j].max;
+        }
       }
     }
 };
 
 vtkStandardNewMacro(BuildFunctor);
 
-class BuildLeafFunctor : public vtkFunctor
-{
-  BuildLeafFunctor( const BuildLeafFunctor& );
-  void operator =( const BuildLeafFunctor& );
-
-  vtkScalarRange<double>* Tree;
-  vtkIdType BF, TreeSize, NbCells;
-  vtkDataSet* DS;
-  vtkDataArray* Scalars;
-
-protected:
-  BuildLeafFunctor() { }
-  ~BuildLeafFunctor() { }
-
-public:
-
-  vtkTypeMacro(BuildLeafFunctor,vtkFunctor);
-  static BuildLeafFunctor* New();
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os,indent);
-    }
-
-  void InitializeData( vtkSMPMinMaxTree* t )
-    {
-    Tree = static_cast<vtkScalarRange<double>*>(t->Tree);
-    BF = t->BranchingFactor;
-    TreeSize = t->LeafOffset * t->BranchingFactor + 1;
-    NbCells = t->DataSet->GetNumberOfCells();
-    DS = t->DataSet;
-    Scalars = t->Scalars;
-    }
-
-  void operator ()( vtkIdType index, vtkSMPThreadID tid ) const
-    {
-    vtkScalarRange<double> *t = Tree + index;
-    t->min = VTK_DOUBLE_MAX;
-    t->max = -VTK_DOUBLE_MAX;
-    vtkIdType cellId = (index * BF) + 1 - TreeSize;
-    vtkIdType n;
-    vtkGenericCell* cell = vtkGenericCell::New();
-    vtkDoubleArray* cellScalars = vtkDoubleArray::New();
-    double* pt = new double[3];
-    double* s;
-    for ( vtkIdType i = 0; i < BF && cellId < NbCells; ++i, ++cellId )
-      {
-      DS->GetCell(cellId, cell);
-      vtkIdList* cellPts = cell->GetPointIds();
-      n = cellPts->GetNumberOfIds();
-      cellScalars->SetNumberOfTuples( n );
-      Scalars->GetTuples(cellPts, cellScalars);
-      s = cellScalars->GetPointer(0);
-
-      while ( n != 0 )
-        {
-        --n;
-        if ( s[n] < t->min )
-          {
-          t->min = s[n];
-          }
-        if ( s[n] > t->max )
-          {
-          t->max = s[n];
-          }
-        }
-      }
-    delete [] pt;
-    cell->Delete();
-    cellScalars->Delete();
-    }
-};
-
-vtkStandardNewMacro(BuildLeafFunctor);
-
 vtkStandardNewMacro(vtkSMPMinMaxTree);
 
 vtkSMPMinMaxTree::vtkSMPMinMaxTree()
   {
+  this->counters = 0;
   }
 
 vtkSMPMinMaxTree::~vtkSMPMinMaxTree()
   {
+  if ( this->counters )
+    delete [] this->counters;
   }
 
 void vtkSMPMinMaxTree::PrintSelf(ostream &os, vtkIndent indent)
@@ -200,22 +201,13 @@ void vtkSMPMinMaxTree::BuildTree()
   vtkScalarRange<double> *TTree;
   this->TreeSize = numNodes - (prod - numLeafs);
   this->Tree = TTree = new vtkScalarRange<double>[this->TreeSize];
-
-  BuildLeafFunctor* BuildLeaf = BuildLeafFunctor::New();
-  BuildLeaf->InitializeData( this );
-  vtkIdType StartIndex = this->LeafOffset;
-  vtkIdType EndIndex = this->TreeSize;
-  vtkSMP::ForEach( StartIndex, EndIndex, BuildLeaf );
-  BuildLeaf->Delete();
+  if ( this->counters )
+    delete [] this->counters;
+  this->counters = new MyAtomic[this->LeafOffset];
 
   BuildFunctor* BuildCells = BuildFunctor::New();
   BuildCells->InitializeData( this );
-  while ( StartIndex != 0 )
-    {
-    EndIndex = StartIndex;
-    StartIndex = ( StartIndex - 1 ) / this->BranchingFactor;
-    vtkSMP::ForEach( StartIndex, EndIndex, BuildCells );
-    }
+  vtkSMP::ForEach( this->LeafOffset, this->LeafOffset * this->BranchingFactor + 1, BuildCells );
   BuildCells->Delete();
 
   this->BuildTime.Modified();
