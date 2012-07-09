@@ -87,12 +87,13 @@ int main( int argc, char** argv )
   s->SetName("scalars");
   vtkPointSet* data = transform->GetOutput();
   vtkIdType num = data->GetNumberOfPoints();
-  
+
   double coord[3];
+  double v = 0;
   for ( vtkIdType i = 0; i < num; ++i )
   {
     data->GetPoint( i, coord );
-    s->SetTuple1( i, coord[2] );
+    s->SetTuple1( i, (v = - ( v - 1 )) );
   }
   data->GetPointData()->SetScalars( s );
   s->Delete();
