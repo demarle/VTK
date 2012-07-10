@@ -6,7 +6,7 @@
 
 class vtkGenericCell;
 class BuildFunctor;
-class MyAtomic;
+class vtkMutexLock;
 
 class VTK_SMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree, public vtkParallelTree
 {
@@ -32,7 +32,8 @@ public:
   virtual vtkIdType GetTreeSize() const;
 
 private:
-  MyAtomic* counters;
+  vtkMutexLock** Locks;
+  void DeleteLocks();
 };
 
 #endif // VTKSMPMINMAXTREE_H
