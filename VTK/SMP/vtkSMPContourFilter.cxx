@@ -486,8 +486,6 @@ int vtkSMPContourFilter::RequestData(
       vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast( this->Locator );
 
       vtkBenchTimer* timer = vtkBenchTimer::New();
-      cout << endl;
-
       timer->start_bench_timer();
       // Init (thread local init is drown into first ForEach)
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely

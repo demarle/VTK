@@ -759,14 +759,14 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
        !this->Algorithm->IsA("vtkContourGrid") )
     { // We want to monitor all but these
 
-    cout << this->Algorithm->GetClassName() << endl;
+    cout << endl << this->Algorithm->GetClassName() << endl;
     for (int i = 0; i < vtKaapiRuns; ++i)
       {
       vtkBenchTimer::New()->start_bench_timer();
       result = this->Algorithm->ProcessRequest(request, inInfo, outInfo);
       vtkBenchTimer::New()->end_bench_timer();
+      cout << endl;
       }
-    cout << endl;
     }
   else // Regular execution
     {

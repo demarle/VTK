@@ -67,7 +67,6 @@ int vtkTransformFilter::RequestData(
 
   // First, copy the input to the output as a starting point
   vtkBenchTimer::New()->start_bench_timer();
-  cout << endl;
   output->CopyStructure( input );
   vtkBenchTimer::New()->end_bench_timer();
 
@@ -145,7 +144,6 @@ int vtkTransformFilter::RequestData(
       }
     if ( inCellNormals )
       {
-      cout << "there" << endl;
       newCellNormals = vtkFloatArray::New();
       newCellNormals->SetNumberOfComponents(3);
       newCellNormals->SetNumberOfTuples(numCells);
