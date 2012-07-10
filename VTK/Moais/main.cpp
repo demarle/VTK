@@ -81,20 +81,26 @@ int main( int argc, char** argv )
   /* === Testing contour filter === */
   transform->Update();
   polyReader->Update();
+  vtkPointSet* data = transform->GetOutput();
   vtkDataArray* s = vtkDoubleArray::New();
   s->SetNumberOfComponents(1);
-  s->SetNumberOfTuples(transform->GetOutput()->GetNumberOfPoints());
+  s->SetNumberOfTuples(data->GetNumberOfPoints());
   s->SetName("scalars");
-  vtkPointSet* data = transform->GetOutput();
-  vtkIdType num = data->GetNumberOfPoints();
+  vtkIdType num = data->GetNumberOfCells() / parallel + 1, n;
+  vtkGenericCell* cell = vtkGenericCell::New();
 
-  double coord[3];
-  double v = 0;
-  for ( vtkIdType i = 0; i < num; ++i )
-  {
-    data->GetPoint( i, coord );
-    s->SetTuple1( i, (v = - ( v - 1 )) );
-  }
+  for ( vtkIdType i = 0; i < data->GetNumberOfCells(); ++i )
+    {
+    data->GetCell( i, cell );
+    n = cell->GetNumberOfPoints();
+    int v = i < num;
+    while ( n-- )
+      {
+      s->SetTuple1( cell->GetPointId( n ), v );
+      }
+    }
+  cell->Delete();
+
   data->GetPointData()->SetScalars( s );
   s->Delete();
 
