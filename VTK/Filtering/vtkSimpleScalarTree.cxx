@@ -21,6 +21,8 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 
+#include "vtkBenchTimer.h"
+
 vtkStandardNewMacro(vtkSimpleScalarTree);
 
 class vtkScalarNode {};
@@ -90,6 +92,7 @@ void vtkSimpleScalarTree::BuildTree()
     return;
     }
 
+  vtkBenchTimer::New()->start_bench_timer();
   vtkDebugMacro( << "Building scalar tree..." );
 
   this->Scalars = this->DataSet->GetPointData()->GetScalars();
@@ -184,6 +187,7 @@ void vtkSimpleScalarTree::BuildTree()
 
   this->BuildTime.Modified();
   cellScalars->Delete();
+  vtkBenchTimer::New()->end_bench_timer();
 }
 
 // Begin to traverse the cells based on a scalar value. Returned cells

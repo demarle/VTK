@@ -9,6 +9,8 @@
 #include "vtkDoubleArray.h"
 #include "vtkGenericCell.h"
 
+#include "vtkBenchTimer.h"
+
 class vtkScalarNode {};
 
 template <class TScalar>
@@ -25,13 +27,23 @@ class InitializeFunctor : public vtkFunctor
   void operator =( const InitializeFunctor& );
 
 protected:
-  InitializeFunctor() { }
-  ~InitializeFunctor() { }
+  InitializeFunctor()
+    {
+    this->TLS_Cell = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
+    this->TLS_CellScalars = vtkSMP::vtkThreadLocal<vtkDoubleArray>::New();
+    }
+  ~InitializeFunctor()
+    {
+    this->TLS_Cell->Delete();
+    this->TLS_CellScalars->Delete();
+    }
 
   vtkScalarRange<double> *Tree;
   vtkIdType Size, BF;
   vtkDataSet* DS;
   vtkDataArray* Scalars;
+  vtkSMP::vtkThreadLocal<vtkGenericCell>* TLS_Cell;
+  vtkSMP::vtkThreadLocal<vtkDoubleArray>* TLS_CellScalars;
 
 public:
   vtkTypeMacro(InitializeFunctor,vtkFunctor);
@@ -55,8 +67,12 @@ public:
     double my_min = VTK_DOUBLE_MAX;
     double my_max = -VTK_DOUBLE_MAX;
 
-    vtkGenericCell* cell = vtkGenericCell::New();
-    vtkDoubleArray* cellScalars = vtkDoubleArray::New();
+    vtkGenericCell* cell = this->TLS_Cell->GetLocal( tid );
+    if ( !cell )
+      cell = this->TLS_Cell->GetLocal( tid );
+    vtkDoubleArray* cellScalars = this->TLS_CellScalars->NewLocal( tid );
+    if ( !cellScalars )
+      cellScalars = this->TLS_CellScalars->NewLocal( tid );
     double* s;
     for ( vtkIdType i = 0, cellId = index * this->BF; i < this->BF && cellId < this->Size; ++i, ++cellId )
       {
@@ -81,9 +97,6 @@ public:
       }
     this->Tree[index].max = my_max;
     this->Tree[index].min = my_min;
-
-    cell->Delete();
-    cellScalars->Delete();
     }
 };
 
@@ -187,6 +200,7 @@ void vtkSMPMinMaxTree::BuildTree()
     return;
     }
 
+  vtkBenchTimer::New()->start_bench_timer();
   this->Initialize();
 
   // Compute the number of levels in the tree
@@ -221,6 +235,7 @@ void vtkSMPMinMaxTree::BuildTree()
   BuildCells->Delete();
 
   this->BuildTime.Modified();
+  vtkBenchTimer::New()->end_bench_timer();
   }
 
 void vtkSMPMinMaxTree::InitTraversal(double scalarValue)

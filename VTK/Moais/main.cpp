@@ -89,7 +89,8 @@ int main( int argc, char** argv )
   vtkIdType num = data->GetNumberOfCells() / parallel + 1, n;
   vtkGenericCell* cell = vtkGenericCell::New();
 
-  for ( vtkIdType i = 0; i < data->GetNumberOfCells(); ++i )
+  //double v = 0;
+  for ( vtkIdType i = 0; i < data->GetNumberOfPoints(); ++i )
     {
     data->GetCell( i, cell );
     n = cell->GetNumberOfPoints();
@@ -98,6 +99,7 @@ int main( int argc, char** argv )
       {
       s->SetTuple1( cell->GetPointId( n ), v );
       }
+    //s->SetTuple1( i, ( v = - ( v - 1 ) ) );
     }
   cell->Delete();
 
