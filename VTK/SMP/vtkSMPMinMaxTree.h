@@ -6,13 +6,12 @@
 
 class vtkGenericCell;
 class BuildFunctor;
-class vtkMutexLock;
+class InitializeFunctor;
 
 class VTK_SMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree, public vtkParallelTree
 {
-  friend class TreeFunctor;
   friend class BuildFunctor;
-  friend class BuildLeafFunctor;
+  friend class InitializeFunctor;
   vtkSMPMinMaxTree( const vtkSMPMinMaxTree& );
   void operator =( const vtkSMPMinMaxTree& );
 
@@ -31,9 +30,6 @@ public:
   virtual void TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const;
   virtual vtkIdType GetTreeSize() const;
 
-private:
-  vtkMutexLock** Locks;
-  void DeleteLocks();
 };
 
 #endif // VTKSMPMINMAXTREE_H
