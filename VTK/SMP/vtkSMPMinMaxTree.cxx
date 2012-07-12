@@ -69,8 +69,8 @@ public:
 
     vtkGenericCell* cell = this->TLS_Cell->GetLocal( tid );
     if ( !cell )
-      cell = this->TLS_Cell->GetLocal( tid );
-    vtkDoubleArray* cellScalars = this->TLS_CellScalars->NewLocal( tid );
+      cell = this->TLS_Cell->NewLocal( tid );
+    vtkDoubleArray* cellScalars = this->TLS_CellScalars->GetLocal( tid );
     if ( !cellScalars )
       cellScalars = this->TLS_CellScalars->NewLocal( tid );
     double* s;

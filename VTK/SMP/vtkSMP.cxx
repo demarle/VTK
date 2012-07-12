@@ -87,11 +87,6 @@ vtkTreeTraversalHelper::~vtkTreeTraversalHelper()
   delete [] this->indexes;
   }
 
-vtkIdType vtkTreeTraversalHelper::GetCurrent()
-  {
-  return this->current_head;
-  }
-
 vtkTreeIndex vtkTreeTraversalHelper::Get( )
   {
   vtkIdType i = (this->current_head)++;

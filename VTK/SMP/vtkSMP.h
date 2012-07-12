@@ -105,9 +105,13 @@ public:
   void push_head ( vtkIdType index, int level );
   void push_tail ( vtkIdType index, int level );
 
-//private:
+  friend void tth_do_init ( vtkTreeTraversalHelper* h, vtkIdType s );
+  friend vtkIdType tth_get_current ( vtkTreeTraversalHelper* h );
+  friend vtkTreeIndex tth_get ( vtkTreeTraversalHelper* h );
+  friend vtkTreeIndex tth_steal ( vtkTreeTraversalHelper* h, vtkIdType i );
+
+private:
   void Init ( vtkIdType s );
-  vtkIdType GetCurrent ();
   vtkTreeIndex Get ( );
   vtkTreeIndex Steal ( vtkIdType i );
 };
