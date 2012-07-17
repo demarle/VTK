@@ -1,0 +1,11 @@
+vtk_module(vtkIOXdmf2
+  GROUPS
+#StandAlone
+  DEPENDS
+    vtkParallelCore
+    vtkFiltersGeneral
+    vtkFiltersExtraction
+    vtkIOXML
+    vtkxdmf2
+  TEST_DEPENDS
+  )
