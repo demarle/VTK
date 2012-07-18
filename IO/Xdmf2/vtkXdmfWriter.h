@@ -38,20 +38,9 @@ class vtkDataArray;
 class vtkInformation;
 class vtkInformationVector;
 class vtkXdmfWriterDomainMemoryHandler;
-
-//BTX
-class XdmfDOM;
 class XdmfGrid;
+class XdmfDOM;
 class XdmfArray;
-struct  _xmlNode;
-typedef _xmlNode *XdmfXmlNode;
-struct vtkXW2NodeHelp {
-  XdmfDOM     *DOM;
-  XdmfXmlNode  node;
-  bool         staticFlag;
-  vtkXW2NodeHelp(XdmfDOM *d, XdmfXmlNode n, bool f) : DOM(d), node(n), staticFlag(f) {};
-};
-//ETX
 
 class VTKIOXDMF2_EXPORT vtkXdmfWriter : public vtkDataObjectAlgorithm
 {

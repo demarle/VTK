@@ -9,7 +9,6 @@ set(CMAKE_C_FLAGS "${CMAKE_ANSI_CFLAGS} ${CMAKE_C_FLAGS}")
 #hard dependencies
 #XML
 if (XDMF_BUILT_INVTK)
-message("IN VTK 1")
   set(XDMF_LIBXML2_LIBRARIES ${vtklibxml2_LIBRARIES})
   set(XDMF_LIBXML2_INCLUDE_DIRS ${vtklibxml2_INCLUDE_DIRS})
 else()
@@ -21,7 +20,6 @@ endif()
 if(NOT BUILD_SHARED_LIBS)
   add_definitions(-DLIBXML_STATIC)
 endif()
-message("XDMF's LIBXML is ${XDMF_LIBXML2_LIBRARIES}")
 
 #XPAT do we still use xpat?
 #set(XDMF_EXPAT_LIBRARIES ${vtklibexpat_LIBRARIES})
@@ -29,7 +27,6 @@ message("XDMF's LIBXML is ${XDMF_LIBXML2_LIBRARIES}")
 
 #HDF5
 if (XDMF_BUILT_INVTK)
-message("IN VTK 2")
   set(XDMF_HDF5_LIBRARIES ${vtkhdf5_LIBRARIES})
   set(XDMF_HDF5_INCLUDE_DIRS ${vtkhdf5_INCLUDE_DIRS})
 else()
@@ -41,7 +38,6 @@ if(EXISTS "${HDF5_CONFIG}")
   include("${HDF5_CONFIG}")
   add_definitions(${HDF5_EXTRA_FLAGS})
 endif()
-message("XDMF's HDF5 is ${XDMF_HDF5_LIBRARIES}")
 
 #optional dependencies
 #MPI

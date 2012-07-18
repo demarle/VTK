@@ -1,10 +1,11 @@
 vtk_module(vtkIOXdmf2
   GROUPS
-#StandAlone
   DEPENDS
-    vtkParallelCore
-    vtkFiltersGeneral
+    vtkCommonCore
+    vtkCommonDataModel
+    vtkCommonExecutionModel
     vtkFiltersExtraction
+    vtkIOCore
     vtkIOXML
     vtkxdmf2
   TEST_DEPENDS

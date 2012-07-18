@@ -21,21 +21,17 @@
 //files around for inspection. Otherwise it deletes the temporary files it
 //creates and returns success.
 
-#include "vtkXdmfWriter.h"
-
-#include "vtkCellData.h"
 #include "vtkDataObject.h"
 #include "vtkDataObjectGenerator.h"
 #include "vtkDataSet.h"
-#include "vtkDataSetWriter.h"
-#include "vtkFieldData.h"
-#include "vtkPointData.h"
 #include "vtkDataSetReader.h"
-#include "vtksys/SystemTools.hxx"
-//#include "vtkTemporalFractal.h"
-//#include "vtkTestUtilities.h"
+#include "vtkDataSetWriter.h"
+#include "vtkPointData.h"
+#include "vtkCellData.h"
 #include "vtkTimeSourceExample.h"
 #include "vtkXdmfReader.h"
+#include "vtkXdmfWriter.h"
+#include "vtksys/SystemTools.hxx"
 
 #ifndef _MSC_VER
 # include <unistd.h>
