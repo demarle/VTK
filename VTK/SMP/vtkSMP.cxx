@@ -73,33 +73,38 @@ vtkTreeTraversalHelper::vtkTreeTraversalHelper()
   {
   this->indexes = 0;
   this->current_head = 0;
+  this->size = 0;
   }
 
-void vtkTreeTraversalHelper::Init( vtkIdType s )
+void vtkTreeTraversalHelper::Init( vtkIdType s, vtkIdType i, int l )
   {
   this->size = s;
   this->indexes = new vtkTreeIndex[s];
-  this->current_head = s;
+  this->current_head = s - 1;
+  this->indexes[this->current_head] = vtkTreeIndex( i, l );
   }
 
 vtkTreeTraversalHelper::~vtkTreeTraversalHelper()
   {
   delete [] this->indexes;
+  this->size = 0;
+  this->current_head = 0;
+  this->indexes = 0;
   }
 
-vtkTreeIndex vtkTreeTraversalHelper::Get( )
+vtkTreeIndex* vtkTreeTraversalHelper::Get( )
   {
   vtkIdType i = (this->current_head)++;
   while ( i < 0 )
     i += this->size;
-  return this->indexes[ i ];
+  return &(this->indexes[ i ]);
   }
 
-vtkTreeIndex vtkTreeTraversalHelper::Steal( vtkIdType i )
+vtkTreeIndex* vtkTreeTraversalHelper::Steal( vtkIdType i )
   {
   while ( i < 0 )
     i += this->size;
-  return this->indexes[ i ];
+  return &(this->indexes[ i ]);
   }
 
 void vtkTreeTraversalHelper::push_head ( vtkIdType index, int level )

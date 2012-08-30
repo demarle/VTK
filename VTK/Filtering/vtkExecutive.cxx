@@ -756,7 +756,8 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
        !this->Algorithm->IsA("vtkWriter") &&
        !this->Algorithm->IsA("vtkAbstractMapper") &&
        !this->Algorithm->IsA("vtkGenericEnSightReader") &&
-       !this->Algorithm->IsA("vtkContourGrid") )
+       !this->Algorithm->IsA("vtkContourGrid") &&
+       !this->Algorithm->IsA("vtkDataSetSurfaceFilter") )
     { // We want to monitor all but these
 
     cout << endl << this->Algorithm->GetClassName() << endl;

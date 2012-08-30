@@ -105,15 +105,15 @@ public:
   void push_head ( vtkIdType index, int level );
   void push_tail ( vtkIdType index, int level );
 
-  friend void tth_do_init ( vtkTreeTraversalHelper* h, vtkIdType s );
-  friend vtkIdType tth_get_current ( vtkTreeTraversalHelper* h );
-  friend vtkTreeIndex tth_get ( vtkTreeTraversalHelper* h );
-  friend vtkTreeIndex tth_steal ( vtkTreeTraversalHelper* h, vtkIdType i );
-
 private:
-  void Init ( vtkIdType s );
-  vtkTreeIndex Get ( );
-  vtkTreeIndex Steal ( vtkIdType i );
+  friend void tth_do_init ( vtkTreeTraversalHelper* h, vtkIdType s, vtkIdType i, int l );
+  friend vtkIdType tth_get_current ( vtkTreeTraversalHelper* h );
+  friend vtkTreeIndex* tth_get ( vtkTreeTraversalHelper* h );
+  friend vtkTreeIndex* tth_steal ( vtkTreeTraversalHelper* h, vtkIdType i );
+
+  void Init ( vtkIdType s, vtkIdType i, int l );
+  vtkTreeIndex* Get ( );
+  vtkTreeIndex* Steal ( vtkIdType i );
 };
 
 class VTK_SMP_EXPORT vtkParallelTree

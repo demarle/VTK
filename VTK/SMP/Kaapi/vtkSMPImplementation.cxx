@@ -42,9 +42,9 @@ void my_spawn ( const vtkTask* function )
   function->Execute( kaapic_get_thread_num(), 0 );
   }
 
-void tth_do_init ( vtkTreeTraversalHelper* tth, vtkIdType size )
+void tth_do_init ( vtkTreeTraversalHelper* tth, vtkIdType size, vtkIdType index, int level )
   {
-  tth->Init( size );
+  tth->Init( size, index, level );
   }
 
 vtkIdType tth_get_current ( vtkTreeTraversalHelper* tth )
@@ -52,14 +52,16 @@ vtkIdType tth_get_current ( vtkTreeTraversalHelper* tth )
   return tth->current_head;
   }
 
-vtkTreeIndex tth_get ( vtkTreeTraversalHelper* tth )
+vtkTreeIndex* tth_get ( vtkTreeTraversalHelper* tth )
   {
-  return tth->Get();
+  vtkTreeIndex* temp = tth->Get();
+  return temp;
   }
 
-vtkTreeIndex tth_steal ( vtkTreeTraversalHelper* tth, vtkIdType i )
+vtkTreeIndex* tth_steal ( vtkTreeTraversalHelper* tth, vtkIdType i )
   {
-  return tth->Steal( i );
+  vtkTreeIndex* temp = tth->Steal( i );
+  return temp;
   }
 
 typedef struct tree_work
@@ -85,8 +87,8 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
 
   while ( !kaapi_workqueue_pop(&(work->wq), &i, &nil, 1) )
     {
-    vtkTreeIndex id = tth_get( &(work->nodes) );
-    work->Tree->TraverseNode( id.index, id.level, &(work->nodes), work->op, kid );
+    vtkTreeIndex* id = tth_get( &(work->nodes) );
+    work->Tree->TraverseNode( id->index, id->level, &(work->nodes), work->op, kid );
     kaapi_workqueue_push( &(work->wq), (kaapi_workqueue_index_t)tth_get_current( &(work->nodes) ) );
     }
 
@@ -117,21 +119,18 @@ redo_steal:
     goto redo_steal;
 
   kaapi_request_t* req = kaapi_api_listrequest_iterator_get(lr, lri);
-  for ( ; i < j; ++i )
+  for (--j ; i <= j; --j )
     {
     work_t* const tw = (work_t*)kaapi_request_pushdata(req, sizeof(work_t));
     tw->Tree = work->Tree;
     tw->op = work->op;
     tw->size = work->size;
-    tth_do_init( &(tw->nodes), tw->size );
+    vtkTreeIndex* id = tth_steal( &(work->nodes), j );
+    tth_do_init( &(tw->nodes), tw->size, id->index, id->level );
     kaapi_workqueue_init_with_kproc( &tw->wq,
-                                     (kaapi_workqueue_index_t)tw->size,
+                                     (kaapi_workqueue_index_t)tw->size - 1,
                                      (kaapi_workqueue_index_t)tw->size,
                                      req->ident );
-    vtkTreeIndex id = tth_steal( &(work->nodes), i );
-    tw->nodes.push_tail( id.index, id.level );
-    kaapi_workqueue_push( &tw->wq, (kaapi_workqueue_index_t)tth_get_current( &(tw->nodes) ) );
-
 
     kaapi_task_init( kaapi_request_toptask(req), thief_entrypoint, tw);
     kaapi_request_pushtask_adaptive( req, victim_task, splitter, 0 );
@@ -237,10 +236,8 @@ namespace vtkSMP
     work.Tree = Tree;
     work.op = func;
     work.size = Tree->GetTreeSize();
-    tth_do_init( &(work.nodes), work.size );
-    kaapi_workqueue_init(&work.wq, (kaapi_workqueue_index_t)work.size, (kaapi_workqueue_index_t)work.size);
-    work.nodes.push_tail( 0, 0 );
-    kaapi_workqueue_push( &work.wq, (kaapi_workqueue_index_t)tth_get_current( &(work.nodes) ) );
+    tth_do_init( &(work.nodes), work.size, 0, 0 );
+    kaapi_workqueue_init(&work.wq, (kaapi_workqueue_index_t)work.size - 1, (kaapi_workqueue_index_t)work.size);
 
     /* push an adaptive task */
     void* sc = kaapi_task_begin_adaptive(
@@ -252,8 +249,8 @@ namespace vtkSMP
 
     while ( !kaapi_workqueue_pop(&work.wq, &i, &nil, 1) )
       {
-      vtkTreeIndex id = tth_get( &(work.nodes) );
-      Tree->TraverseNode( id.index, id.level, &work.nodes, func, kaapic_get_thread_num() );
+      vtkTreeIndex* id = tth_get( &(work.nodes) );
+      Tree->TraverseNode( id->index, id->level, &work.nodes, func, kaapic_get_thread_num() );
       kaapi_workqueue_push( &work.wq, (kaapi_workqueue_index_t)tth_get_current( &(work.nodes) ) );
       }
 

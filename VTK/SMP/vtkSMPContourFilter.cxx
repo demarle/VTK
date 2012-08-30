@@ -409,217 +409,191 @@ int vtkSMPContourFilter::RequestData(
   vtkCellData *inCd=input->GetCellData(), *outCd=output->GetCellData();
 
   vtkDebugMacro(<< "Executing contour filter");
-  if (input->GetDataObjectType() == VTK_UNSTRUCTURED_GRID)
+  // Do not handle UnStructuredGrid since vtkSMP::ForEach can't apply.
+  // vtkContourGrid iterates over cells in a non-independant way
+
+  numCells = input->GetNumberOfCells();
+  inScalars = this->GetInputArrayToProcess(0,inputVector);
+  if ( ! inScalars || numCells < 1 )
     {
-    vtkDebugMacro(<< "Processing unstructured grid");
-    vtkContourGrid *cgrid;
+    vtkDebugMacro(<<"No data to contour");
+    return 1;
+    }
 
-    cgrid = vtkContourGrid::New();
-    cgrid->SetInput(input);
-    if ( this->Locator )
-      {
-      cgrid->SetLocator( this->Locator );
-      }
-
-    for (i = 0; i < numContours; i++)
-      {
-      cgrid->SetValue(i, values[i]);
-      }
-    cgrid->GetOutput()->SetUpdateExtent(output->GetUpdatePiece(),
-                                        output->GetUpdateNumberOfPieces(),
-                                        output->GetUpdateGhostLevel());
-    cgrid->SetInputArrayToProcess(0,this->GetInputArrayInformation(0));
-    cgrid->Update();
-    output->ShallowCopy(cgrid->GetOutput());
-    cgrid->SetInput(0);
-    cgrid->Delete();
-    } //if type VTK_UNSTRUCTURED_GRID
-  else
-    {
-    numCells = input->GetNumberOfCells();
-    inScalars = this->GetInputArrayToProcess(0,inputVector);
-    if ( ! inScalars || numCells < 1 )
-      {
-      vtkDebugMacro(<<"No data to contour");
-      return 1;
-      }
-
-    // Create objects to hold output of contour operation. First estimate
-    // allocation size.
-    //
-    estimatedSize=
+  // Create objects to hold output of contour operation. First estimate
+  // allocation size.
+  //
+  estimatedSize=
       static_cast<vtkIdType>(pow(static_cast<double>(numCells),.75));
-    estimatedSize *= numContours;
-    estimatedSize = estimatedSize / 1024 * 1024; //multiple of 1024
-    if (estimatedSize < 1024)
+  estimatedSize *= numContours;
+  estimatedSize = estimatedSize / 1024 * 1024; //multiple of 1024
+  if (estimatedSize < 1024)
+    {
+    estimatedSize = 1024;
+    }
+
+  newPts = vtkPoints::New();
+  newPts->Allocate(estimatedSize,estimatedSize);
+  newVerts = vtkCellArray::New();
+  newLines = vtkCellArray::New();
+  newPolys = vtkCellArray::New();
+  cellScalars = inScalars->NewInstance();
+
+  // locator used to merge potentially duplicate points
+  if ( this->Locator == NULL )
+    {
+    this->CreateDefaultLocator();
+    }
+  this->Locator->InitPointInsertion (newPts, input->GetBounds(),estimatedSize);
+
+  // interpolate data along edge
+  // if we did not ask for scalars to be computed, don't copy them
+  if (!this->ComputeScalars)
+    {
+    outPd->CopyScalarsOff();
+    }
+
+  // If enabled, build a scalar tree to accelerate search
+  //
+  vtkSMPMinMaxTree* parallelTree = vtkSMPMinMaxTree::SafeDownCast(this->ScalarTree);
+  if ( !this->UseScalarTree || parallelTree )
+    {
+    vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast( this->Locator );
+
+    vtkBenchTimer* timer = vtkBenchTimer::New();
+    timer->start_bench_timer();
+    // Init (thread local init is drown into first ForEach)
+    input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
+    ThreadsFunctor* my_contour;
+    if ( this->UseScalarTree )
+      my_contour = AcceleratedFunctor::New();
+    else
+      my_contour = ThreadsFunctor::New();
+    my_contour->SetData( input, newPts, inCd, inPd, this->Locator,
+                         estimatedSize, values, numContours, inScalars, this->ComputeScalars,
+                         newVerts, newLines, newPolys, outCd, outPd );
+    timer->end_bench_timer();
+
+    // Exec
+    timer->start_bench_timer();
+    if ( this->UseScalarTree )
       {
-      estimatedSize = 1024;
+      AcceleratedFunctor* TreeContour = static_cast<AcceleratedFunctor*>(my_contour);
+      parallelTree->SetDataSet(input);
+      for ( i = 0; i < numContours; ++i )
+        {
+        TreeContour->ScalarValue = values[i];
+        parallelTree->InitTraversal( values[i] );
+        vtkSMP::Traverse( parallelTree, TreeContour );
+        }
       }
-
-    newPts = vtkPoints::New();
-    newPts->Allocate(estimatedSize,estimatedSize);
-    newVerts = vtkCellArray::New();
-    newLines = vtkCellArray::New();
-    newPolys = vtkCellArray::New();
-    cellScalars = inScalars->NewInstance();
-
-    // locator used to merge potentially duplicate points
-    if ( this->Locator == NULL )
-      {
-      this->CreateDefaultLocator();
-      }
-    this->Locator->InitPointInsertion (newPts,
-                                       input->GetBounds(),estimatedSize);
-
-    // interpolate data along edge
-    // if we did not ask for scalars to be computed, don't copy them
-    if (!this->ComputeScalars)
-      {
-      outPd->CopyScalarsOff();
-      }
-
-    // If enabled, build a scalar tree to accelerate search
-    //
-    vtkSMPMinMaxTree* parallelTree = vtkSMPMinMaxTree::SafeDownCast(this->ScalarTree);
-    if ( !this->UseScalarTree || parallelTree )
-      {
-      vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast( this->Locator );
-
-      vtkBenchTimer* timer = vtkBenchTimer::New();
-      timer->start_bench_timer();
-      // Init (thread local init is drown into first ForEach)
-      input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
-      ThreadsFunctor* my_contour;
-      if ( this->UseScalarTree )
-        my_contour = AcceleratedFunctor::New();
-      else
-        my_contour = ThreadsFunctor::New();
-      my_contour->SetData( input, newPts, inCd, inPd, this->Locator,
-                           estimatedSize, values, numContours, inScalars, this->ComputeScalars,
-                           newVerts, newLines, newPolys, outCd, outPd );
-      timer->end_bench_timer();
-
-      // Exec
-      timer->start_bench_timer();
-      if ( this->UseScalarTree )
-        {
-        AcceleratedFunctor* TreeContour = static_cast<AcceleratedFunctor*>(my_contour);
-        parallelTree->SetDataSet(input);
-        for ( i = 0; i < numContours; ++i )
-          {
-          TreeContour->ScalarValue = values[i];
-          parallelTree->InitTraversal( values[i] );
-          vtkSMP::Traverse( parallelTree, TreeContour );
-          }
-        }
-      else
-        {
-        for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
-          {
-          vtkSMP::ForEach( 0, numCells, my_contour );
-          }
-        }
-      timer->end_bench_timer();
-
-      // Merge
-      timer->start_bench_timer();
-      if ( parallelLocator )
-        {
-        vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* SMPLocator = vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::New();
-        my_contour->Locator->FillDerivedThreadLocal( SMPLocator );
-        vtkSMP::MergePoints( parallelLocator, SMPLocator,
-                             outPd, my_contour->outPd,
-                             newVerts, my_contour->newVerts,
-                             newLines, my_contour->newLines,
-                             newPolys, my_contour->newPolys,
-                             0, 0, outCd, my_contour->outCd, 1 );
-        SMPLocator->Delete();
-        }
-      else
-        {
-        vtkSMP::MergePoints( newPts, my_contour->newPts, input->GetBounds(),
-                             outPd, my_contour->outPd,
-                             newVerts, my_contour->newVerts,
-                             newLines, my_contour->newLines,
-                             newPolys, my_contour->newPolys,
-                             0, 0, outCd, my_contour->outCd, 1 );
-        }
-      timer->end_bench_timer();
-
-      my_contour->Delete();
-      } //if using scalar tree
     else
       {
-      // Move of previously deleted Allocations
-      newVerts->Allocate( estimatedSize, estimatedSize );
-      newLines->Allocate( estimatedSize, estimatedSize );
-      newPolys->Allocate( estimatedSize, estimatedSize );
-      outPd->InterpolateAllocate( inPd, estimatedSize, estimatedSize );
-      outCd->CopyAllocate( inCd, estimatedSize, estimatedSize );
-      cellScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
-      cellScalars->Allocate( cellScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
-
-      vtkCell *cell;
-      if ( this->ScalarTree == NULL )
+      for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
         {
-        this->ScalarTree = vtkSimpleScalarTree::New();
+        vtkSMP::ForEach( 0, numCells, my_contour );
         }
-      this->ScalarTree->SetDataSet(input);
-      // Note: This will have problems when input contains 2D and 3D cells.
-      // CellData will get scrabled because of the implicit ordering of
-      // verts, lines and polys in vtkPolyData.  The solution
-      // is to convert this filter to create unstructured grid.
-      //
-      // Loop over all contour values.  Then for each contour value,
-      // loop over all cells.
-      //
-      for ( i=0; i < numContours; i++ )
-        {
-        for ( this->ScalarTree->InitTraversal(values[i]);
-              (cell=this->ScalarTree->GetNextCell(cellId,cellPts,cellScalars)) != NULL; )
-          {
-          cell->Contour(values[i], cellScalars, this->Locator,
-                        newVerts, newLines, newPolys, inPd, outPd,
-                        inCd, cellId, outCd);
+      }
+    timer->end_bench_timer();
 
-          } //for all cells
-        } //for all contour values
-      } //using scalar tree
+    // Merge
+    timer->start_bench_timer();
+    if ( parallelLocator )
+      {
+      vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* SMPLocator = vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::New();
+      my_contour->Locator->FillDerivedThreadLocal( SMPLocator );
+      vtkSMP::MergePoints( parallelLocator, SMPLocator,
+                           outPd, my_contour->outPd,
+                           newVerts, my_contour->newVerts,
+                           newLines, my_contour->newLines,
+                           newPolys, my_contour->newPolys,
+                           0, 0, outCd, my_contour->outCd, 1 );
+      SMPLocator->Delete();
+      }
+    else
+      {
+      vtkSMP::MergePoints( newPts, my_contour->newPts, input->GetBounds(),
+                           outPd, my_contour->outPd,
+                           newVerts, my_contour->newVerts,
+                           newLines, my_contour->newLines,
+                           newPolys, my_contour->newPolys,
+                           0, 0, outCd, my_contour->outCd, 1 );
+      }
+    timer->end_bench_timer();
 
-    vtkDebugMacro(<<"Created: "
-                  << newPts->GetNumberOfPoints() << " points, "
-                  << newVerts->GetNumberOfCells() << " verts, "
-                  << newLines->GetNumberOfCells() << " lines, "
-                  << newPolys->GetNumberOfCells() << " triangles");
+    my_contour->Delete();
+    } //if using scalar tree
+  else
+    {
+    // Move of previously deleted Allocations
+    newVerts->Allocate( estimatedSize, estimatedSize );
+    newLines->Allocate( estimatedSize, estimatedSize );
+    newPolys->Allocate( estimatedSize, estimatedSize );
+    outPd->InterpolateAllocate( inPd, estimatedSize, estimatedSize );
+    outCd->CopyAllocate( inCd, estimatedSize, estimatedSize );
+    cellScalars->SetNumberOfComponents( inScalars->GetNumberOfComponents() );
+    cellScalars->Allocate( cellScalars->GetNumberOfComponents() * VTK_CELL_SIZE );
 
-    // Update ourselves.  Because we don't know up front how many verts, lines,
-    // polys we've created, take care to reclaim memory.
+    vtkCell *cell;
+    if ( this->ScalarTree == NULL )
+      {
+      this->ScalarTree = vtkSimpleScalarTree::New();
+      }
+    this->ScalarTree->SetDataSet(input);
+    // Note: This will have problems when input contains 2D and 3D cells.
+    // CellData will get scrabled because of the implicit ordering of
+    // verts, lines and polys in vtkPolyData.  The solution
+    // is to convert this filter to create unstructured grid.
     //
-    output->SetPoints(newPts);
-    newPts->Delete();
-    cellScalars->Delete();
-
-    if (newVerts->GetNumberOfCells())
+    // Loop over all contour values.  Then for each contour value,
+    // loop over all cells.
+    //
+    for ( i=0; i < numContours; i++ )
       {
-      output->SetVerts(newVerts);
-      }
-    newVerts->Delete();
+      for ( this->ScalarTree->InitTraversal(values[i]);
+            (cell=this->ScalarTree->GetNextCell(cellId,cellPts,cellScalars)) != NULL; )
+        {
+        cell->Contour(values[i], cellScalars, this->Locator,
+                      newVerts, newLines, newPolys, inPd, outPd,
+                      inCd, cellId, outCd);
 
-    if (newLines->GetNumberOfCells())
-      {
-      output->SetLines(newLines);
-      }
-    newLines->Delete();
+        } //for all cells
+      } //for all contour values
+    } //using scalar tree
 
-    if (newPolys->GetNumberOfCells())
-      {
-      output->SetPolys(newPolys);
-      }
-    newPolys->Delete();
+  vtkDebugMacro(<<"Created: "
+                << newPts->GetNumberOfPoints() << " points, "
+                << newVerts->GetNumberOfCells() << " verts, "
+                << newLines->GetNumberOfCells() << " lines, "
+                << newPolys->GetNumberOfCells() << " triangles");
 
-    this->Locator->Initialize();//releases leftover memory
-    output->Squeeze();
-    } //else if not vtkUnstructuredGrid
+  // Update ourselves.  Because we don't know up front how many verts, lines,
+  // polys we've created, take care to reclaim memory.
+  //
+  output->SetPoints(newPts);
+  newPts->Delete();
+  cellScalars->Delete();
+
+  if (newVerts->GetNumberOfCells())
+    {
+    output->SetVerts(newVerts);
+    }
+  newVerts->Delete();
+
+  if (newLines->GetNumberOfCells())
+    {
+    output->SetLines(newLines);
+    }
+  newLines->Delete();
+
+  if (newPolys->GetNumberOfCells())
+    {
+    output->SetPolys(newPolys);
+    }
+  newPolys->Delete();
+
+  this->Locator->Initialize();//releases leftover memory
+  output->Squeeze();
 
   return 1;
 }

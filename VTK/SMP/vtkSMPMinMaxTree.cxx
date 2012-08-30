@@ -254,6 +254,7 @@ void vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelp
     {
     return;
     }
+//  printf("traversing node %d by thread %d\n", id, tid);
 
   vtkScalarRange<double> *t = static_cast<vtkScalarRange<double>*>(this->Tree) + id;
   if ( t->min > this->ScalarValue || t->max < this->ScalarValue )
