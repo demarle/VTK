@@ -5,12 +5,10 @@
 #include "vtkSMP.h"
 
 class vtkGenericCell;
-class BuildFunctor;
 class InitializeFunctor;
 
 class VTK_SMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree, public vtkParallelTree
 {
-  friend class BuildFunctor;
   friend class InitializeFunctor;
   vtkSMPMinMaxTree( const vtkSMPMinMaxTree& );
   void operator =( const vtkSMPMinMaxTree& );

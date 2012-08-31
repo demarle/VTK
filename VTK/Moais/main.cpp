@@ -125,7 +125,7 @@ int main( int argc, char** argv )
 //        {
 //        s->SetTuple1( cell->GetPointId( n ), v );
 //        }
-      s->SetTuple1( i, ( v = - ( v - 1 ) ) );
+      s->SetTuple1( i, ( v = 1 - v ) );
       }
     cell->Delete();
 
