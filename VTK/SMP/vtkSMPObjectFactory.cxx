@@ -4,6 +4,7 @@
 #include "vtkSMPWarpVector.h"
 #include "vtkSMPContourFilter.h"
 #include "vtkSMPTransform.h"
+#include "vtkSMPMinMaxTree.h"
 
 vtkStandardNewMacro(vtkSMPObjectFactory);
 
@@ -28,6 +29,7 @@ const char* vtkSMPObjectFactory::GetDescription()
 VTK_CREATE_CREATE_FUNCTION(vtkSMPWarpVector);
 VTK_CREATE_CREATE_FUNCTION(vtkSMPContourFilter);
 VTK_CREATE_CREATE_FUNCTION(vtkSMPTransform);
+VTK_CREATE_CREATE_FUNCTION(vtkSMPMinMaxTree);
 
 vtkSMPObjectFactory::vtkSMPObjectFactory()
 {
@@ -46,6 +48,11 @@ vtkSMPObjectFactory::vtkSMPObjectFactory()
                          "SMP",
                          1,
                          vtkObjectFactoryCreatevtkSMPTransform);
+  this->RegisterOverride("vtkSimpleScalarTree",
+                         "vtkSMPMinMaxTree",
+                         "SMP",
+                         1,
+                         vtkObjectFactoryCreatevtkSMPMinMaxTree);
 }
 
 vtkSMPObjectFactory::~vtkSMPObjectFactory()
