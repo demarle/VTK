@@ -83,44 +83,11 @@ protected:
   ~vtkTaskSplitable();
 };
 
-struct vtkTreeIndex
-{
-  vtkIdType index;
-  int level;
-
-  vtkTreeIndex(vtkIdType i, int l);
-  vtkTreeIndex();
-};
-
-class VTK_SMP_EXPORT vtkTreeTraversalHelper
-{
-  vtkTreeIndex* indexes;
-  vtkIdType current_head;
-  vtkIdType size;
-
-public:
-  vtkTreeTraversalHelper();
-  ~vtkTreeTraversalHelper();
-
-  void push_head ( vtkIdType index, int level );
-  void push_tail ( vtkIdType index, int level );
-
-private:
-  friend void tth_do_init ( vtkTreeTraversalHelper* h, vtkIdType s, vtkIdType i, int l );
-  friend vtkIdType tth_get_current ( vtkTreeTraversalHelper* h );
-  friend vtkTreeIndex* tth_get ( vtkTreeTraversalHelper* h );
-  friend vtkTreeIndex* tth_steal ( vtkTreeTraversalHelper* h, vtkIdType i );
-
-  void Init ( vtkIdType s, vtkIdType i, int l );
-  vtkTreeIndex* Get ( );
-  vtkTreeIndex* Steal ( vtkIdType i );
-};
-
 class VTK_SMP_EXPORT vtkParallelTree
 {
 public:
-  virtual void TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;
-  virtual vtkIdType GetTreeSize () const = 0;
+  virtual int TraverseNode( vtkIdType id, int lvl, vtkFunctor* function, vtkSMPThreadID tid ) const = 0;
+  virtual void GetTreeSize ( int& max_level, vtkIdType& branching_factor ) const = 0;
 };
 
 namespace vtkSMP

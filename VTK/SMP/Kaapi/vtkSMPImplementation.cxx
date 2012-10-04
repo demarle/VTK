@@ -42,36 +42,37 @@ void my_spawn ( const vtkTask* function )
   function->Execute( kaapic_get_thread_num(), 0 );
   }
 
-void tth_do_init ( vtkTreeTraversalHelper* tth, vtkIdType size, vtkIdType index, int level )
-  {
-  tth->Init( size, index, level );
-  }
-
-vtkIdType tth_get_current ( vtkTreeTraversalHelper* tth )
-  {
-  return tth->current_head;
-  }
-
-vtkTreeIndex* tth_get ( vtkTreeTraversalHelper* tth )
-  {
-  vtkTreeIndex* temp = tth->Get();
-  return temp;
-  }
-
-vtkTreeIndex* tth_steal ( vtkTreeTraversalHelper* tth, vtkIdType i )
-  {
-  vtkTreeIndex* temp = tth->Steal( i );
-  return temp;
-  }
-
 typedef struct tree_work
 {
   kaapi_workqueue_t wq;
-  vtkTreeTraversalHelper nodes;
   const vtkParallelTree* Tree;
   vtkFunctor* op;
-  vtkIdType size;
+  int max_level;
+  vtkIdType branching_factor;
+  vtkIdType* nodes_per_subtrees;
+  int root_lvl;
 } work_t;
+
+vtkIdType convert_to_row_first( kaapi_workqueue_index_t i, int level, work_t* work )
+  {
+  if ( !level ) return 0;
+  int lvl = 1;
+  vtkIdType index = 1;
+  while ( lvl <= level )
+    {
+    vtkIdType size = work->nodes_per_subtrees[work->max_level - lvl];
+    while ( i > size )
+      {
+      i -= size;
+      ++index;
+      }
+    if ( level != lvl )
+      index = index * work->branching_factor + 1;
+    ++lvl;
+    --i;
+    }
+  return index;
+  }
 
 static void thief_entrypoint( void* args, kaapi_thread_t* thread )
   {
@@ -85,11 +86,24 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
 
   kaapi_workqueue_index_t i, nil;
 
-  while ( !kaapi_workqueue_pop(&(work->wq), &i, &nil, 1) )
+  int level = work->root_lvl;
+  while ( !kaapi_workqueue_pop(&work->wq, &i, &nil, 1) )
     {
-    vtkTreeIndex* id = tth_get( &(work->nodes) );
-    work->Tree->TraverseNode( id->index, id->level, &(work->nodes), work->op, kid );
-    kaapi_workqueue_push( &(work->wq), (kaapi_workqueue_index_t)tth_get_current( &(work->nodes) ) );
+    vtkIdType id = convert_to_row_first( i, level, work );
+    if ( work->Tree->TraverseNode( id, level, work->op, kaapic_get_thread_num() ) )
+      {
+      ++level;
+      }
+    else
+      {
+      if ( work->max_level != level )
+        kaapi_workqueue_pop(&work->wq, &i, &nil, work->nodes_per_subtrees[work->max_level - level] - 1);
+      while ( !(id % work->branching_factor) && level > work->root_lvl )
+        {
+        --level;
+        id = (id - 1) / work->branching_factor;
+        }
+      }
     }
 
   }
@@ -103,40 +117,29 @@ static int splitter(
   {
   work_t* const work = (work_t*)(args);
   kaapi_workqueue_index_t i, j;
-
-  /* nrequests count */
-  int nreq = kaapi_api_listrequest_iterator_count( lri );
-
-redo_steal:
-  kaapi_workqueue_index_t range_size = kaapi_workqueue_size(&work->wq);
-  if ( --range_size < 1 )
-    return 0;
-
-  if ( range_size < nreq )
-    nreq = range_size;
-
-  if (kaapi_workqueue_steal(&work->wq, &i, &j, nreq))
-    goto redo_steal;
+  int steal_lvl = work->root_lvl + 1;
 
   kaapi_request_t* req = kaapi_api_listrequest_iterator_get(lr, lri);
-  for (--j ; i <= j; --j )
+  while ( req && steal_lvl < work->max_level )
     {
-    work_t* const tw = (work_t*)kaapi_request_pushdata(req, sizeof(work_t));
-    tw->Tree = work->Tree;
-    tw->op = work->op;
-    tw->size = work->size;
-    vtkTreeIndex* id = tth_steal( &(work->nodes), j );
-    tth_do_init( &(tw->nodes), tw->size, id->index, id->level );
-    kaapi_workqueue_init_with_kproc( &tw->wq,
-                                     (kaapi_workqueue_index_t)tw->size - 1,
-                                     (kaapi_workqueue_index_t)tw->size,
-                                     req->ident );
+    if ( !(kaapi_workqueue_steal(&work->wq, &i, &j, work->nodes_per_subtrees[work->max_level - steal_lvl]) ) )
+      {
+      work_t* const tw = (work_t*)kaapi_request_pushdata(req, sizeof(work_t));
+      tw->Tree = work->Tree;
+      tw->op = work->op;
+      tw->branching_factor = work->branching_factor;
+      tw->max_level = work->max_level;
+      tw->nodes_per_subtrees = work->nodes_per_subtrees;
+      tw->root_lvl = steal_lvl;
+      kaapi_workqueue_init_with_kproc( &tw->wq, i, j, req->ident );
+      kaapi_task_init( kaapi_request_toptask(req), thief_entrypoint, tw);
+      kaapi_request_pushtask_adaptive( req, victim_task, splitter, 0 );
+      kaapi_request_committask(req);
 
-    kaapi_task_init( kaapi_request_toptask(req), thief_entrypoint, tw);
-    kaapi_request_pushtask_adaptive( req, victim_task, splitter, 0 );
-    kaapi_request_committask(req);
-
-    req = kaapi_api_listrequest_iterator_next(lr, lri);
+      req = kaapi_api_listrequest_iterator_next(lr, lri);
+      }
+    else
+      ++steal_lvl;
     }
 
   return 0;
@@ -235,9 +238,15 @@ namespace vtkSMP
     /* initialize work */
     work.Tree = Tree;
     work.op = func;
-    work.size = Tree->GetTreeSize();
-    tth_do_init( &(work.nodes), work.size, 0, 0 );
-    kaapi_workqueue_init(&work.wq, (kaapi_workqueue_index_t)work.size - 1, (kaapi_workqueue_index_t)work.size);
+    Tree->GetTreeSize( work.max_level, work.branching_factor );
+    work.nodes_per_subtrees = new vtkIdType[work.max_level + 1];
+    vtkIdType value = work.nodes_per_subtrees[work.root_lvl = 0] = 1;
+    for ( vtkIdType i = 1; i <= work.max_level; ++i )
+      {
+      value *= work.branching_factor;
+      work.nodes_per_subtrees[i] = ++value;
+      }
+    kaapi_workqueue_init(&work.wq, 0, (kaapi_workqueue_index_t)value);
 
     /* push an adaptive task */
     void* sc = kaapi_task_begin_adaptive(
@@ -247,17 +256,32 @@ namespace vtkSMP
           &work     /* arg for splitter = work to split */
           );
 
+    int level = work.root_lvl;
     while ( !kaapi_workqueue_pop(&work.wq, &i, &nil, 1) )
       {
-      vtkTreeIndex* id = tth_get( &(work.nodes) );
-      Tree->TraverseNode( id->index, id->level, &work.nodes, func, kaapic_get_thread_num() );
-      kaapi_workqueue_push( &work.wq, (kaapi_workqueue_index_t)tth_get_current( &(work.nodes) ) );
+      vtkIdType id = convert_to_row_first( i, level, &work );
+      if ( Tree->TraverseNode( id, level, func, kaapic_get_thread_num() ) )
+        {
+        ++level;
+        }
+      else
+        {
+        if ( work.max_level != level )
+          kaapi_workqueue_pop(&work.wq, &i, &nil, work.nodes_per_subtrees[work.max_level - level] - 1);
+        while ( !(id % work.branching_factor) && level > work.root_lvl )
+          {
+          --level;
+          id = (id - 1) / work.branching_factor;
+          }
+        }
       }
 
     kaapi_task_end_adaptive(thread, sc);
 
     /* wait for thieves */
     kaapi_sched_sync( );
+
+    delete [] work.nodes_per_subtrees;
 
     kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
 

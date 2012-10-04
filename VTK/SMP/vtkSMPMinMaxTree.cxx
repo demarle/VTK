@@ -217,17 +217,17 @@ void vtkSMPMinMaxTree::InitTraversal(double scalarValue)
   this->TreeIndex = this->TreeSize;
   }
 
-void vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const
+int vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkFunctor* function, vtkSMPThreadID tid ) const
   {
   if ( id >= this->TreeSize )
     {
-    return;
+    return 0;
     }
 
   vtkScalarRange<double> *t = static_cast<vtkScalarRange<double>*>(this->Tree) + id;
   if ( t->min > this->ScalarValue || t->max < this->ScalarValue )
     {
-    return;
+    return 0;
     }
 
   if ( lvl == this->Level ) //leaf
@@ -238,19 +238,16 @@ void vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelp
       {
       (*function)( cell_id, tid );
       }
+    return 0;
     }
   else //node
     {
-    vtkIdType index = ( id + 1 ) * this->BranchingFactor;
-    int level = lvl + 1;
-    for ( vtkIdType i = 0; i < this->BranchingFactor; ++i, --index )
-      {
-      th->push_tail( index, level );
-      }
+    return 1;
     }
   }
 
-vtkIdType vtkSMPMinMaxTree::GetTreeSize() const
+void vtkSMPMinMaxTree::GetTreeSize( int& max_level, vtkIdType& branching_factor ) const
   {
-  return (this->BranchingFactor - 1) * this->Level;
+  max_level = this->Level;
+  branching_factor = this->BranchingFactor;
   }

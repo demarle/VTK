@@ -25,8 +25,8 @@ public:
   void BuildTree();
   void InitTraversal(double scalarValue);
 
-  virtual void TraverseNode( vtkIdType id, int lvl, vtkTreeTraversalHelper* th, vtkFunctor* function, vtkSMPThreadID tid ) const;
-  virtual vtkIdType GetTreeSize() const;
+  virtual int TraverseNode( vtkIdType id, int lvl, vtkFunctor* function, vtkSMPThreadID tid ) const;
+  virtual void GetTreeSize ( int& max_level, vtkIdType& branching_factor ) const;
 
 };
 

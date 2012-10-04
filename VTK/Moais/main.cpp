@@ -109,23 +109,23 @@ int main( int argc, char** argv )
     s->SetName("scalars");
     vtkIdType num = data->GetNumberOfCells() / parallel + 1, n;
     vtkGenericCell* cell = vtkGenericCell::New();
-
+/*
     double v = 0;
     for ( vtkIdType i = 0; i < data->GetNumberOfPoints(); ++i )
       {
-/*    double pt[3];
+      double pt[3];
       data->GetPoint(i,pt);
       s->SetTuple1(i,pt[2]);*/
-//    for ( vtkIdType i = 0; i < data->GetNumberOfCells(); ++i )
-//      {
-//      data->GetCell( i, cell );
-//      n = cell->GetNumberOfPoints();
-//      int v = i < num;
-//      while ( n-- )
-//        {
-//        s->SetTuple1( cell->GetPointId( n ), v );
-//        }
-      s->SetTuple1( i, ( v = 1 - v ) );
+    for ( vtkIdType i = 0; i < data->GetNumberOfCells(); ++i )
+      {
+      data->GetCell( i, cell );
+      n = cell->GetNumberOfPoints();
+      int v = i < num;
+      while ( n-- )
+        {
+        s->SetTuple1( cell->GetPointId( n ), v );
+        }
+//      s->SetTuple1( i, ( v = 1 - v ) );
       }
     cell->Delete();
 

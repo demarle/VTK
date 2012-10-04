@@ -35,7 +35,7 @@
 
 #include "vtkBenchTimer.h"
 
-const int vtKaapiRuns = 50;
+const int vtKaapiRuns = 30;
 
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_AFTER_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_BEFORE_FORWARD, Integer);
