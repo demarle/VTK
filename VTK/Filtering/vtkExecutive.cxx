@@ -35,8 +35,6 @@
 
 #include "vtkBenchTimer.h"
 
-const int vtKaapiRuns = 30;
-
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_AFTER_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_BEFORE_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_DIRECTION, Integer);
@@ -751,17 +749,10 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
 
   int result = 0;
   if ( request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()) &&
-       !this->Algorithm->IsA("vtkImageReader2") &&
-       !this->Algorithm->IsA("vtkDataReader") &&
-       !this->Algorithm->IsA("vtkWriter") &&
-       !this->Algorithm->IsA("vtkAbstractMapper") &&
-       !this->Algorithm->IsA("vtkGenericEnSightReader") &&
-       !this->Algorithm->IsA("vtkContourGrid") &&
-       !this->Algorithm->IsA("vtkDataSetSurfaceFilter") )
-    { // We want to monitor all but these
-
+       this->Algorithm->IsA("vtkContourFilter") )
+    { // We want to monitor only these
     cout << endl << this->Algorithm->GetClassName() << endl;
-    for (int i = 0; i < vtKaapiRuns; ++i)
+    for (int i = 0; i < 1; ++i)
       {
       vtkBenchTimer::New()->start_bench_timer();
       result = this->Algorithm->ProcessRequest(request, inInfo, outInfo);

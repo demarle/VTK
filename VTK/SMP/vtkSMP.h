@@ -67,22 +67,6 @@ protected:
   ~vtkTask();
 };
 
-class VTK_SMP_EXPORT vtkTaskSplitable : public vtkTask
-{
-  vtkTaskSplitable ( const vtkTaskSplitable& );
-  void operator =( const vtkTaskSplitable& );
-
-public:
-  vtkTypeMacro(vtkTaskSplitable, vtkTask);
-  void PrintSelf(ostream &os, vtkIndent indent);
-
-  virtual void SplitTask() const = 0;
-
-protected:
-  vtkTaskSplitable();
-  ~vtkTaskSplitable();
-};
-
 class VTK_SMP_EXPORT vtkParallelTree
 {
 public:
@@ -231,10 +215,6 @@ namespace vtkSMP
                                    vtkCellArray* outPolys, vtkThreadLocal<vtkCellArray>* inPolys,
                                    vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
                                    vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData, int SkipThreads );
-
-  void VTK_SMP_EXPORT BeginSpawnRegion();
-  void VTK_SMP_EXPORT Spawn( const vtkTask* function );
-  void VTK_SMP_EXPORT Sync();
 
   void VTK_SMP_EXPORT Traverse( const vtkParallelTree* Tree, vtkFunctor* func );
 

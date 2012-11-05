@@ -389,7 +389,6 @@ ABSTRACT
 
 SET_SOURCE_FILES_PROPERTIES(
   vtkColor
-  #vtkGenericIterator
   vtkRect
   vtkVector
   HEADER_FILE_ONLY
@@ -407,7 +406,6 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkEventForwarderCommand.cxx
   vtkFloatingPointExceptions
   vtkGarbageCollectorManager.cxx
-  #vtkGenericIterator.h
   vtkIOStream.cxx
   vtkIndent.cxx
   vtkLargeInteger.cxx
@@ -428,7 +426,6 @@ SET_SOURCE_FILES_PROPERTIES(
 
 SET_SOURCE_FILES_PROPERTIES(
   vtkColor.h
-  #vtkGenericIterator.h
   vtkRect.h
   vtkTimeStamp.cxx
   vtkVariant.cxx

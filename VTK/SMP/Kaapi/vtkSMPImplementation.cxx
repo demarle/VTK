@@ -207,24 +207,6 @@ namespace vtkSMP
     kaapic_spawn_attr_destroy(&attr);
     }
 
-  void BeginSpawnRegion()
-    {
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    }
-
-  void Spawn( const vtkTask *function )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_spawn( &attr, 1, my_spawn, KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-  void Sync( )
-    {
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    }
-
   void Traverse( const vtkParallelTree *Tree, vtkFunctor* func )
     {
     work_t work;

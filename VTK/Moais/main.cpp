@@ -3,7 +3,6 @@
 #include "vtkPolyDataMapper.h"
 #include "vtkUnstructuredGridReader.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkDataSetMapper.h"
 #include "vtkActor.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
@@ -18,29 +17,18 @@
   #include "vtkSMPMinMaxTree.h"
 #else
   #include "vtkContourFilter.h"
+  #include "vtkSimpleScalarTree.h"
 #endif
 
-#include "vtkDoubleArray.h"
-#include "vtkGenericCell.h"
-#include "vtkPointData.h"
-#include <cstdlib>
-
-#include "vtkUnstructuredGridWriter.h"
-#include "vtkSubdivideTetra.h"
-#include "vtkMergePoints.h"
-#include "vtkCellArray.h"
-
 int main( int argc, char** argv )
-{
-  if ( argc < 2 )
   {
+  if ( argc < 2 )
+    {
     cout << "You must provide a file name" << endl;
     return 1;
-  }
-  int parallel = argc == 2 ? 48 : atoi(argv[2]);
+    }
 
   /* === Reading 3D model === */
-
   vtkUnstructuredGridReader* usgReader = 0;
   vtkPolyDataReader* polyReader = vtkPolyDataReader::New();
   polyReader->SetFileName(argv[1]);
@@ -60,104 +48,38 @@ int main( int argc, char** argv )
     }
   cout << "Using file " << argv[1] << endl;
 
-  vtkTransformFilter* pre_transform = vtkTransformFilter::New();
-  if ( !usgReader )
-    {
-    pre_transform->SetInputConnection( polyReader->GetOutputPort() );
-    polyReader->Delete();
-    }
-  else
-    {
-    pre_transform->SetInputConnection( usgReader->GetOutputPort() );
-    usgReader->Delete();
-    }
-
+  /* === Distributing data === */
   vtkTransformFilter* transform = vtkTransformFilter::New();
-  transform->SetInputConnection( pre_transform->GetOutputPort() );
-
-  pre_transform->Delete();
-
+  transform->SetInputConnection( usgReader ? usgReader->GetOutputPort() : polyReader->GetOutputPort() );
 #ifdef VTK_CAN_USE_SMP
-  if ( parallel != 1 )
-    {
-    vtkSMPTransform* t = vtkSMPTransform::New();
-    t->Scale( -1., -1., -1. );
-    pre_transform->SetTransform( t );
-    transform->SetTransform( t );
-    t->Delete();
-    }
-  else
-    {
+  vtkSMPTransform* t = vtkSMPTransform::New();
+#else
+  vtkTransform* t = vtkTransform::New();
 #endif
-    vtkTransform* t = vtkTransform::New();
-    t->Scale( -1., -1., -1. );
-    pre_transform->SetTransform( t );
-    transform->SetTransform( t );
-    t->Delete();
-#ifdef VTK_CAN_USE_SMP
-    }
-#endif
+  t->Identity();
+  transform->SetTransform( t );
+  t->Delete();
 
   /* === Testing contour filter === */
-  transform->Update();
-  if ( !usgReader )
-    {
-    vtkPointSet* data = transform->GetOutput();
-    vtkDataArray* s = vtkDoubleArray::New();
-    s->SetNumberOfComponents(1);
-    s->SetNumberOfTuples(data->GetNumberOfPoints());
-    s->SetName("scalars");
-    vtkIdType num = data->GetNumberOfCells() / parallel + 1, n;
-    vtkGenericCell* cell = vtkGenericCell::New();
-/*
-    double v = 0;
-    for ( vtkIdType i = 0; i < data->GetNumberOfPoints(); ++i )
-      {
-      double pt[3];
-      data->GetPoint(i,pt);
-      s->SetTuple1(i,pt[2]);*/
-    for ( vtkIdType i = 0; i < data->GetNumberOfCells(); ++i )
-      {
-      data->GetCell( i, cell );
-      n = cell->GetNumberOfPoints();
-      int v = i < num;
-      while ( n-- )
-        {
-        s->SetTuple1( cell->GetPointId( n ), v );
-        }
-//      s->SetTuple1( i, ( v = 1 - v ) );
-      }
-    cell->Delete();
-
-    data->GetPointData()->SetScalars( s );
-    s->Delete();
-    }
-
 #ifdef VTK_CAN_USE_SMP
-  vtkContourFilter* isosurface = parallel != 1 ? vtkSMPContourFilter::New() : vtkContourFilter::New();
-  if ( parallel != 1 )
-    {
-    vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
-    isosurface->SetLocator( locator );
-    locator->Delete();
-    vtkSMPMinMaxTree* tree = vtkSMPMinMaxTree::New();
-    isosurface->SetScalarTree(tree);
-    tree->Delete();
-    }
+  vtkContourFilter* isosurface = vtkSMPContourFilter::New();
+  vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
+  isosurface->SetLocator( locator );
+  locator->Delete();
+  vtkSMPMinMaxTree* tree = vtkSMPMinMaxTree::New();
 #else
   vtkContourFilter* isosurface = vtkContourFilter::New();
+  vtkSimpleScalarTree* tree = vtkSimpleScalarTree::New();
 #endif
+  isosurface->SetScalarTree(tree);
+  tree->Delete();
   isosurface->SetInputConnection( transform->GetOutputPort() );
   isosurface->GenerateValues( 11, 0.0, 1.0 );
   isosurface->UseScalarTreeOn();
-
   transform->Delete();
 
-#ifdef HIDE_VTK_WINDOW
-  // Simulate a call to vtkRenderWindow::Render()
-  isosurface->Update();
-  isosurface->Delete();
-#else
+  /* === Pipeline pull === */
+#ifndef HIDE_VTK_WINDOW
   vtkPolyDataMapper* map = vtkPolyDataMapper::New();
   map->SetInputConnection( isosurface->GetOutputPort() );
   isosurface->Delete();
@@ -166,31 +88,10 @@ int main( int argc, char** argv )
   object->SetMapper( map );
   map->Delete();
 
-  vtkActor* reference = vtkActor::New();
-  if ( !usgReader )
-    {
-    vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
-    mapper->SetInputConnection( transform->GetOutputPort() );
-    reference->SetMapper( mapper );
-    mapper->Delete();
-    }
-  else
-    {
-    vtkDataSetMapper* mapper = vtkDataSetMapper::New();
-    mapper->SetInputConnection( transform->GetOutputPort() );
-    reference->SetMapper( mapper );
-    mapper->Delete();
-    }
-  double b[6];
-  transform->GetOutput()->GetBounds(b);
-  reference->AddPosition( (b[1]-b[0])*1.02, 0., 0. );
-
   vtkRenderer* viewport = vtkRenderer::New();
   viewport->SetBackground( .5, .5, .5 );
   viewport->AddActor( object );
-  viewport->AddActor( reference );
   object->Delete();
-  reference->Delete();
 
   vtkRenderWindow* window = vtkRenderWindow::New();
   window->AddRenderer( viewport );
@@ -202,10 +103,26 @@ int main( int argc, char** argv )
   window->Delete();
 
   eventsCatcher->Initialize();
-  eventsCatcher->Start();
+#endif
 
+  int bf = 2;
+  while ( bf < 10 )
+    {
+    tree->SetBranchingFactor( bf );
+    isosurface->Modified();
+#ifdef HIDE_VTK_WINDOW
+    isosurface->Update();
+#else
+    eventsCatcher->Render();
+    eventsCatcher->Start();
+#endif
+    if ( bf < 4 ) ++bf; else bf *= 2;
+    }
+#ifdef HIDE_VTK_WINDOW
+  isosurface->Delete();
+#else
   eventsCatcher->Delete();
 #endif
 
   return 0;
-}
+  }

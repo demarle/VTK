@@ -1,6 +1,19 @@
 #include "vtkSMP.h"
 #include <omp.h>
 
+void omp_traversal( vtkIdType index, int lvl, vtkIdType BranchingFactor, const vtkParallelTree* Tree, vtkFunctor* func )
+  {
+  if ( Tree->TraverseNode(index, lvl, func, omp_get_thread_num()) )
+    {
+    for ( vtkIdType i = index * BranchingFactor + 1, j = 0; j < BranchingFactor; ++i, ++j )
+      {
+      #pragma omp task
+        omp_traversal( i, lvl + 1, BranchingFactor, Tree, func );
+      }
+    #pragma omp taskwait
+    }
+  }
+
 namespace vtkSMP
 {
 
@@ -55,14 +68,15 @@ namespace vtkSMP
       }
     }
 
-  void Spawn ( const vtkTask* function, const vtkObject* data )
+  void Traverse( const vtkParallelTree* Tree, vtkFunctor* func )
     {
+    int lvl;
+    vtkIdType bf;
+    Tree->GetTreeSize(lvl,bf);
     #pragma omp parallel
-    #pragma omp single
+    #pragma omp master
       {
-      #pragma omp task
-      function->Execute( omp_get_thread_num(), data );
-      #pragma omp taskwait
+      omp_traversal( 0, 0, bf, Tree, func);
       }
     }
 }

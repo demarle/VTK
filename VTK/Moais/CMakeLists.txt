@@ -49,3 +49,11 @@ ELSE(VTK_USE_SMP)
     install(TARGETS purevtkBench RUNTIME DESTINATION bin)
   ENDIF(VTK_USE_MPI)
 ENDIF(VTK_USE_SMP)
+
+add_executable(buildBenchMeshes MACOSX_BUNDLE "meshes.cpp")
+target_link_libraries(buildBenchMeshes vtkIO vtkRendering)
+install(TARGETS buildBenchMeshes RUNTIME DESTINATION bin)
+
+add_executable(viewMesh MACOSX_BUNDLE "viewer.cpp")
+target_link_libraries(viewMesh vtkIO vtkRendering vtkVolumeRendering)
+install(TARGETS viewMesh RUNTIME DESTINATION bin)

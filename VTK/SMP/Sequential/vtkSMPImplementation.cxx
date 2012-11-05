@@ -1,5 +1,16 @@
 #include "vtkSMP.h"
 
+void sequential_traverse( vtkIdType index, int lvl, vtkIdType BranchingFactor, const vtkParallelTree* Tree, vtkFunctor* func )
+  {
+  if ( Tree->TraverseNode( index, lvl, func, 0 ) )
+    {
+    for ( vtkIdType i = index * BranchingFactor + 1, j = 0; j < BranchingFactor; ++i, ++j )
+      {
+      sequential_traverse( i, lvl + 1, BranchingFactor, Tree, func );
+      }
+    }
+  }
+
 namespace vtkSMP
 {
 
@@ -35,10 +46,9 @@ namespace vtkSMP
 
   void Traverse( const vtkParallelTree* Tree, vtkFunctor* func )
     {
-    vtkTreeIndex current( 0, 0 );
-    while ( current.index != -1 )
-      {
-      current = Tree->TraverseNode( current, func, 0 );
-      }
+    int lvl;
+    vtkIdType bf;
+    Tree->GetTreeSize(lvl,bf);
+    sequential_traverse( 0, 0, bf, Tree, func );
     }
 }
