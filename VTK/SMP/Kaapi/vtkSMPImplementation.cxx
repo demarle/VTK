@@ -87,12 +87,13 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
   kaapi_workqueue_index_t i, nil;
 
   int level = work->root_lvl;
+  vtkIdType id = convert_to_row_first(kaapi_workqueue_range_begin(&work->wq), level, work);
   while ( !kaapi_workqueue_pop(&work->wq, &i, &nil, 1) )
     {
-    vtkIdType id = convert_to_row_first( i, level, work );
     if ( work->Tree->TraverseNode( id, level, work->op, kaapic_get_thread_num() ) )
       {
       ++level;
+      id *= work->branching_factor;
       }
     else
       {
@@ -104,6 +105,7 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
         id = (id - 1) / work->branching_factor;
         }
       }
+    ++id;
     }
 
   }
@@ -239,12 +241,13 @@ namespace vtkSMP
           );
 
     int level = work.root_lvl;
+    vtkIdType id = 0;
     while ( !kaapi_workqueue_pop(&work.wq, &i, &nil, 1) )
       {
-      vtkIdType id = convert_to_row_first( i, level, &work );
       if ( Tree->TraverseNode( id, level, func, kaapic_get_thread_num() ) )
         {
         ++level;
+        id *= work.branching_factor;
         }
       else
         {
@@ -256,6 +259,7 @@ namespace vtkSMP
           id = (id - 1) / work.branching_factor;
           }
         }
+      ++id;
       }
 
     kaapi_task_end_adaptive(thread, sc);
