@@ -108,6 +108,7 @@ int main( int argc, char** argv )
   int bf = 2;
   while ( bf < 10 )
     {
+    cout << endl << "Branching factor set to " << bf;
     tree->SetBranchingFactor( bf );
     isosurface->Modified();
 #ifdef HIDE_VTK_WINDOW
