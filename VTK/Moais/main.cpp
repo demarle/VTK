@@ -117,6 +117,7 @@ int main( int argc, char** argv )
     eventsCatcher->Render();
     eventsCatcher->Start();
 #endif
+    cout << "Tree level was " << tree->GetLevel() << endl;
     if ( bf < 4 ) ++bf; else bf *= 2;
     }
 #ifdef HIDE_VTK_WINDOW

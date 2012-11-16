@@ -14,6 +14,8 @@
 
 #include "vtkDataSetTriangleFilter.h"
 #include "vtkSubdivideTetra.h"
+#include "vtkVectorNorm.h"
+#include "vtkCastToConcrete.h"
 #include <string>
 
 void SetScalarsAtTheBeginning( vtkPointSet* mesh, int size )
@@ -261,24 +263,40 @@ int main( int argc, char** argv )
     data->DeepCopy( usgReader->GetOutput() );
     usgReader->Delete();
 
-    char ext[4];
-    sprintf(ext, "");
-    vtkSubdivideTetra* tetra;
-    int size = 1;
-    while ( size < 65 )
+    if (data->GetPointData()->GetScalars() == 0 )
       {
-      UnstructuredGridWrapper( data, storage_folder + file + ext + ".vtk", DoNothing );
-      UnstructuredGridWrapper( data, storage_folder + file + ext + "-points_mapping.vtk", ColorByPointNumber );
-      UnstructuredGridWrapper( data, storage_folder + file + ext + "-cells_mapping.vtk", ColorByCellNumber );
-      tetra = vtkSubdivideTetra::New();
-      tetra->SetInput( data );
-      tetra->Update();
-      data->DeepCopy( tetra->GetOutput() );
-      tetra->Delete();
-      size *= 4;
-      sprintf(ext, "%dx", size);
+      vtkCastToConcrete* ctc = vtkCastToConcrete::New();
+      vtkVectorNorm* normaliser = vtkVectorNorm::New();
+      data->GetCellData()->SetScalars(0);
+      normaliser->SetInput( data );
+      normaliser->SetNormalize(1);
+      ctc->SetInputConnection( normaliser->GetOutputPort() );
+      normaliser->Delete();
+      ctc->Update();
+      UnstructuredGridWrapper( vtkUnstructuredGrid::SafeDownCast(ctc->GetOutput()), storage_folder + file + ".vtk", DoNothing );
+      ctc->Delete();
       }
-    data->Delete();
+    else
+      {
+      char ext[4];
+      sprintf(ext, "");
+      vtkSubdivideTetra* tetra;
+      int size = 1;
+      while ( size < 65 )
+        {
+        UnstructuredGridWrapper( data, storage_folder + file + ext + ".vtk", DoNothing );
+        UnstructuredGridWrapper( data, storage_folder + file + ext + "-points_mapping.vtk", ColorByPointNumber );
+        UnstructuredGridWrapper( data, storage_folder + file + ext + "-cells_mapping.vtk", ColorByCellNumber );
+        tetra = vtkSubdivideTetra::New();
+        tetra->SetInput( data );
+        tetra->Update();
+        data->DeepCopy( tetra->GetOutput() );
+        tetra->Delete();
+        size *= 4;
+        sprintf(ext, "%dx", size);
+        }
+      }
+      data->Delete();
     }
 
   return 0;

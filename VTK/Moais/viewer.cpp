@@ -1,12 +1,10 @@
 #include "vtkPolyDataReader.h"
-#include "vtkPolyDataMapper.h"
+#include "vtkPolyData.h"
 #include "vtkUnstructuredGridReader.h"
-#include "vtkUnstructuredGridVolumeRayCastMapper.h"
-#include "vtkActor.h"
-#include "vtkVolume.h"
-#include "vtkRenderer.h"
-#include "vtkRenderWindow.h"
-#include "vtkRenderWindowInteractor.h"
+#include "vtkUnstructuredGrid.h"
+
+#include "vtkPointData.h"
+#include "vtkCellData.h"
 
 #include <cstdlib>
 
@@ -38,52 +36,18 @@ int main( int argc, char** argv )
     }
   cout << "Using file " << argv[1] << endl;
 
-  /* === Building viewport === */
-  vtkRenderer* viewport = vtkRenderer::New();
-  viewport->SetBackground( .5, .5, .5 );
-
+  /* === Printing mesh informations === */
   if ( !usgReader )
     {
-    vtkPolyDataMapper* map = vtkPolyDataMapper::New();
-    map->SetInputConnection( polyReader->GetOutputPort() );
+    polyReader->Update();
+    polyReader->GetOutput()->Print( cout );
     polyReader->Delete();
-
-    vtkActor* object = vtkActor::New();
-    object->SetMapper( map );
-    map->Delete();
-
-    viewport->AddActor( object );
-    object->Delete();
     }
   else
     {
-    vtkUnstructuredGridVolumeRayCastMapper* map = vtkUnstructuredGridVolumeRayCastMapper::New();
-    map->SetInputConnection( usgReader->GetOutputPort() );
-    map->SetNumberOfThreads( 8 );
+    usgReader->Update();
+    usgReader->GetOutput()->Print( cout );
+    usgReader->GetOutput()->GetPointData()->GetScalars()->Print( cout );
     usgReader->Delete();
-
-    vtkVolume* object = vtkVolume::New();
-    object->SetMapper( map );
-    map->Delete();
-
-    viewport->AddActor( object );
-    object->Delete();
     }
-
-
-  vtkRenderWindow* window = vtkRenderWindow::New();
-  window->AddRenderer( viewport );
-  window->SetWindowName(VTK_WINDOW_NAME);
-  viewport->Delete();
-
-  vtkRenderWindowInteractor* eventsCatcher = vtkRenderWindowInteractor::New();
-  eventsCatcher->SetRenderWindow( window );
-  window->Delete();
-
-  eventsCatcher->Initialize();
-  eventsCatcher->Start();
-
-  eventsCatcher->Delete();
-
-  return 0;
 }
