@@ -161,13 +161,10 @@ protected:
 
     Maps->UnRegister( this );
 
-    if ( this->outputLocator )
-      {
-      InVerts->UnRegister( this );
-      InLines->UnRegister( this );
-      InPolys->UnRegister( this );
-      InStrips->UnRegister( this );
-      }
+    InVerts->UnRegister( this );
+    InLines->UnRegister( this );
+    InPolys->UnRegister( this );
+    InStrips->UnRegister( this );
     }
 
 public:
@@ -290,10 +287,10 @@ public:
     NumberOfPoints = 0;
     vtkThreadLocalStorageContainer<vtkSMPMergePoints*>::iterator itLocator;
     if ( _locator )
-      itLocator = Locators->GetOrCreateAll();
+      itLocator = Locators->GetAll();
     vtkThreadLocalStorageContainer<vtkPoints*>::iterator itPoints;
     if ( _points )
-      itPoints = InPoints->GetOrCreateAll();
+      itPoints = InPoints->GetAll();
     vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itVerts = InVerts->GetOrCreateAll();
     vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itLines = InLines->GetOrCreateAll();
     vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itPolys = InPolys->GetOrCreateAll();
@@ -308,37 +305,22 @@ public:
       vtkIdType n;
       if ( this->InPoints )
         {
-        n = (*itPoints)->GetNumberOfPoints();
+        n = *itPoints ? (*itPoints)->GetNumberOfPoints() : 0;
         ++itPoints;
         }
       else
         {
-        n = (*itLocator)->GetPoints()->GetNumberOfPoints();
+        n = *itLocator ? (*itLocator)->GetPoints()->GetNumberOfPoints() : 0;
         ++itLocator;
         }
+
       (*itMaps)->Allocate( n );
       NumberOfPoints += n;
 
-      if ( _inverts )
-        {
-        vertOffset->ManageNextValue( *itVerts );
-        ++itVerts;
-        }
-      if ( _inlines )
-        {
-        lineOffset->ManageNextValue( *itLines );
-        ++itLines;
-        }
-      if ( _inpolys )
-        {
-        polyOffset->ManageNextValue( *itPolys );
-        ++itPolys;
-        }
-      if ( _instrips )
-        {
-        stripOffset->ManageNextValue( *itStrips );
-        ++itStrips;
-        }
+      vertOffset->ManageNextValue( *itVerts++ );
+      lineOffset->ManageNextValue( *itLines++ );
+      polyOffset->ManageNextValue( *itPolys++ );
+      stripOffset->ManageNextValue( *itStrips++ );
       }
 
     NumberOfCells = vertOffset->GetNumberOfCells() +
@@ -355,11 +337,6 @@ public:
     this->outputCd->CopyAllocate( this->outputCd, NumberOfCells, NumberOfCells );
     outputLocator->GetPoints()->GetData()->Resize( NumberOfPoints );
     outputLocator->GetPoints()->SetNumberOfPoints( NumberOfPoints );
-
-    vertOffset->Print( cout );
-    lineOffset->Print( cout );
-    polyOffset->Print( cout );
-    stripOffset->Print( cout );
     }
 };
 
@@ -399,13 +376,12 @@ struct ParallelPointMerger : public vtkTask
           vtkThreadLocalStorageContainer<vtkPointData*>::iterator itPd = self->InPd->GetAll( 1 );
           vtkThreadLocalStorageContainer<vtkIdList*>::iterator itMaps = self->Maps->GetAll( 1 );
           for ( vtkThreadLocalStorageContainer<vtkSMPMergePoints*>::iterator itLocator = self->Locators->GetAll( 1 );
-                itLocator != self->Locators->EndOfAll(); ++itLocator )
+                itLocator != self->Locators->EndOfAll(); ++itLocator, ++itPd, ++itMaps )
             {
             if ( *itLocator )
               {
               self->outputLocator->Merge( *itLocator, i, self->outputPd, *itPd, *itMaps );
               }
-            ++itPd; ++itMaps;
             }
           }
       }
