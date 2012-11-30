@@ -100,12 +100,13 @@ public:
 
   void ManageNextValue ( vtkCellArray* ca )
     {
-    vtkIdType c = ca->GetNumberOfCells();
-    vtkIdType t = ca->GetData()->GetNumberOfTuples();
-    (*itCells) = CellsOffset;
-    (*itTuples) = TuplesOffset;
-    CellsOffset += c;
-    TuplesOffset += t;
+    *itCells = CellsOffset;
+    *itTuples = TuplesOffset;
+    if ( ca )
+      {
+      CellsOffset += ca->GetNumberOfCells();
+      TuplesOffset += ca->GetData()->GetNumberOfTuples();
+      }
     ++itCells;
     ++itTuples;
     }
@@ -291,10 +292,10 @@ public:
     vtkThreadLocalStorageContainer<vtkPoints*>::iterator itPoints;
     if ( _points )
       itPoints = InPoints->GetAll();
-    vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itVerts = InVerts->GetOrCreateAll();
-    vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itLines = InLines->GetOrCreateAll();
-    vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itPolys = InPolys->GetOrCreateAll();
-    vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itStrips = InStrips->GetOrCreateAll();
+    vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itVerts = InVerts->GetAll();
+    vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itLines = InLines->GetAll();
+    vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itPolys = InPolys->GetAll();
+    vtkThreadLocalStorageContainer<vtkCellArray*>::iterator itStrips = InStrips->GetAll();
     vertOffset->InitManageValues();
     lineOffset->InitManageValues();
     polyOffset->InitManageValues();
@@ -314,8 +315,16 @@ public:
         ++itLocator;
         }
 
-      (*itMaps)->Allocate( n );
-      NumberOfPoints += n;
+      if ( n )
+        {
+        (*itMaps)->Allocate( n );
+        NumberOfPoints += n;
+        }
+      else
+        {
+        (*itMaps)->Delete();
+        *itMaps = NULL;
+        }
 
       vertOffset->ManageNextValue( *itVerts++ );
       lineOffset->ManageNextValue( *itLines++ );
@@ -337,6 +346,8 @@ public:
     this->outputCd->CopyAllocate( this->outputCd, NumberOfCells, NumberOfCells );
     outputLocator->GetPoints()->GetData()->Resize( NumberOfPoints );
     outputLocator->GetPoints()->SetNumberOfPoints( NumberOfPoints );
+    outputLocator->Print( cout );
+    cout << NumberOfPoints << " points and " << NumberOfCells << " cells." << endl;
     }
 };
 
@@ -532,20 +543,23 @@ struct LockPointMerger : public vtkFunctor
 
   void operator()( vtkIdType id, vtkSMPThreadID tid ) const
     {
-    vtkSMPThreadID threadID = 0;
+    vtkThreadLocalStorageContainer<vtkPoints*>::iterator itPoints = this->Functor->InPoints->GetAll();
+    vtkThreadLocalStorageContainer<vtkPointData*>::iterator itPd = this->Functor->InPd->GetAll();
+    vtkThreadLocalStorageContainer<vtkIdList*>::iterator itMaps = this->Functor->Maps->GetAll();
+
     vtkIdType NumberOfPoints = NumberOfPointsFirstThread, NewId;
     while ( id >= NumberOfPoints )
       {
       id -= NumberOfPoints;
-      ++threadID;
-      NumberOfPoints = this->Functor->InPoints->GetLocal(threadID)->GetNumberOfPoints();
+      ++itPoints; ++itPd; ++itMaps;
+      NumberOfPoints = (*itPoints)->GetNumberOfPoints();
       }
 
     double* pt = new double[3];
-    this->Functor->InPoints->GetLocal( threadID )->GetPoint( id, pt );
+    (*itPoints)->GetPoint( id, pt );
     if ( this->Functor->outputLocator->SetUniquePoint( pt, NewId ) )
-      this->Functor->outputPd->SetTuple( NewId, id, this->Functor->InPd->GetLocal( threadID ) );
-    this->Functor->Maps->GetLocal( threadID )->SetId( id, NewId );
+      this->Functor->outputPd->SetTuple( NewId, id, (*itPd) );
+    (*itMaps)->SetId( id, NewId );
     delete [] pt;
     }
 protected:
@@ -588,6 +602,7 @@ namespace vtkSMP
     TheMerge->self = DummyFunctor;
     Parallel<vtkSMPMergePoints>( TheMerge, DummyFunctor->Locators->GetAll(), SkipThreads );
     TheMerge->Delete();
+    DummyFunctor->outputLocator->Print( cout );
 
     ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
     TheCellMerge->self = DummyFunctor;
@@ -629,7 +644,7 @@ namespace vtkSMP
     timer->start_bench_timer();
     DummyMergeFunctor* Functor = DummyMergeFunctor::New();
     vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::New();
-    vtkIdType NumberOfInPointsThread0 = inPoints->GetLocal(0)->GetNumberOfPoints();
+    vtkIdType NumberOfInPointsThread0 = (*(inPoints->GetAll()))->GetNumberOfPoints();
     outputLocator->InitLockInsertion( outPoints, bounds, NumberOfInPointsThread0 );
     Functor->outputLocator = outputLocator;
 

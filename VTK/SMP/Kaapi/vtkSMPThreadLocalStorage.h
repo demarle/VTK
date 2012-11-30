@@ -2,6 +2,7 @@ template<class T>
 vtkThreadLocal<T>::vtkThreadLocal() :
     vtkObject(), ThreadLocalStorage(kaapic_get_concurrency())
   {
+  memset(&ThreadLocalStorage[0], 0, sizeof(T*) * kaapic_get_concurrency());
   }
 
 template<class T>
