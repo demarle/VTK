@@ -275,6 +275,7 @@ public:
 
     if ( outputVerts )
       {
+      clIndex = 0;
       computedCells = this->InVerts->GetLocal( tid );
       computedCells->InitTraversal();
       totalNumber = vertOffset->GetTuplesOffset( tid );
@@ -295,6 +296,7 @@ public:
 
     if ( outputLines )
       {
+      clIndex = 0;
       computedCells = this->InLines->GetLocal( tid );
       computedCells->InitTraversal();
       totalNumber = lineOffset->GetTuplesOffset( tid );
@@ -315,6 +317,7 @@ public:
 
     if ( outputPolys )
       {
+      clIndex = 0;
       computedCells = this->InPolys->GetLocal( tid );
       computedCells->InitTraversal();
       totalNumber = polyOffset->GetTuplesOffset( tid );
@@ -335,6 +338,7 @@ public:
 
     if ( outputStrips )
       {
+      clIndex = 0;
       computedCells = this->InStrips->GetLocal( tid );
       computedCells->InitTraversal();
       totalNumber = stripOffset->GetTuplesOffset( tid );

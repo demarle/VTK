@@ -267,7 +267,7 @@ int main( int argc, char** argv )
       {
       vtkCastToConcrete* ctc = vtkCastToConcrete::New();
       vtkVectorNorm* normaliser = vtkVectorNorm::New();
-      data->GetCellData()->SetScalars(0);
+//      data->GetCellData()->SetScalars(0);
       normaliser->SetInput( data );
       normaliser->SetNormalize(1);
       ctc->SetInputConnection( normaliser->GetOutputPort() );
