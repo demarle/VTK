@@ -6,32 +6,32 @@
 #include <compat/thread>
 #include <atomic.h>
 
-tbb::tbb_thread::id* real_ids = 0;
-tbb::atomic<int> CurrentId;
+//tbb::tbb_thread::id* real_ids = 0;
+//tbb::atomic<int> CurrentId;
 
-void smpInit(void)
-  {
-  real_ids = new tbb::tbb_thread::id[vtkSMP::GetNumberOfThreads()];
-  }
+//void smpInit(void)
+//  {
+//  real_ids = new tbb::tbb_thread::id[vtkSMP::GetNumberOfThreads()];
+//  }
 
-void smpFini(void)
-  {
-  delete [] real_ids;
-  real_ids = 0;
-  }
+//void smpFini(void)
+//  {
+//  delete [] real_ids;
+//  real_ids = 0;
+//  }
 
-vtkSMPThreadID ExtractRealID ( const tbb::tbb_thread::id& HiddenId )
-  {
-  vtkSMPThreadID id, max = CurrentId.load();
-  for ( id = 0; id < max; ++id )
-    {
-    if ( real_ids[id] == HiddenId )
-      return id;
-    }
-  id = CurrentId += 1;
-  real_ids[id] = HiddenId;
-  return id;
-  }
+//vtkSMPThreadID ExtractRealID ( const tbb::tbb_thread::id& HiddenId )
+//  {
+//  vtkSMPThreadID id, max = CurrentId.load();
+//  for ( id = 0; id < max; ++id )
+//    {
+//    if ( real_ids[id] == HiddenId )
+//      return id;
+//    }
+//  id = CurrentId += 1;
+//  real_ids[id] = HiddenId;
+//  return id;
+//  }
 
 class FuncCall
 {

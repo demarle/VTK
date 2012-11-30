@@ -1,5 +1,4 @@
 #include "vtkSMP.h"
-#include <omp.h>
 
 void omp_traversal( vtkIdType index, int lvl, vtkIdType BranchingFactor, const vtkParallelTree* Tree, vtkFunctor* func )
   {
@@ -16,12 +15,6 @@ void omp_traversal( vtkIdType index, int lvl, vtkIdType BranchingFactor, const v
 
 namespace vtkSMP
 {
-
-  vtkSMPThreadID InternalGetTID()
-    {
-    return omp_get_thread_num();
-    }
-
   void ForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain)
     {
     #pragma omp default(none)

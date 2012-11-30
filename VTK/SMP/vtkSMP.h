@@ -3,18 +3,13 @@
 
 #include "vtkSMPImplementation.h"
 #include "vtkObject.h"
-#include "vtkCommand.h"
-
-#include <vector>
-#include <typeinfo>  //for 'typeid'
 
 class vtkPoints;
-class vtkCommand;
 class vtkPointData;
 class vtkCellArray;
 class vtkCellData;
 class vtkSMPMergePoints;
-class vtkMutexLock;
+class vtkIdList;
 
 class VTK_SMP_EXPORT vtkFunctor : public vtkObject
 {
@@ -60,7 +55,7 @@ public:
   vtkTypeMacro(vtkTask, vtkObjectBase);
   void PrintSelf(ostream &os, vtkIndent indent);
 
-  virtual void Execute( vtkSMPThreadID tid, const vtkObject *data ) const = 0;
+  void Execute( ... ) const {}
 
 protected:
   vtkTask();
@@ -78,127 +73,93 @@ namespace vtkSMP
 {
   vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
 
-  vtkSMPThreadID InternalGetTID();
+  class VTK_SMP_EXPORT vtkIdTypeThreadLocal : public vtkObject
+    {
+    protected:
+      vtkIdTypeThreadLocal();
+      ~vtkIdTypeThreadLocal();
+
+    public:
+      vtkTypeMacro( vtkIdTypeThreadLocal, vtkObject );
+      static vtkIdTypeThreadLocal* New();
+
+      void PrintSelf( ostream &os, vtkIndent indent );
+      vtkThreadLocalStorageContainer<vtkIdType>::iterator GetAll();
+      vtkThreadLocalStorageContainer<vtkIdType>::iterator EndOfAll();
+      void SetLocal ( vtkSMPThreadID tid, vtkIdType value );
+      vtkIdType GetLocal ( vtkSMPThreadID tid );
+      vtkIdType GetLocal ();
+
+    protected:
+      vtkThreadLocalStorageContainer<vtkIdType>::type ThreadLocalStorage;
+    };
 
   template<class T>
   class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
     {
     protected :
-      vtkThreadLocal() : vtkObject(), ThreadLocalStorage(GetNumberOfThreads()) { }
-      ~vtkThreadLocal()
-        {
-        for ( typename vtkstd::vector<T*>::iterator it = ThreadLocalStorage.begin();
-              it != ThreadLocalStorage.end(); ++it )
-          {
-          if ( *it )
-            (*it)->UnRegister( this );
-          *it = 0;
-          }
-        ThreadLocalStorage.clear();
-        }
+      vtkThreadLocal();
+      ~vtkThreadLocal();
 
     public:
       vtkTypeMacro(vtkThreadLocal, vtkObject)
-      static vtkThreadLocal<T>* New()
-        {
-        return new vtkThreadLocal<T>();
-        }
+      static vtkThreadLocal<T>* New();
 
-      void PrintSelf( ostream &os, vtkIndent indent )
-        {
-        this->Superclass::PrintSelf( os, indent );
-        os << indent << "Class stored: " << typeid(T).name() << endl;
-        os << indent << "Local storage: " << endl;
-        for ( size_t i = 0; i < this->ThreadLocalStorage.size(); ++i )
-          {
-          os << indent.GetNextIndent() << "id " << i << ": (" << ThreadLocalStorage[i] << ")" << endl;
-          if ( !ThreadLocalStorage[i] ) continue;
-          ThreadLocalStorage[i]->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
-          }
-        }
+      void PrintSelf( ostream &os, vtkIndent indent );
 
-      T* NewLocal ( vtkSMPThreadID tid, T* specificImpl )
-        {
-        if (this->ThreadLocalStorage[tid])
-          {
-          this->ThreadLocalStorage[tid]->UnRegister(this);
-          }
+      T* NewLocal ( vtkSMPThreadID tid, T* specificImpl );
+      T* NewLocal ( vtkSMPThreadID tid );
 
-        T* item = specificImpl->NewInstance();
-        if (item)
-          {
-          item->Register(this);
-          item->Delete();
-          }
-        this->ThreadLocalStorage[tid] = item;
+      typename vtkThreadLocalStorageContainer<T*>::iterator GetOrCreateAll( T* specificImpl );
+      typename vtkThreadLocalStorageContainer<T*>::iterator GetOrCreateAll( );
 
-        return item;
-        }
+      typename vtkThreadLocalStorageContainer<T*>::iterator GetAll( vtkIdType skipThreads = 0 ) ;
 
-      T* NewLocal ( vtkSMPThreadID tid )
-        {
-        if (this->ThreadLocalStorage[tid])
-          {
-          this->ThreadLocalStorage[tid]->UnRegister(this);
-          }
+      typename vtkThreadLocalStorageContainer<T*>::iterator EndOfAll( );
 
-        T* item = T::New();
-        if (item)
-          {
-          item->Register(this);
-          item->Delete();
-          }
-        this->ThreadLocalStorage[tid] = item;
+      void SetLocal ( vtkSMPThreadID tid, T* item );
 
-        return item;
-        }
+      T* GetLocal( vtkSMPThreadID tid );
 
-      void SetLocal ( vtkSMPThreadID tid, T* item )
-        {
-        if ( this->ThreadLocalStorage[tid] )
-          {
-          this->ThreadLocalStorage[tid]->UnRegister(this);
-          }
-
-        if ( item )
-          {
-          item->Register( this );
-          }
-
-        this->ThreadLocalStorage[tid] = item;
-        }
-
-      T* GetLocal( vtkSMPThreadID tid )
-        {
-        return this->ThreadLocalStorage[tid];
-        }
-
-      T* GetLocal()
-        {
-        return GetLocal(InternalGetTID());
-        }
+      T* GetLocal();
 
       template<class Derived>
-      void FillDerivedThreadLocal ( vtkThreadLocal<Derived>* other )
-        {
-        for ( typename vtkstd::vector<T*>::size_type i = 0; i < ThreadLocalStorage.size(); ++i )
-          {
-          other->SetLocal( i, Derived::SafeDownCast(ThreadLocalStorage[i]) );
-          }
-        }
+      void FillDerivedThreadLocal ( vtkThreadLocal<Derived>* other );
 
     protected:
-      // the __thread c++Ox modifier cannot be used because this is not static
-      // create an explicit map and use the thread id key instead.
-      vtkstd::vector<T*> ThreadLocalStorage;
+      typename vtkThreadLocalStorageContainer<T*>::type ThreadLocalStorage;
     };
+  #include "vtkSMPThreadLocalStorage.h" // load runtime-specific definition of TLS
 
   // ForEach template : parallel loop over an iterator
   void VTK_SMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain = 0 );
 
   void VTK_SMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f, int grain = 0 );
 
-  void VTK_SMP_EXPORT Parallel( const vtkTask* function, const vtkObject* data = NULL, vtkSMPThreadID skipThreads = 1 );
+  template<class T>
+  void VTK_SMP_EXPORT Parallel( const vtkTask* function,
+                                typename vtkThreadLocalStorageContainer<T*>::iterator data1,
+                                vtkSMPThreadID skipThreads = 1 );
+
+  template<class T1, class T2, class T3, class T4, class T5, class T6>
+  void VTK_SMP_EXPORT Parallel( const vtkTask* function,
+                                typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
+                                typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
+                                typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
+                                typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
+                                typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
+                                typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
+                                vtkThreadLocalStorageContainer<vtkIdType>::iterator offset1,
+                                vtkThreadLocalStorageContainer<vtkIdType>::iterator offset2,
+                                vtkThreadLocalStorageContainer<vtkIdType>::iterator offset3,
+                                vtkThreadLocalStorageContainer<vtkIdType>::iterator offset4,
+                                vtkThreadLocalStorageContainer<vtkIdType>::iterator offset5,
+                                vtkThreadLocalStorageContainer<vtkIdType>::iterator offset6,
+                                vtkThreadLocalStorageContainer<vtkIdType>::iterator offset7,
+                                vtkThreadLocalStorageContainer<vtkIdType>::iterator offset8,
+                                vtkSMPThreadID skipThreads = 1 );
+
+  void VTK_SMP_EXPORT Traverse( const vtkParallelTree* Tree, vtkFunctor* func );
 
   void VTK_SMP_EXPORT MergePoints( vtkPoints* outPoints, vtkThreadLocal<vtkPoints>* inPoints, const double bounds[6],
                                    vtkPointData* outPtsData, vtkThreadLocal<vtkPointData>* inPtsData,
@@ -215,8 +176,6 @@ namespace vtkSMP
                                    vtkCellArray* outPolys, vtkThreadLocal<vtkCellArray>* inPolys,
                                    vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
                                    vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData, int SkipThreads );
-
-  void VTK_SMP_EXPORT Traverse( const vtkParallelTree* Tree, vtkFunctor* func );
 
 }
 

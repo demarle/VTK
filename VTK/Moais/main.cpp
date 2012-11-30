@@ -9,7 +9,6 @@
 #include "vtkRenderWindowInteractor.h"
 
 #include "vtkTransformFilter.h"
-#include "vtkTransform.h"
 #ifdef VTK_CAN_USE_SMP
   #include "vtkSMPTransform.h"
   #include "vtkSMPContourFilter.h"
@@ -18,6 +17,7 @@
 #else
   #include "vtkContourFilter.h"
   #include "vtkSimpleScalarTree.h"
+  #include "vtkTransform.h"
 #endif
 
 int main( int argc, char** argv )

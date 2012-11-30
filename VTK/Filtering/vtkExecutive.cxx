@@ -752,7 +752,7 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
        this->Algorithm->IsA("vtkContourFilter") )
     { // We want to monitor only these
     cout << endl << this->Algorithm->GetClassName() << endl;
-    int max = this->Algorithm->IsA("vtkSMPContourFilter") ? 35 : 3;
+    int max = this->Algorithm->IsA("vtkSMPContourFilter") ? 5 : 3;
     for (int i = 0; i < max; ++i)
       {
       vtkBenchTimer::New()->start_bench_timer();
