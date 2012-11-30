@@ -346,8 +346,6 @@ public:
     this->outputCd->CopyAllocate( this->outputCd, NumberOfCells, NumberOfCells );
     outputLocator->GetPoints()->GetData()->Resize( NumberOfPoints );
     outputLocator->GetPoints()->SetNumberOfPoints( NumberOfPoints );
-    outputLocator->Print( cout );
-    cout << NumberOfPoints << " points and " << NumberOfCells << " cells." << endl;
     }
 };
 
@@ -602,7 +600,6 @@ namespace vtkSMP
     TheMerge->self = DummyFunctor;
     Parallel<vtkSMPMergePoints>( TheMerge, DummyFunctor->Locators->GetAll(), SkipThreads );
     TheMerge->Delete();
-    DummyFunctor->outputLocator->Print( cout );
 
     ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
     TheCellMerge->self = DummyFunctor;
@@ -644,7 +641,7 @@ namespace vtkSMP
     timer->start_bench_timer();
     DummyMergeFunctor* Functor = DummyMergeFunctor::New();
     vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::New();
-    vtkIdType NumberOfInPointsThread0 = (*(inPoints->GetAll()))->GetNumberOfPoints();
+    vtkIdType NumberOfInPointsThread0 = (*(inPoints->GetAll( 0 )))->GetNumberOfPoints();
     outputLocator->InitLockInsertion( outPoints, bounds, NumberOfInPointsThread0 );
     Functor->outputLocator = outputLocator;
 

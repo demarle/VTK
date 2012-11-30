@@ -55,7 +55,25 @@ public:
   vtkTypeMacro(vtkTask, vtkObjectBase);
   void PrintSelf(ostream &os, vtkIndent indent);
 
-  void Execute( ... ) const {}
+  void Execute( ... ) const
+    {
+    cout << "Shouldn't be invocked." << endl;
+    }
+  virtual void Execute( vtkSMPMergePoints* ) const {}
+  virtual void Execute( vtkIdList* map,
+                        vtkCellData* clData,
+                        vtkCellArray* verts,
+                        vtkCellArray* lines,
+                        vtkCellArray* polys,
+                        vtkCellArray* strips,
+                        vtkIdType vertCellOffset,
+                        vtkIdType vertTupleOffset,
+                        vtkIdType lineCellOffset,
+                        vtkIdType lineTupleOffset,
+                        vtkIdType polyCellOffset,
+                        vtkIdType polyTupleOffset,
+                        vtkIdType stripCellOffset,
+                        vtkIdType stripTupleOffset ) const {}
 
 protected:
   vtkTask();
