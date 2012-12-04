@@ -311,21 +311,15 @@ namespace vtkSMP
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  vtkSMPThreadID GetNumberOfThreads()
-    {
-    return kaapic_get_concurrency();
-    }
-
-
   template<class T>
   void Parallel( const vtkTask* function,
                  typename vtkThreadLocalStorageContainer<T*>::iterator data1,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 2, my_parallel_1,
@@ -338,16 +332,16 @@ namespace vtkSMP
   template<>
   void Parallel<vtkSMPMergePoints> ( const vtkTask* function,
                                      vtkThreadLocalStorageContainer<vtkSMPMergePoints*>::iterator data1,
-                                     vtkSMPThreadID skipThreads )
+                                     vtkIdType skipThreads )
     {
-    for ( vtkSMPThreadID tid = 0; tid < skipThreads; ++tid )
+    for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
       {
       ++data1;
       }
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 2, my_parallel_1<vtkSMPMergePoints>,
@@ -363,12 +357,12 @@ namespace vtkSMP
   void Parallel( const vtkTask* function,
                  typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
                  typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 3, my_parallel_2,
@@ -386,12 +380,12 @@ namespace vtkSMP
                  typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
                  typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
                  typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 4, my_parallel_3,
@@ -411,12 +405,12 @@ namespace vtkSMP
                  typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
                  typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
                  typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 5, my_parallel_4,
@@ -438,12 +432,12 @@ namespace vtkSMP
                  typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
                  typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
                  typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 6, my_parallel_5,
@@ -466,12 +460,12 @@ namespace vtkSMP
                  typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
                  typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
                  typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 7, my_parallel_6,
@@ -503,9 +497,9 @@ namespace vtkSMP
                  vtkThreadLocalStorageContainer<vtkIdType>::iterator offset6,
                  vtkThreadLocalStorageContainer<vtkIdType>::iterator offset7,
                  vtkThreadLocalStorageContainer<vtkIdType>::iterator offset8,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
-    for ( vtkSMPThreadID tid = 0; tid < skipThreads; ++tid )
+    for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
       {
       ++data1; ++data2; ++data3; ++data4; ++data5; ++data6;
       ++offset1; ++offset2; ++offset3; ++offset4; ++offset5; ++offset6; ++offset7; ++offset8;
@@ -513,7 +507,7 @@ namespace vtkSMP
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 15, my_parallel,
@@ -552,9 +546,9 @@ namespace vtkSMP
                  vtkThreadLocalStorageContainer<vtkIdType>::iterator offset6,
                  vtkThreadLocalStorageContainer<vtkIdType>::iterator offset7,
                  vtkThreadLocalStorageContainer<vtkIdType>::iterator offset8,
-                 vtkSMPThreadID skipThreads )
+                 vtkIdType skipThreads )
     {
-    for ( vtkSMPThreadID tid = 0; tid < skipThreads; ++tid )
+    for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
       {
       ++data1; ++data2; ++data3; ++data4; ++data5; ++data6;
       ++offset1; ++offset2; ++offset3; ++offset4; ++offset5; ++offset6; ++offset7; ++offset8;
@@ -562,7 +556,7 @@ namespace vtkSMP
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 15, my_parallel<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>,
@@ -595,12 +589,12 @@ namespace vtkSMP
                  typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
                  typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
                  typename vtkThreadLocalStorageContainer<T7*>::iterator data7,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 8, my_parallel_7,
@@ -628,12 +622,12 @@ namespace vtkSMP
                  typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
                  typename vtkThreadLocalStorageContainer<T7*>::iterator data7,
                  typename vtkThreadLocalStorageContainer<T8*>::iterator data8,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 9, my_parallel_8,
@@ -663,12 +657,12 @@ namespace vtkSMP
                  typename vtkThreadLocalStorageContainer<T7*>::iterator data7,
                  typename vtkThreadLocalStorageContainer<T8*>::iterator data8,
                  typename vtkThreadLocalStorageContainer<T9*>::iterator data9,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 10, my_parallel_9,
@@ -700,12 +694,12 @@ namespace vtkSMP
                  typename vtkThreadLocalStorageContainer<T8*>::iterator data8,
                  typename vtkThreadLocalStorageContainer<T9*>::iterator data9,
                  typename vtkThreadLocalStorageContainer<T0*>::iterator data0,
-                 vtkSMPThreadID skipThreads = 1 )
+                 vtkIdType skipThreads = 1 )
     {
     kaapic_spawn_attr_t attr;
     kaapic_spawn_attr_init(&attr);
     kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkSMPThreadID tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
       {
       kaapic_spawn_attr_set_kproc(&attr, tid);
       kaapic_spawn( &attr, 11, my_parallel_0,

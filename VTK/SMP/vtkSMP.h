@@ -91,8 +91,6 @@ public:
 
 namespace vtkSMP
 {
-  vtkSMPThreadID VTK_SMP_EXPORT GetNumberOfThreads( );
-
   class VTK_SMP_EXPORT vtkIdTypeThreadLocal : public vtkObject
     {
     protected:
@@ -132,7 +130,7 @@ namespace vtkSMP
       typename vtkThreadLocalStorageContainer<T*>::iterator GetOrCreateAll( T* specificImpl );
       typename vtkThreadLocalStorageContainer<T*>::iterator GetOrCreateAll( );
 
-      typename vtkThreadLocalStorageContainer<T*>::iterator GetAll( vtkSMPThreadID skipThreads = 0 ) ;
+      typename vtkThreadLocalStorageContainer<T*>::iterator GetAll( vtkIdType skipThreads = 0 ) ;
 
       typename vtkThreadLocalStorageContainer<T*>::iterator EndOfAll( );
 
@@ -156,7 +154,7 @@ namespace vtkSMP
   template<class T>
   void VTK_SMP_EXPORT Parallel( const vtkTask* function,
                                 typename vtkThreadLocalStorageContainer<T*>::iterator data1,
-                                vtkSMPThreadID skipThreads = 1 );
+                                vtkIdType skipThreads = 1 );
 
   template<class T1, class T2, class T3, class T4, class T5, class T6>
   void VTK_SMP_EXPORT Parallel( const vtkTask* function,
@@ -174,7 +172,7 @@ namespace vtkSMP
                                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset6,
                                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset7,
                                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset8,
-                                vtkSMPThreadID skipThreads = 1 );
+                                vtkIdType skipThreads = 1 );
 
   void VTK_SMP_EXPORT Traverse( const vtkParallelTree* Tree, vtkFunctor* func );
 

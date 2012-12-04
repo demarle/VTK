@@ -157,7 +157,7 @@ typename vtkThreadLocalStorageContainer<T*>::iterator vtkThreadLocal<T>::GetOrCr
   }
 
 template<class T>
-typename vtkThreadLocalStorageContainer<T*>::iterator vtkThreadLocal<T>::GetAll( vtkSMPThreadID skipThreads )
+typename vtkThreadLocalStorageContainer<T*>::iterator vtkThreadLocal<T>::GetAll( vtkIdType skipThreads )
   {
   typename vtkThreadLocalStorageContainer<T*>::iterator value = ThreadLocalStorage.begin();
   while ( skipThreads )
