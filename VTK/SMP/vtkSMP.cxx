@@ -24,25 +24,29 @@ void vtkFunctor::PrintSelf(ostream &os, vtkIndent indent)
 //--------------------------------------------------------------------------------
 vtkFunctorInitialisable::vtkFunctorInitialisable() : vtkFunctor()
   {
-  vtkSMPThreadID NumThreads = vtkSMP::GetNumberOfThreads();
-  IsInitialized = new vtkIdType[NumThreads];
-  memset( IsInitialized, 0, NumThreads * sizeof(vtkIdType) );
+  IsInitialized = vtkSMP::vtkIdTypeThreadLocal::New();
   }
 
 vtkFunctorInitialisable::~vtkFunctorInitialisable()
   {
-  delete [] IsInitialized;
+  IsInitialized->Delete();
   }
 
-bool vtkFunctorInitialisable::ShouldInitialize( vtkSMPThreadID tid ) const
+bool vtkFunctorInitialisable::ShouldInitialize( ) const
   {
-  return !IsInitialized[tid];
+  return !IsInitialized->GetLocal();
+  }
+
+void vtkFunctorInitialisable::Initialized( ) const
+  {
+  IsInitialized->SetLocal( 1 );
   }
 
 void vtkFunctorInitialisable::PrintSelf(ostream &os, vtkIndent indent)
   {
   this->Superclass::PrintSelf( os, indent );
-  os << indent << "Is initialized: " << IsInitialized << endl;
+  os << indent << "Is initialized: " << endl;
+  IsInitialized->PrintSelf( os, indent.GetNextIndent() );
   }
 
 //--------------------------------------------------------------------------------

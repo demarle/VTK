@@ -10,6 +10,7 @@ class vtkCellArray;
 class vtkCellData;
 class vtkSMPMergePoints;
 class vtkIdList;
+namespace vtkSMP { class vtkIdTypeThreadLocal; }
 
 class VTK_SMP_EXPORT vtkFunctor : public vtkObject
 {
@@ -36,11 +37,12 @@ public:
   vtkTypeMacro(vtkFunctorInitialisable,vtkFunctor);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  virtual void Init ( vtkSMPThreadID ) const = 0;
-  bool ShouldInitialize( vtkSMPThreadID tid ) const;
+  virtual void Init ( ) const = 0;
+  bool ShouldInitialize( ) const;
 
 protected:
-  mutable vtkIdType* IsInitialized;
+  void Initialized( ) const;
+  vtkSMP::vtkIdTypeThreadLocal* IsInitialized;
 
   vtkFunctorInitialisable();
   ~vtkFunctorInitialisable();
@@ -104,8 +106,7 @@ namespace vtkSMP
       void PrintSelf( ostream &os, vtkIndent indent );
       vtkThreadLocalStorageContainer<vtkIdType>::iterator GetAll();
       vtkThreadLocalStorageContainer<vtkIdType>::iterator EndOfAll();
-      void SetLocal ( vtkSMPThreadID tid, vtkIdType value );
-      vtkIdType GetLocal ( vtkSMPThreadID tid );
+      void SetLocal ( vtkIdType value );
       vtkIdType GetLocal ();
 
     protected:
@@ -125,19 +126,17 @@ namespace vtkSMP
 
       void PrintSelf( ostream &os, vtkIndent indent );
 
-      T* NewLocal ( vtkSMPThreadID tid, T* specificImpl );
-      T* NewLocal ( vtkSMPThreadID tid );
+      T* NewLocal ( T* specificImpl );
+      T* NewLocal ( );
 
       typename vtkThreadLocalStorageContainer<T*>::iterator GetOrCreateAll( T* specificImpl );
       typename vtkThreadLocalStorageContainer<T*>::iterator GetOrCreateAll( );
 
-      typename vtkThreadLocalStorageContainer<T*>::iterator GetAll( vtkIdType skipThreads = 0 ) ;
+      typename vtkThreadLocalStorageContainer<T*>::iterator GetAll( vtkSMPThreadID skipThreads = 0 ) ;
 
       typename vtkThreadLocalStorageContainer<T*>::iterator EndOfAll( );
 
-      void SetLocal ( vtkSMPThreadID tid, T* item );
-
-      T* GetLocal( vtkSMPThreadID tid );
+      void SetLocal ( T* item );
 
       T* GetLocal();
 

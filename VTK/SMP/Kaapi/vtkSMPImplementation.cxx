@@ -23,9 +23,9 @@ void func_call ( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o )
 
 void func_call_init ( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o )
   {
-  if ( o->ShouldInitialize(tid) )
+  if ( o->ShouldInitialize() )
     {
-    o->Init( tid );
+    o->Init();
     }
   for ( int32_t k = b; k < e; ++k )
     {
@@ -186,11 +186,9 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
   {
   work_t* const work = (work_t*)(args);
 
-  vtkSMPThreadID kid = (vtkSMPThreadID) kaapi_get_self_kid();
-
   vtkFunctorInitialisable* iop = vtkFunctorInitialisable::SafeDownCast( work->op );
-  if ( iop && iop->ShouldInitialize( kid ) )
-    iop->Init( kid );
+  if ( iop && iop->ShouldInitialize( ) )
+    iop->Init( );
 
   kaapi_workqueue_index_t i, nil;
 
@@ -279,14 +277,9 @@ namespace vtkSMP
     return ThreadLocalStorage.end();
     }
 
-  void vtkIdTypeThreadLocal::SetLocal(vtkSMPThreadID tid, vtkIdType value)
+  void vtkIdTypeThreadLocal::SetLocal( vtkIdType value )
     {
-    ThreadLocalStorage[tid] = value;
-    }
-
-  vtkIdType vtkIdTypeThreadLocal::GetLocal(vtkSMPThreadID tid)
-    {
-    return ThreadLocalStorage[tid];
+    ThreadLocalStorage[kaapic_get_thread_num()] = value;
     }
 
   vtkIdType vtkIdTypeThreadLocal::GetLocal()

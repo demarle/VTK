@@ -33,8 +33,9 @@ void vtkThreadLocal<T>::PrintSelf( ostream &os, vtkIndent indent )
   }
 
 template<class T>
-T* vtkThreadLocal<T>::NewLocal( vtkSMPThreadID tid, T *specificImpl )
+T* vtkThreadLocal<T>::NewLocal( T *specificImpl )
   {
+  vtkSMPThreadID tid = kaapic_get_thread_num();
   if (this->ThreadLocalStorage[tid])
     {
     this->ThreadLocalStorage[tid]->UnRegister(this);
@@ -52,8 +53,9 @@ T* vtkThreadLocal<T>::NewLocal( vtkSMPThreadID tid, T *specificImpl )
   }
 
 template<class T>
-T* vtkThreadLocal<T>::NewLocal( vtkSMPThreadID tid )
+T* vtkThreadLocal<T>::NewLocal( )
   {
+  vtkSMPThreadID tid = kaapic_get_thread_num();
   if (this->ThreadLocalStorage[tid])
     {
     this->ThreadLocalStorage[tid]->UnRegister(this);
@@ -71,8 +73,9 @@ T* vtkThreadLocal<T>::NewLocal( vtkSMPThreadID tid )
   }
 
 template<class T>
-void vtkThreadLocal<T>::SetLocal( vtkSMPThreadID tid, T* item )
+void vtkThreadLocal<T>::SetLocal( T* item )
   {
+  vtkSMPThreadID tid = kaapic_get_thread_num();
   if ( this->ThreadLocalStorage[tid] )
     {
     this->ThreadLocalStorage[tid]->UnRegister(this);
@@ -87,12 +90,6 @@ void vtkThreadLocal<T>::SetLocal( vtkSMPThreadID tid, T* item )
   }
 
 template<class T>
-T* vtkThreadLocal<T>::GetLocal( vtkSMPThreadID tid )
-  {
-  return this->ThreadLocalStorage[tid];
-  }
-
-template<class T>
 T* vtkThreadLocal<T>::GetLocal( )
   {
   return this->ThreadLocalStorage[kaapic_get_thread_num()];
@@ -101,9 +98,15 @@ T* vtkThreadLocal<T>::GetLocal( )
 template<class T> template<class Derived>
 void vtkThreadLocal<T>::FillDerivedThreadLocal( vtkThreadLocal<Derived>* other )
   {
-  for ( typename vtkThreadLocalStorageContainer<T*>::type::size_type i = 0; i < ThreadLocalStorage.size(); ++i )
+  typename vtkThreadLocalStorageContainer<T*>::iterator src = this->GetAll();
+  for ( typename vtkThreadLocalStorageContainer<Derived*>::iterator it = other->GetAll();
+        it != other->EndOfAll(); ++it, ++src )
     {
-    other->SetLocal( i, Derived::SafeDownCast(ThreadLocalStorage[i]) );
+    if ( (*it) )
+      (*it)->UnRegister(other);
+    (*it) = Derived::SafeDownCast(*src);
+    if ( (*it) )
+      (*it)->Register(other);
     }
   }
 
@@ -154,7 +157,7 @@ typename vtkThreadLocalStorageContainer<T*>::iterator vtkThreadLocal<T>::GetOrCr
   }
 
 template<class T>
-typename vtkThreadLocalStorageContainer<T*>::iterator vtkThreadLocal<T>::GetAll( vtkIdType skipThreads )
+typename vtkThreadLocalStorageContainer<T*>::iterator vtkThreadLocal<T>::GetAll( vtkSMPThreadID skipThreads )
   {
   typename vtkThreadLocalStorageContainer<T*>::iterator value = ThreadLocalStorage.begin();
   while ( skipThreads )

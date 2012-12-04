@@ -79,12 +79,12 @@ public:
 
     if ( cellId < this->Size )
       {
-      vtkGenericCell* cell = this->TLS_Cell->GetLocal( tid );
+      vtkGenericCell* cell = this->TLS_Cell->GetLocal( );
       if ( !cell )
-        cell = this->TLS_Cell->NewLocal( tid );
-      vtkDoubleArray* cellScalars = this->TLS_CellScalars->GetLocal( tid );
+        cell = this->TLS_Cell->NewLocal( );
+      vtkDoubleArray* cellScalars = this->TLS_CellScalars->GetLocal( );
       if ( !cellScalars )
-        cellScalars = this->TLS_CellScalars->NewLocal( tid );
+        cellScalars = this->TLS_CellScalars->NewLocal( );
       double* s;
       for ( vtkIdType i = 0; i < this->BF && cellId < this->Size; ++i, ++cellId )
         {
