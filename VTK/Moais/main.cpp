@@ -75,7 +75,7 @@ int main( int argc, char** argv )
   tree->Delete();
   isosurface->SetInputConnection( transform->GetOutputPort() );
   isosurface->GenerateValues( 11, 0.0, 1.0 );
-  isosurface->UseScalarTreeOn();
+  isosurface->UseScalarTreeOff();
   transform->Delete();
 
   /* === Pipeline pull === */

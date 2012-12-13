@@ -12,7 +12,6 @@ SET(KIT_INTERFACE_LIBRARIES vtkCommon vtkGraphics ${VTK_SMP_IMPLEMENTATION_LIBRA
 
 set(Kit_SRCS
   ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPImplementation.cxx
-  ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPThreadLocalStorage.h
   vtkSMP.cxx
   vtkSMPObjectFactory.cxx
   vtkSMPTransform.cxx
@@ -25,7 +24,6 @@ set(Kit_SRCS
 SET_SOURCE_FILES_PROPERTIES(
   vtkSMP.cxx
   ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPImplementation.cxx
-  ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPThreadLocalStorage.h
   WRAP_EXCLUDE
 )
 
@@ -37,7 +35,6 @@ SET_SOURCE_FILES_PROPERTIES(
 SET_SOURCE_FILES_PROPERTIES(
   vtkSMP.cxx
   ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPImplementation.cxx
-  ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPThreadLocalStorage.h
   PROPERTIES WRAP_SPECIAL 1
 )
 

@@ -1,154 +1,192 @@
 #include "vtkSMP.h"
 #include "vtkCommand.h"
 #include <kaapic.h>
-#include <kaapi++>
 #include <cmath>
 
-void smpInit(void)
+KaapiInit::KaapiInit() // : com(ka::System::join_community()) { }
   {
-  kaapic_init( KAAPIC_START_ONLY_MAIN );
+  kaapic_init(KAAPIC_START_ONLY_MAIN);
   }
-void smpFini(void)
+
+KaapiInit::~KaapiInit()
   {
+//  com.leave();
+//  ka::System::terminate();
   kaapic_finalize();
   }
 
-void func_call ( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o )
-  {
-  for ( int32_t k = b; k < e; ++k )
-    {
-    (*o)( k, tid );
-    }
-  }
+const KaapiInit performInit;
 
-void func_call_init ( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o )
+template<class Functor>
+class Work {
+  public:
+    /* Dummy constructor for type checking */
+    Work() : _op(NULL), _array(0), _grain(0) {}
+
+    Work(vtkIdType beg, size_t size, const Functor* op)
+      {
+      _op    = op;
+      _array = beg;
+      _grain = sqrt(size);
+      kaapi_atomic_initlock( &_lock );
+      kaapi_workqueue_init_with_lock(&_wq, 0, size, &_lock);
+      }
+
+    Work(vtkIdType beg, size_t size, const Functor* op, kaapi_workqueue_index_t grain)
+      {
+      _op    = op;
+      _array = beg;
+      _grain = grain;
+      kaapi_atomic_initlock( &_lock );
+      kaapi_workqueue_init_with_lock(&_wq, 0, size, &_lock);
+      }
+
+    ~Work() {kaapi_atomic_destroylock( &_lock );}
+
+    /* execute sequential work */
+    bool doWork()
+      {
+      kaapi_workqueue_index_t b, e;
+      vtkIdType beg, end;
+      if ( kaapi_workqueue_pop(&_wq, &b, &e, _grain) ) return false;
+      end = _array+e;
+      for ( beg = _array+b; beg < end; ++beg )
+        {
+        (*_op)( beg );
+        }
+      return true;
+      }
+
+    /* split work and reply to requests */
+    int split (ka::StealContext* sc, int nreq, ka::ListRequest::iterator beg, ka::ListRequest::iterator end);
+
+    const Functor*& getFunctor() {return _op;}
+
+  protected:
+    /* extract parallel work for nreq. Return the unit size */
+    bool helper_split( int& nreq, vtkIdType& beg, vtkIdType& end)
+      {
+      kaapi_atomic_lock( &_lock );
+      kaapi_workqueue_index_t steal_size, i,j;
+      kaapi_workqueue_index_t range_size = kaapi_workqueue_size(&_wq);
+      if (range_size <= _grain)
+        {
+        kaapi_atomic_unlock( &_lock );
+        return false;
+        }
+
+      steal_size = range_size * nreq / (nreq + 1);
+      if (steal_size == 0)
+        {
+        nreq = (range_size / _grain) - 1;
+        steal_size = nreq*_grain;
+        }
+
+      /* perform the actual steal. */
+      if (kaapi_workqueue_steal(&_wq, &i, &j, steal_size))
+        {
+        kaapi_atomic_unlock( &_lock );
+        return false;
+        }
+      kaapi_atomic_unlock( &_lock );
+      beg = _array + i;
+      end = _array + j;
+      return true;
+      }
+
+  protected:
+    const Functor*          _op;
+    vtkIdType               _array;
+    kaapi_workqueue_t       _wq;
+    kaapi_lock_t            _lock;
+    kaapi_workqueue_index_t _grain;
+};
+
+template<class Functor>
+struct TaskWork : public ka::Task<1>::Signature<ka::RW<Work<Functor> > > {};
+
+template<class Functor>
+struct TaskBodyCPU<TaskWork<Functor> > {
+  void operator() ( ka::pointer_rw<Work<Functor> > work )
+    {
+    while( work->doWork() );
+    }
+};
+
+template<>
+struct TaskBodyCPU<TaskWork<vtkFunctorInitialisable> > {
+  void operator() ( ka::pointer_rw<Work<vtkFunctorInitialisable> > work )
+    {
+    const vtkFunctorInitialisable* functor = work->getFunctor();
+    if ( functor->ShouldInitialize() )
+      functor->Init();
+    while( work->doWork() );
+    }
+};
+
+template<class Functor>
+struct TaskSplitter<TaskWork<Functor> > {
+  int operator() ( ka::StealContext* sc,
+                   int nreq,
+                   ka::ListRequest::iterator begin,
+                   ka::ListRequest::iterator end,
+                   ka::pointer_rw<Work<Functor> > work )
+    {
+    return work->split(sc, nreq, begin, end);
+    }
+};
+
+template<class Functor>
+int Work<Functor>::split (ka::StealContext* sc, int nreq, ka::ListRequest::iterator beg, ka::ListRequest::iterator end)
   {
-  if ( o->ShouldInitialize() )
+  /* stolen range */
+  vtkIdType beg_theft;
+  vtkIdType end_theft;
+  size_t size_theft;
+
+  if (!helper_split( nreq, beg_theft, end_theft ))
+    return 0;
+  size_theft = (end_theft-beg_theft)/nreq;
+
+  /* thief work: create a task */
+  for (; nreq>1; --nreq, ++beg, beg_theft+=size_theft)
     {
-    o->Init();
+    beg->Spawn<TaskWork<Functor> >(sc)(new (*beg) Work<Functor>( beg_theft, size_theft, _op, _grain));
+    beg->commit();
     }
-  for ( int32_t k = b; k < e; ++k )
-    {
-    (*o)( k, tid );
-    }
-  }
+  beg->Spawn<TaskWork<Functor> >(sc)(new (*beg) Work<Functor>( beg_theft, end_theft-beg_theft, _op, _grain));
+  beg->commit();
+  ++beg;
+
+  return 0;
+}
 
 template<class T1, class T2, class T3, class T4, class T5, class T6>
-void my_parallel ( const vtkTask* function,
-                   T1* data1, T2* data2, T3* data3, T4* data4, T5* data5, T6* data6,
-                   vtkIdType offset1, vtkIdType offset2,
-                   vtkIdType offset3, vtkIdType offset4,
-                   vtkIdType offset5, vtkIdType offset6,
-                   vtkIdType offset7, vtkIdType offset8 )
-  {
-  function->Execute( data1, data2, data3, data4, data5, data6, offset1, offset2, offset3, offset4, offset5, offset6, offset7, offset8 );
-  }
+struct TaskParallel_ : public ka::Task<15>::Signature<const vtkTask*, T1*, T2*, T3*, T4*, T5*, T6*, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType> {};
+
+template<> template<class T1, class T2, class T3, class T4, class T5, class T6>
+struct TaskBodyCPU<TaskParallel_<T1, T2, T3, T4, T5, T6> > {
+  void operator() ( const vtkTask* function,
+                    T1* data1, T2* data2, T3* data3, T4* data4, T5* data5, T6* data6,
+                    vtkIdType offset1, vtkIdType offset2,
+                    vtkIdType offset3, vtkIdType offset4,
+                    vtkIdType offset5, vtkIdType offset6,
+                    vtkIdType offset7, vtkIdType offset8 )
+    {
+    function->Execute( data1, data2, data3, data4, data5, data6, offset1, offset2, offset3, offset4, offset5, offset6, offset7, offset8 );
+    }
+};
 
 template<class T>
-void my_parallel_1 ( const vtkTask* function,
-                     T* data )
-  {
-  function->Execute( data );
-  }
+struct TaskParallel : public ka::Task<2>::Signature<const vtkTask*, T*> {};
 
-void my_parallel_2 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2 )
-  {
-  function->Execute( data1, data2 );
-  }
-
-void my_parallel_3 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2,
-                     vtkObject* data3 )
-  {
-  function->Execute( data1, data2, data3 );
-  }
-
-void my_parallel_4 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2,
-                     vtkObject* data3,
-                     vtkObject* data4 )
-  {
-  function->Execute( data1, data2, data3, data4 );
-  }
-
-void my_parallel_5 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2,
-                     vtkObject* data3,
-                     vtkObject* data4,
-                     vtkObject* data5 )
-  {
-  function->Execute( data1, data2, data3, data4, data5 );
-  }
-
-void my_parallel_6 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2,
-                     vtkObject* data3,
-                     vtkObject* data4,
-                     vtkObject* data5,
-                     vtkObject* data6 )
-  {
-  function->Execute( data1, data2, data3, data4, data5, data6 );
-  }
-
-void my_parallel_7 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2,
-                     vtkObject* data3,
-                     vtkObject* data4,
-                     vtkObject* data5,
-                     vtkObject* data6,
-                     vtkObject* data7 )
-  {
-  function->Execute( data1, data2, data3, data4, data5, data6, data7 );
-  }
-
-void my_parallel_8 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2,
-                     vtkObject* data3,
-                     vtkObject* data4,
-                     vtkObject* data5,
-                     vtkObject* data6,
-                     vtkObject* data7,
-                     vtkObject* data8 )
-  {
-  function->Execute( data1, data2, data3, data4, data5, data6, data7, data8 );
-  }
-
-void my_parallel_9 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2,
-                     vtkObject* data3,
-                     vtkObject* data4,
-                     vtkObject* data5,
-                     vtkObject* data6,
-                     vtkObject* data7,
-                     vtkObject* data8,
-                     vtkObject* data9 )
-  {
-  function->Execute( data1, data2, data3, data4, data5, data6, data7, data8, data9 );
-  }
-
-void my_parallel_0 ( const vtkTask* function,
-                     vtkObject* data1,
-                     vtkObject* data2,
-                     vtkObject* data3,
-                     vtkObject* data4,
-                     vtkObject* data5,
-                     vtkObject* data6,
-                     vtkObject* data7,
-                     vtkObject* data8,
-                     vtkObject* data9,
-                     vtkObject* data0 )
-  {
-  function->Execute( data1, data2, data3, data4, data5, data6, data7, data8, data9, data0 );
-  }
+template<> template<class T>
+struct TaskBodyCPU<TaskParallel<T> > {
+  void operator() ( const vtkTask* function, T* data )
+    {
+    function->Execute(data);
+    }
+};
 
 typedef struct tree_work
 {
@@ -196,7 +234,7 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
   vtkIdType id = convert_to_row_first(kaapi_workqueue_range_begin(&work->wq), level, work);
   while ( !kaapi_workqueue_pop(&work->wq, &i, &nil, 1) )
     {
-    if ( work->Tree->TraverseNode( id, level, work->op, kaapic_get_thread_num() ) )
+    if ( work->Tree->TraverseNode( id, level, work->op ) )
       {
       ++level;
       id *= work->branching_factor;
@@ -253,299 +291,97 @@ static int splitter(
   return 0;
   }
 
+inline void doFor( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o )
+  {
+  for (int32_t k = b; k < e; ++k)
+    {
+    (*o)( k );
+    }
+  }
+inline void doForInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o )
+  {
+  if (o->ShouldInitialize())
+    o->Init();
+  for (int32_t k = b; k < e; ++k)
+    {
+    (*o)( k );
+    }
+  }
+
 //--------------------------------------------------------------------------------
 namespace vtkSMP
 {
-  vtkIdTypeThreadLocal::vtkIdTypeThreadLocal()
-      : vtkObject(), ThreadLocalStorage(kaapic_get_concurrency())
+  int InternalGetNumberOfThreads()
     {
-    memset(&ThreadLocalStorage[0], 0, sizeof(vtkIdType) * kaapic_get_concurrency());
+    return kaapi_getconcurrency();
     }
 
-  vtkIdTypeThreadLocal::~vtkIdTypeThreadLocal()
+  int InternalGetTid()
     {
-    ThreadLocalStorage.clear();
-    }
-
-  vtkThreadLocalStorageContainer<vtkIdType>::iterator vtkIdTypeThreadLocal::GetAll()
-    {
-    return ThreadLocalStorage.begin();
-    }
-
-  vtkThreadLocalStorageContainer<vtkIdType>::iterator vtkIdTypeThreadLocal::EndOfAll()
-    {
-    return ThreadLocalStorage.end();
-    }
-
-  void vtkIdTypeThreadLocal::SetLocal( vtkIdType value )
-    {
-    ThreadLocalStorage[kaapic_get_thread_num()] = value;
-    }
-
-  vtkIdType vtkIdTypeThreadLocal::GetLocal()
-    {
-    return ThreadLocalStorage[kaapic_get_thread_num()];
+    return kaapi_get_self_kid();
     }
 
   void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
     {
     vtkIdType n = last - first;
-    if (!n) return;
-    uint32_t granularity = grain ? grain : sqrt(n);
+    int g = grain ? grain : sqrt(n);
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
-    kaapic_foreach_attr_set_grains(&attr, granularity, granularity);
-    kaapic_foreach( first, last, &attr, 1, func_call, op );
+    kaapic_foreach_attr_set_grains(&attr, g, g);
+    kaapic_foreach( first, last, &attr, 1, doFor, op );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
     kaapic_foreach_attr_destroy(&attr);
     }
 
   void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op, int grain )
     {
     vtkIdType n = last - first;
-    if (!n) return;
-    uint32_t granularity = grain ? grain : sqrt(n);
+    int g = grain ? grain : sqrt(n);
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
-    kaapic_foreach_attr_set_grains(&attr, granularity, granularity);
-    kaapic_foreach( first, last, &attr, 1, func_call_init, op );
+    kaapic_foreach_attr_set_grains(&attr, g, g);
+    kaapic_foreach( first, last, &attr, 1, doForInit, op );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  template<class T>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T*>::iterator data1,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 2, my_parallel_1,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
   template<>
   void Parallel<vtkSMPMergePoints> ( const vtkTask* function,
-                                     vtkThreadLocalStorageContainer<vtkSMPMergePoints*>::iterator data1,
+                                     vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::iterator data1,
                                      vtkIdType skipThreads )
     {
     for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
       {
       ++data1;
       }
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+//    kaapi_begin_parallel( KAAPI_SCHEDFLAG_DEFAULT );
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+    for ( vtkIdType tid = skipThreads; tid < kaapi_getconcurrency(); ++tid )
       {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 2, my_parallel_1<vtkSMPMergePoints>,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1++), 1, KAAPIC_TYPE_PTR );
+      ka::Spawn<TaskParallel<vtkSMPMergePoints> >()( function, *data1++ );
       }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+//    kaapi_end_parallel( KAAPI_SCHEDFLAG_DEFAULT );
     }
 
-
-  template<class T1, class T2>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 3, my_parallel_2,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-
-  template<class T1, class T2, class T3>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 4, my_parallel_3,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data3+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-
-  template<class T1, class T2, class T3, class T4>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 5, my_parallel_4,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data3+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data4+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-
-  template<class T1, class T2, class T3, class T4, class T5>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 6, my_parallel_5,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data3+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data4+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data5+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-  template<class T1, class T2, class T3, class T4, class T5, class T6>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
-                 typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 7, my_parallel_6,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data3+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data4+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data5+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data6+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-  template<class T1, class T2, class T3, class T4, class T5, class T6>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
-                 typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset1,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset2,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset3,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset4,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset5,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset6,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset7,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset8,
-                 vtkIdType skipThreads = 1 )
-    {
-    for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
-      {
-      ++data1; ++data2; ++data3; ++data4; ++data5; ++data6;
-      ++offset1; ++offset2; ++offset3; ++offset4; ++offset5; ++offset6; ++offset7; ++offset8;
-      }
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 15, my_parallel,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data1++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data2++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data3++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data4++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data5++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data6++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_V, *offset1++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset2++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset3++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset4++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset5++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset6++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset7++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset8++, 1, KAAPIC_TYPE_INT );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
   template<>
   void Parallel<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>( const vtkTask* function,
-                 vtkThreadLocalStorageContainer<vtkIdList*>::iterator data1,
-                 vtkThreadLocalStorageContainer<vtkCellData*>::iterator data2,
-                 vtkThreadLocalStorageContainer<vtkCellArray*>::iterator data3,
-                 vtkThreadLocalStorageContainer<vtkCellArray*>::iterator data4,
-                 vtkThreadLocalStorageContainer<vtkCellArray*>::iterator data5,
-                 vtkThreadLocalStorageContainer<vtkCellArray*>::iterator data6,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset1,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset2,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset3,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset4,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset5,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset6,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset7,
-                 vtkThreadLocalStorageContainer<vtkIdType>::iterator offset8,
+                 vtkSMP::vtkThreadLocal<vtkIdList>::iterator data1,
+                 vtkSMP::vtkThreadLocal<vtkCellData>::iterator data2,
+                 vtkSMP::vtkThreadLocal<vtkCellArray>::iterator data3,
+                 vtkSMP::vtkThreadLocal<vtkCellArray>::iterator data4,
+                 vtkSMP::vtkThreadLocal<vtkCellArray>::iterator data5,
+                 vtkSMP::vtkThreadLocal<vtkCellArray>::iterator data6,
+                 vtkstd::vector<vtkIdType>::iterator offset1,
+                 vtkstd::vector<vtkIdType>::iterator offset2,
+                 vtkstd::vector<vtkIdType>::iterator offset3,
+                 vtkstd::vector<vtkIdType>::iterator offset4,
+                 vtkstd::vector<vtkIdType>::iterator offset5,
+                 vtkstd::vector<vtkIdType>::iterator offset6,
+                 vtkstd::vector<vtkIdType>::iterator offset7,
+                 vtkstd::vector<vtkIdType>::iterator offset8,
                  vtkIdType skipThreads )
     {
     for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
@@ -553,170 +389,16 @@ namespace vtkSMP
       ++data1; ++data2; ++data3; ++data4; ++data5; ++data6;
       ++offset1; ++offset2; ++offset3; ++offset4; ++offset5; ++offset6; ++offset7; ++offset8;
       }
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
+//    kaapi_begin_parallel( KAAPI_SCHEDFLAG_DEFAULT );
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+    for ( vtkIdType tid = skipThreads; tid < kaapi_getconcurrency(); ++tid )
       {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 15, my_parallel<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data1++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data2++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data3++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data4++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data5++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *data6++, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_V, *offset1++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset2++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset3++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset4++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset5++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset6++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset7++, 1, KAAPIC_TYPE_INT,
-                    KAAPIC_MODE_V, *offset8++, 1, KAAPIC_TYPE_INT );
+      ka::Spawn<TaskParallel_<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray> >()(
+                    function, *data1++, *data2++, *data3++, *data4++, *data5++, *data6++,
+                    *offset1++, *offset2++, *offset3++, *offset4++, *offset5++, *offset6++, *offset7++, *offset8++ );
       }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-  template<class T1, class T2, class T3, class T4, class T5, class T6, class T7>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
-                 typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
-                 typename vtkThreadLocalStorageContainer<T7*>::iterator data7,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 8, my_parallel_7,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data3+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data4+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data5+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data6+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data7+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-
-  template<class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
-                 typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
-                 typename vtkThreadLocalStorageContainer<T7*>::iterator data7,
-                 typename vtkThreadLocalStorageContainer<T8*>::iterator data8,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 9, my_parallel_8,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data3+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data4+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data5+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data6+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data7+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data8+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-
-  template<class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
-                 typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
-                 typename vtkThreadLocalStorageContainer<T7*>::iterator data7,
-                 typename vtkThreadLocalStorageContainer<T8*>::iterator data8,
-                 typename vtkThreadLocalStorageContainer<T9*>::iterator data9,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 10, my_parallel_9,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data3+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data4+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data5+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data6+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data7+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data8+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data9+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
-    }
-
-
-  template<class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T0>
-  void Parallel( const vtkTask* function,
-                 typename vtkThreadLocalStorageContainer<T1*>::iterator data1,
-                 typename vtkThreadLocalStorageContainer<T2*>::iterator data2,
-                 typename vtkThreadLocalStorageContainer<T3*>::iterator data3,
-                 typename vtkThreadLocalStorageContainer<T4*>::iterator data4,
-                 typename vtkThreadLocalStorageContainer<T5*>::iterator data5,
-                 typename vtkThreadLocalStorageContainer<T6*>::iterator data6,
-                 typename vtkThreadLocalStorageContainer<T7*>::iterator data7,
-                 typename vtkThreadLocalStorageContainer<T8*>::iterator data8,
-                 typename vtkThreadLocalStorageContainer<T9*>::iterator data9,
-                 typename vtkThreadLocalStorageContainer<T0*>::iterator data0,
-                 vtkIdType skipThreads = 1 )
-    {
-    kaapic_spawn_attr_t attr;
-    kaapic_spawn_attr_init(&attr);
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
-    for ( vtkIdType tid = skipThreads; tid < kaapic_get_concurrency(); ++tid )
-      {
-      kaapic_spawn_attr_set_kproc(&attr, tid);
-      kaapic_spawn( &attr, 11, my_parallel_0,
-                    KAAPIC_MODE_R, function, 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data1+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data2+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data3+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data4+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data5+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data6+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data7+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data8+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data9+tid), 1, KAAPIC_TYPE_PTR,
-                    KAAPIC_MODE_R, *(data0+tid), 1, KAAPIC_TYPE_PTR );
-      }
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
-    kaapic_spawn_attr_destroy(&attr);
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+//    kaapi_end_parallel( KAAPI_SCHEDFLAG_DEFAULT );
     }
 
   void Traverse( const vtkParallelTree *Tree, vtkFunctor* func )
@@ -724,7 +406,7 @@ namespace vtkSMP
     work_t work;
     kaapi_workqueue_index_t i, nil;
 
-    kaapic_begin_parallel( KAAPIC_FLAG_DEFAULT );
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
     /* get the self thread */
     kaapi_thread_t* thread = kaapi_self_thread();
@@ -754,7 +436,7 @@ namespace vtkSMP
     vtkIdType id = 0;
     while ( !kaapi_workqueue_pop(&work.wq, &i, &nil, 1) )
       {
-      if ( Tree->TraverseNode( id, level, func, kaapic_get_thread_num() ) )
+      if ( Tree->TraverseNode( id, level, func ) )
         {
         ++level;
         id *= work.branching_factor;
@@ -779,7 +461,7 @@ namespace vtkSMP
 
     delete [] work.nodes_per_subtrees;
 
-    kaapic_end_parallel( KAAPIC_FLAG_DEFAULT );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
 
     }
 }

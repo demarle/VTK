@@ -1,8 +1,8 @@
 template<class T>
 vtkThreadLocal<T>::vtkThreadLocal() :
-    vtkObject(), ThreadLocalStorage(kaapic_get_concurrency())
+    vtkObject(), ThreadLocalStorage(kaapi_getconcurrency())
   {
-  memset(&ThreadLocalStorage[0], 0, sizeof(T*) * kaapic_get_concurrency());
+  memset(&ThreadLocalStorage[0], 0, sizeof(T*) * kaapi_getconcurrency());
   }
 
 template<class T>
@@ -35,7 +35,7 @@ void vtkThreadLocal<T>::PrintSelf( ostream &os, vtkIndent indent )
 template<class T>
 T* vtkThreadLocal<T>::NewLocal( T *specificImpl )
   {
-  vtkSMPThreadID tid = kaapic_get_thread_num();
+  int32_t tid = kaapi_get_self_kid();
   if (this->ThreadLocalStorage[tid])
     {
     this->ThreadLocalStorage[tid]->UnRegister(this);
@@ -55,7 +55,7 @@ T* vtkThreadLocal<T>::NewLocal( T *specificImpl )
 template<class T>
 T* vtkThreadLocal<T>::NewLocal( )
   {
-  vtkSMPThreadID tid = kaapic_get_thread_num();
+  int32_t tid = kaapi_get_self_kid();
   if (this->ThreadLocalStorage[tid])
     {
     this->ThreadLocalStorage[tid]->UnRegister(this);
@@ -75,7 +75,7 @@ T* vtkThreadLocal<T>::NewLocal( )
 template<class T>
 void vtkThreadLocal<T>::SetLocal( T* item )
   {
-  vtkSMPThreadID tid = kaapic_get_thread_num();
+  int32_t tid = kaapi_get_self_kid();
   if ( this->ThreadLocalStorage[tid] )
     {
     this->ThreadLocalStorage[tid]->UnRegister(this);
@@ -92,22 +92,13 @@ void vtkThreadLocal<T>::SetLocal( T* item )
 template<class T>
 T* vtkThreadLocal<T>::GetLocal( )
   {
-  return this->ThreadLocalStorage[kaapic_get_thread_num()];
+  return this->ThreadLocalStorage[kaapi_get_self_kid()];
   }
 
 template<class T> template<class Derived>
-void vtkThreadLocal<T>::FillDerivedThreadLocal( vtkThreadLocal<Derived>* other )
+Derived* vtkThreadLocal<T>::GetLocal( )
   {
-  typename vtkThreadLocalStorageContainer<T*>::iterator src = this->GetAll();
-  for ( typename vtkThreadLocalStorageContainer<Derived*>::iterator it = other->GetAll();
-        it != other->EndOfAll(); ++it, ++src )
-    {
-    if ( (*it) )
-      (*it)->UnRegister(other);
-    (*it) = Derived::SafeDownCast(*src);
-    if ( (*it) )
-      (*it)->Register(other);
-    }
+  return Derived::SafeDownCast(this->ThreadLocalStorage[kaapi_get_self_kid()]);
   }
 
 template<class T>

@@ -74,7 +74,7 @@ struct vtkSMPWarpVectorOp : public vtkFunctor
   vtkArrayIteratorTemplate<T2> *inVecIter;
   T1 scaleFactor;
 
-  void  operator()( vtkIdType index, vtkSMPThreadID tid ) const
+  void  operator()( vtkIdType index ) const
     {
     T1* inTuple = inIter->GetTuple(index);
     T1* outTuple = outIter->GetTuple(index);

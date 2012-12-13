@@ -70,7 +70,7 @@ public:
     Max = t->TreeSize;
     }
 
-  void operator ()( vtkIdType index, vtkSMPThreadID tid ) const
+  void operator ()( vtkIdType index ) const
     {
     double my_min = VTK_DOUBLE_MAX;
     double my_max = -VTK_DOUBLE_MAX;
@@ -217,7 +217,7 @@ void vtkSMPMinMaxTree::InitTraversal(double scalarValue)
   this->TreeIndex = this->TreeSize;
   }
 
-int vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkFunctor* function, vtkSMPThreadID tid ) const
+int vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkFunctor* function ) const
   {
   if ( id >= this->TreeSize )
     {
@@ -236,7 +236,7 @@ int vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkFunctor* function,
     vtkIdType max_id = this->DataSet->GetNumberOfCells();
     for ( vtkIdType i = 0; i < this->BranchingFactor && cell_id < max_id; ++i, ++cell_id )
       {
-      (*function)( cell_id, tid );
+      (*function)( cell_id );
       }
     return 0;
     }

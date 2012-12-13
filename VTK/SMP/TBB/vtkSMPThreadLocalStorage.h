@@ -2,11 +2,6 @@ template<class T>
 vtkThreadLocal<T>::vtkThreadLocal() :
     vtkObject(), ThreadLocalStorage()
   {
-  #pragma omp parallel
-  #pragma omp master
-    {
-    ThreadLocalStorage.resize(omp_get_num_threads(), 0);
-    }
   }
 
 template<class T>
@@ -28,90 +23,86 @@ void vtkThreadLocal<T>::PrintSelf( ostream &os, vtkIndent indent )
   this->Superclass::PrintSelf( os, indent );
   os << indent << "Class stored: " << typeid(T).name() << endl;
   os << indent << "Local storage: " << endl;
-  for ( size_t i = 0; i < this->ThreadLocalStorage.size(); ++i )
+  size_t i = 0;
+  for ( typename vtkThreadLocalStorageContainer<T*>::iterator it = ThreadLocalStorage.begin();
+        it != ThreadLocalStorage.end(); ++it, ++i )
     {
-    os << indent.GetNextIndent() << "id " << i << ": (" << ThreadLocalStorage[i] << ")" << endl;
-    if ( !ThreadLocalStorage[i] ) continue;
-    ThreadLocalStorage[i]->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
+    os << indent.GetNextIndent() << "id " << i << ": (" << *it << ")" << endl;
+    if ( *it ) (*it)->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
     }
   }
 
 template<class T>
 T* vtkThreadLocal<T>::NewLocal( T *specificImpl )
   {
-  int tid = omp_get_thread_num();
-  if (this->ThreadLocalStorage[tid])
+  T*& local = ThreadLocalStorage.local();
+  if ( local )
     {
-    this->ThreadLocalStorage[tid]->UnRegister(this);
+    local->UnRegister(this);
     }
 
-  T* item = specificImpl->NewInstance();
-  if (item)
+  local = specificImpl->NewInstance();
+  if (local)
     {
-    item->Register(this);
-    item->Delete();
+    local->Register(this);
+    local->Delete();
     }
-  this->ThreadLocalStorage[tid] = item;
 
-  return item;
+  return local;
   }
 
 template<class T>
 T* vtkThreadLocal<T>::NewLocal( )
   {
-  int tid = omp_get_thread_num();
-  if (this->ThreadLocalStorage[tid])
+  T*& local = ThreadLocalStorage.local();
+  if ( local )
     {
-    this->ThreadLocalStorage[tid]->UnRegister(this);
+    local->UnRegister(this);
     }
 
-  T* item = T::New();
-  if (item)
+  local = T::New();
+  if (local)
     {
-    item->Register(this);
-    item->Delete();
+    local->Register(this);
+    local->Delete();
     }
-  this->ThreadLocalStorage[tid] = item;
 
-  return item;
+  return local;
   }
 
 template<class T>
 void vtkThreadLocal<T>::SetLocal( T* item )
   {
-  int tid = omp_get_thread_num();
-  if ( this->ThreadLocalStorage[tid] )
+  T*& local = ThreadLocalStorage.local();
+  if ( local )
     {
-    this->ThreadLocalStorage[tid]->UnRegister(this);
+    local->UnRegister(this);
     }
 
-  if ( item )
+  local = item;
+  if (local)
     {
-    item->Register( this );
+    local->Register(this);
     }
-
-  this->ThreadLocalStorage[tid] = item;
   }
 
 template<class T>
 T* vtkThreadLocal<T>::GetLocal( )
   {
-  return this->ThreadLocalStorage[omp_get_thread_num()];
+  T*& local = ThreadLocalStorage.local();
+  return local;
   }
 
 template<class T> template<class Derived>
-void vtkThreadLocal<T>::FillDerivedThreadLocal( vtkThreadLocal<Derived>* other )
+Derived* vtkThreadLocal<T>::GetLocal()
   {
-  typename vtkThreadLocalStorageContainer<T*>::iterator src = this->GetAll();
-  for ( typename vtkThreadLocalStorageContainer<Derived*>::iterator it = other->GetAll();
-        it != other->EndOfAll(); ++it, ++src )
+  T*& local = ThreadLocalStorage.local();
+  Derived* derived_local = Derived::SafeDownCast(local);
+  if ( !derived_local )
     {
-    if ( (*it) )
-      (*it)->UnRegister(other);
-    (*it) = Derived::SafeDownCast(*src);
-    if ( (*it) )
-      (*it)->Register(other);
+
     }
+  return derived_local;
   }
 
 template<class T>

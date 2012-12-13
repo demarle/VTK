@@ -160,7 +160,7 @@ public:
     Initialized();
     }
 
-  void operator ()( vtkIdType cellId, vtkSMPThreadID tid ) const
+  void operator ()( vtkIdType cellId ) const
     {
     vtkGenericCell *cell = this->Cells->GetLocal( );
     int cellType = input->GetCellType(cellId);
@@ -249,7 +249,7 @@ public:
 
   double ScalarValue;
 
-  void operator ()( vtkIdType id, vtkSMPThreadID tid ) const
+  void operator ()( vtkIdType id ) const
     {
     vtkGenericCell* cell = this->Cells->GetLocal( );
     vtkDataArray* scalars = this->CellsScalars->GetLocal( );
@@ -491,17 +491,16 @@ int vtkSMPContourFilter::RequestData(
       {
       for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
         {
-        vtkSMP::ForEach( 0, numCells, my_contour );
+        vtkSMP::ForEach( 0, numCells, my_contour, 1024 );
         }
       }
     timer->end_bench_timer();
-
     // Merge
     timer->start_bench_timer();
     if ( parallelLocator )
       {
       vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* SMPLocator = vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::New();
-      my_contour->Locator->FillDerivedThreadLocal( SMPLocator );
+      my_contour->Locator->FillDerivedThreadLocal(SMPLocator);
       vtkSMP::MergePoints( parallelLocator, SMPLocator,
                            outPd, my_contour->outPd,
                            newVerts, my_contour->newVerts,
