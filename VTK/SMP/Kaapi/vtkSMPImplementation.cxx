@@ -194,6 +194,7 @@ typedef struct tree_work
   const vtkParallelTree* Tree;
   vtkFunctor* op;
   int max_level;
+  int cur_level;
   vtkIdType branching_factor;
   vtkIdType* nodes_per_subtrees;
   int root_lvl;
@@ -230,22 +231,24 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
 
   kaapi_workqueue_index_t i, nil;
 
-  int level = work->root_lvl;
-  vtkIdType id = convert_to_row_first(kaapi_workqueue_range_begin(&work->wq), level, work);
+  work->cur_level = work->root_lvl;
+  vtkIdType id = convert_to_row_first(kaapi_workqueue_range_begin(&work->wq), work->cur_level, work);
   while ( !kaapi_workqueue_pop(&work->wq, &i, &nil, 1) )
     {
-    if ( work->Tree->TraverseNode( id, level, work->op ) )
+    if ( work->Tree->TraverseNode( id, work->cur_level, work->op ) )
       {
-      ++level;
+      ++work->cur_level;
       id *= work->branching_factor;
       }
     else
       {
-      if ( work->max_level != level )
-        kaapi_workqueue_pop(&work->wq, &i, &nil, work->nodes_per_subtrees[work->max_level - level] - 1);
-      while ( !(id % work->branching_factor) && level > work->root_lvl )
+      if ( work->max_level != work->cur_level )
         {
-        --level;
+        kaapi_workqueue_pop(&work->wq, &i, &nil, work->nodes_per_subtrees[work->max_level - work->cur_level] - 1);
+        }
+      while ( !(id % work->branching_factor) && work->cur_level > work->root_lvl )
+        {
+        --work->cur_level;
         id = (id - 1) / work->branching_factor;
         }
       }
@@ -266,7 +269,7 @@ static int splitter(
   int steal_lvl = work->root_lvl + 1;
 
   kaapi_request_t* req = kaapi_api_listrequest_iterator_get(lr, lri);
-  while ( req && steal_lvl < work->max_level )
+  while ( req && work->cur_level >= steal_lvl && steal_lvl < work->max_level )
     {
     if ( !(kaapi_workqueue_steal(&work->wq, &i, &j, work->nodes_per_subtrees[work->max_level - steal_lvl]) ) )
       {
@@ -432,22 +435,24 @@ namespace vtkSMP
           &work     /* arg for splitter = work to split */
           );
 
-    int level = work.root_lvl;
+    work.cur_level = work.root_lvl;
     vtkIdType id = 0;
     while ( !kaapi_workqueue_pop(&work.wq, &i, &nil, 1) )
       {
-      if ( Tree->TraverseNode( id, level, func ) )
+      if ( Tree->TraverseNode( id, work.cur_level, func ) )
         {
-        ++level;
+        ++work.cur_level;
         id *= work.branching_factor;
         }
       else
         {
-        if ( work.max_level != level )
-          kaapi_workqueue_pop(&work.wq, &i, &nil, work.nodes_per_subtrees[work.max_level - level] - 1);
-        while ( !(id % work.branching_factor) && level > work.root_lvl )
+        if ( work.max_level != work.cur_level )
           {
-          --level;
+          kaapi_workqueue_pop(&work.wq, &i, &nil, work.nodes_per_subtrees[work.max_level - work.cur_level] - 1);
+          }
+        while ( !(id % work.branching_factor) && work.cur_level > work.root_lvl )
+          {
+          --work.cur_level;
           id = (id - 1) / work.branching_factor;
           }
         }
