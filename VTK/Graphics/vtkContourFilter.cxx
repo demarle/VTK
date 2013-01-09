@@ -531,6 +531,7 @@ int vtkContourFilter::RequestData(
       // Loop over all contour values.  Then for each contour value,
       // loop over all cells.
       //
+      vtkBenchTimer::New()->start_bench_timer();
       for (i=0; i < numContours; i++)
         {
         for ( this->ScalarTree->InitTraversal(values[i]);
@@ -542,6 +543,7 @@ int vtkContourFilter::RequestData(
 
           } //for all cells
         } //for all contour values
+      vtkBenchTimer::New()->end_bench_timer();
       } //using scalar tree
 
     vtkDebugMacro(<<"Created: "

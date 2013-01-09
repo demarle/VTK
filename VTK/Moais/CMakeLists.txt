@@ -25,7 +25,7 @@ IF(VTK_USE_SMP)
   add_definitions(-DVTK_CAN_USE_SMP=1 -DVTK_WINDOW_NAME=\"${SMP_NAME}\")
 
   add_executable(${SMP_NAME}Bench MACOSX_BUNDLE "main.cpp" ${HDRS})
-  target_link_libraries(${SMP_NAME}Bench vtkIO vtkRendering vtkSMP vtkParallel)
+  target_link_libraries(${SMP_NAME}Bench vtkIO vtkRendering vtkSMP vtkParallel vtkHybrid)
 
   install(TARGETS ${SMP_NAME}Bench RUNTIME DESTINATION bin)
 ELSE(VTK_USE_SMP)
@@ -44,7 +44,7 @@ ELSE(VTK_USE_SMP)
     add_definitions(-DVTK_WINDOW_NAME=\"VTKreference\")
 
     add_executable(purevtkBench MACOSX_BUNDLE "main.cpp" ${HDRS})
-    target_link_libraries(purevtkBench vtkIO vtkRendering vtkGraphics)
+    target_link_libraries(purevtkBench vtkIO vtkRendering vtkGraphics vtkHybrid)
 
     install(TARGETS purevtkBench RUNTIME DESTINATION bin)
   ENDIF(VTK_USE_MPI)

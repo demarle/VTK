@@ -19,6 +19,7 @@ set(Kit_SRCS
   vtkSMPWarpVector.cxx
   vtkSMPMergePoints.cxx
   vtkSMPMinMaxTree.cxx
+  vtkSMPZCurve.cxx
 )
 
 SET_SOURCE_FILES_PROPERTIES(
@@ -63,6 +64,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkSMPWarpVector.h
     vtkSMPMergePoints.h
     vtkSMPMinMaxTree.h
+    vtkSMPZCurve.h
     )
 
   INSTALL(FILES ${__inst_files}

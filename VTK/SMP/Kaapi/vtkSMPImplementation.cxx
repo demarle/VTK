@@ -231,7 +231,6 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
 
   kaapi_workqueue_index_t i, nil;
 
-  work->cur_level = work->root_lvl;
   vtkIdType id = convert_to_row_first(kaapi_workqueue_range_begin(&work->wq), work->cur_level, work);
   while ( !kaapi_workqueue_pop(&work->wq, &i, &nil, 1) )
     {
@@ -280,6 +279,7 @@ static int splitter(
       tw->max_level = work->max_level;
       tw->nodes_per_subtrees = work->nodes_per_subtrees;
       tw->root_lvl = steal_lvl;
+      tw->cur_level = steal_lvl;
       kaapi_workqueue_init_with_kproc( &tw->wq, i, j, req->ident );
       kaapi_task_init( kaapi_request_toptask(req), thief_entrypoint, tw);
       kaapi_request_pushtask_adaptive( req, victim_task, splitter, 0 );

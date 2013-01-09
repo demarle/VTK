@@ -7,6 +7,7 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkAxesActor.h"
 
 #include "vtkTransformFilter.h"
 #ifdef VTK_CAN_USE_SMP
@@ -15,9 +16,9 @@
   #include "vtkSMPMergePoints.h"
   #include "vtkSMPMinMaxTree.h"
 #else
+  #include "vtkTransform.h"
   #include "vtkContourFilter.h"
   #include "vtkSimpleScalarTree.h"
-  #include "vtkTransform.h"
 #endif
 
 int main( int argc, char** argv )
@@ -49,34 +50,37 @@ int main( int argc, char** argv )
   cout << "Using file " << argv[1] << endl;
 
   /* === Distributing data === */
-  vtkTransformFilter* transform = vtkTransformFilter::New();
-  transform->SetInputConnection( usgReader ? usgReader->GetOutputPort() : polyReader->GetOutputPort() );
 #ifdef VTK_CAN_USE_SMP
   vtkSMPTransform* t = vtkSMPTransform::New();
 #else
   vtkTransform* t = vtkTransform::New();
 #endif
   t->Identity();
+  vtkTransformFilter* transform = vtkTransformFilter::New();
   transform->SetTransform( t );
   t->Delete();
+  transform->SetInputConnection( usgReader ? usgReader->GetOutputPort() : polyReader->GetOutputPort() );
+  if (usgReader)
+    usgReader->Delete();
+  else
+    polyReader->Delete();
 
   /* === Testing contour filter === */
 #ifdef VTK_CAN_USE_SMP
-  vtkContourFilter* isosurface = vtkSMPContourFilter::New();
+  vtkSMPContourFilter* isosurface = vtkSMPContourFilter::New();
   vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
   isosurface->SetLocator( locator );
   locator->Delete();
   vtkSMPMinMaxTree* tree = vtkSMPMinMaxTree::New();
-#else
-  vtkContourFilter* isosurface = vtkContourFilter::New();
-  vtkSimpleScalarTree* tree = vtkSimpleScalarTree::New();
-#endif
   isosurface->SetScalarTree(tree);
   tree->Delete();
+#else
+  vtkContourFilter* isosurface = vtkContourFilter::New();
+#endif
   isosurface->SetInputConnection( transform->GetOutputPort() );
-  isosurface->GenerateValues( 11, 0.0, 1.0 );
-  isosurface->UseScalarTreeOn();
   transform->Delete();
+  isosurface->GenerateValues( 11, 0.0, 1.0 );
+  isosurface->UseScalarTreeOff();
 
   /* === Pipeline pull === */
 #ifndef HIDE_VTK_WINDOW
@@ -103,28 +107,22 @@ int main( int argc, char** argv )
   window->Delete();
 
   eventsCatcher->Initialize();
+  eventsCatcher->Start();
+#else
+  isosurface->Update();
 #endif
 
-  int bf = 2;
-  while ( bf < 10 )
-    {
-    cout << endl << "Branching factor set to " << bf;
-    tree->SetBranchingFactor( bf );
-    isosurface->Modified();
+  /* === New computation with search tree === */
+  isosurface->UseScalarTreeOn();
+  isosurface->Modified();
+
 #ifdef HIDE_VTK_WINDOW
-    isosurface->Update();
-#else
-    eventsCatcher->Render();
-    eventsCatcher->Start();
-#endif
-    cout << "Tree level was " << tree->GetLevel() << endl;
-    if ( bf < 4 ) ++bf; else bf *= 2;
-    }
-#ifdef HIDE_VTK_WINDOW
+  isosurface->Update();
   isosurface->Delete();
 #else
+  eventsCatcher->Render();
+  eventsCatcher->Start();
   eventsCatcher->Delete();
 #endif
-
   return 0;
   }
