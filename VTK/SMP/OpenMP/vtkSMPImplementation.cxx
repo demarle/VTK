@@ -113,9 +113,11 @@ namespace vtkSMP
     vtkIdType bf;
     Tree->GetTreeSize(lvl,bf);
     #pragma omp parallel
-    #pragma omp master
       {
-      omp_traversal( 0, 0, bf, Tree, func);
+      #pragma omp single nowait
+        {
+        omp_traversal( 0, 0, bf, Tree, func);
+        }
       }
     }
 }
