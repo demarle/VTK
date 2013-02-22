@@ -491,7 +491,7 @@ int vtkSMPContourFilter::RequestData(
       {
       for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
         {
-        vtkSMP::ForEach( 0, numCells, my_contour, 1024 );
+        vtkSMP::ForEach( 0, numCells, my_contour );
         }
       }
     timer->end_bench_timer();

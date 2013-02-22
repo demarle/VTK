@@ -28,6 +28,11 @@ IF(VTK_USE_SMP)
   target_link_libraries(${SMP_NAME}Bench vtkIO vtkRendering vtkSMP vtkParallel vtkHybrid)
 
   install(TARGETS ${SMP_NAME}Bench RUNTIME DESTINATION bin)
+
+  add_executable(viewMesh MACOSX_BUNDLE "viewer.cpp")
+  target_link_libraries(viewMesh vtkIO vtkSMP)
+  install(TARGETS viewMesh RUNTIME DESTINATION bin)
+
 ELSE(VTK_USE_SMP)
   IF(VTK_USE_MPI)
     find_package(MPI REQUIRED)
@@ -53,7 +58,3 @@ ENDIF(VTK_USE_SMP)
 add_executable(buildBenchMeshes MACOSX_BUNDLE "meshes.cpp")
 target_link_libraries(buildBenchMeshes vtkIO vtkRendering)
 install(TARGETS buildBenchMeshes RUNTIME DESTINATION bin)
-
-add_executable(viewMesh MACOSX_BUNDLE "viewer.cpp")
-target_link_libraries(viewMesh vtkIO vtkRendering vtkVolumeRendering)
-install(TARGETS viewMesh RUNTIME DESTINATION bin)

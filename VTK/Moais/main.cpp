@@ -10,11 +10,15 @@
 #include "vtkAxesActor.h"
 
 #include "vtkTransformFilter.h"
+#include "vtkPointData.h"
+#include "vtkCellData.h"
+#include "vtkDoubleArray.h"
 #ifdef VTK_CAN_USE_SMP
   #include "vtkSMPTransform.h"
   #include "vtkSMPContourFilter.h"
   #include "vtkSMPMergePoints.h"
   #include "vtkSMPMinMaxTree.h"
+  #include "vtkSMPZCurve.h"
 #else
   #include "vtkTransform.h"
   #include "vtkContourFilter.h"
@@ -51,14 +55,14 @@ int main( int argc, char** argv )
 
   /* === Distributing data === */
 #ifdef VTK_CAN_USE_SMP
-  vtkSMPTransform* t = vtkSMPTransform::New();
+  vtkSMPZCurve* transform = vtkSMPZCurve::New();
 #else
   vtkTransform* t = vtkTransform::New();
-#endif
   t->Identity();
   vtkTransformFilter* transform = vtkTransformFilter::New();
   transform->SetTransform( t );
   t->Delete();
+#endif
   transform->SetInputConnection( usgReader ? usgReader->GetOutputPort() : polyReader->GetOutputPort() );
   if (usgReader)
     usgReader->Delete();
@@ -84,6 +88,19 @@ int main( int argc, char** argv )
 
   /* === Pipeline pull === */
 #ifndef HIDE_VTK_WINDOW
+  vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
+  mapper->SetInputConnection( transform->GetOutputPort() );
+  vtkActor* reference = vtkActor::New();
+  reference->SetMapper( mapper );
+  mapper->Delete();
+  double bounds[6];
+  mapper->GetBounds(bounds);
+  reference->SetPosition( bounds[1], bounds[2], bounds[4] );
+
+  vtkIdType n;
+  vtkPointSet* tmp;
+  vtkDataArray* scalars;
+
   vtkPolyDataMapper* map = vtkPolyDataMapper::New();
   map->SetInputConnection( isosurface->GetOutputPort() );
   isosurface->Delete();
@@ -91,11 +108,60 @@ int main( int argc, char** argv )
   vtkActor* object = vtkActor::New();
   object->SetMapper( map );
   map->Delete();
+  object->SetPosition( bounds[0], bounds[2], bounds[4]);
 
   vtkRenderer* viewport = vtkRenderer::New();
   viewport->SetBackground( .5, .5, .5 );
   viewport->AddActor( object );
   object->Delete();
+  viewport->AddActor( reference );
+  reference->Delete();
+  /* === Visualisation of points mapping === */
+  transform->Update();
+  tmp = transform->GetOutput()->NewInstance();
+  tmp->DeepCopy( transform->GetOutput() );
+  n = tmp->GetNumberOfPoints();
+  scalars = tmp->GetPointData()->GetScalars();
+  for ( vtkIdType i = 0; i < n; ++i )
+    {
+    scalars->SetTuple1( i, double(i)/n);
+    }
+  vtkPolyDataMapper* ptmapper = vtkPolyDataMapper::New();
+  ptmapper->SetInput( vtkPolyData::SafeDownCast(tmp) );
+  vtkActor* ptactor = vtkActor::New();
+  ptactor->SetMapper( ptmapper );
+  ptmapper->Delete();
+  tmp->Delete();
+  ptactor->SetPosition( bounds[1]*2 - bounds[0], bounds[2], bounds[4] );
+  viewport->AddActor( ptactor );
+  ptactor->Delete();
+  /* */
+  /* === Visualisation of cells mapping === */
+  transform->Update();
+  tmp = transform->GetOutput()->NewInstance();
+  tmp->DeepCopy( transform->GetOutput() );
+  n = tmp->GetNumberOfCells();
+  scalars = vtkDoubleArray::New();
+  scalars->SetNumberOfComponents( 1 );
+  scalars->Allocate( n, n );
+  scalars->SetNumberOfTuples( n );
+  for ( vtkIdType i = 0; i < n; ++i )
+    {
+    scalars->SetTuple1( i, double(i)/n);
+    }
+  tmp->GetCellData()->SetScalars( scalars );
+  scalars->Delete();
+  tmp->GetPointData()->SetScalars(NULL);
+  vtkPolyDataMapper* cellmapper = vtkPolyDataMapper::New();
+  cellmapper->SetInput( vtkPolyData::SafeDownCast(tmp) );
+  vtkActor* cellactor = vtkActor::New();
+  cellactor->SetMapper( cellmapper );
+  cellmapper->Delete();
+  tmp->Delete();
+  cellactor->SetPosition( bounds[1]*3 - bounds[0]*2, bounds[2], bounds[4] );
+  viewport->AddActor( cellactor );
+  cellactor->Delete();
+  /* */
 
   vtkRenderWindow* window = vtkRenderWindow::New();
   window->AddRenderer( viewport );
@@ -108,21 +174,11 @@ int main( int argc, char** argv )
 
   eventsCatcher->Initialize();
   eventsCatcher->Start();
+  eventsCatcher->Delete();
 #else
-  isosurface->Update();
-#endif
-
-  /* === New computation with search tree === */
-  isosurface->UseScalarTreeOn();
-  isosurface->Modified();
-
-#ifdef HIDE_VTK_WINDOW
   isosurface->Update();
   isosurface->Delete();
-#else
-  eventsCatcher->Render();
-  eventsCatcher->Start();
-  eventsCatcher->Delete();
 #endif
+
   return 0;
   }
