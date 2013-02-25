@@ -55,14 +55,14 @@ int main( int argc, char** argv )
 
   /* === Distributing data === */
 #ifdef VTK_CAN_USE_SMP
-  vtkSMPZCurve* transform = vtkSMPZCurve::New();
+  vtkSMPTransform* t = vtkSMPTransform::New();
 #else
   vtkTransform* t = vtkTransform::New();
+#endif
   t->Identity();
   vtkTransformFilter* transform = vtkTransformFilter::New();
   transform->SetTransform( t );
   t->Delete();
-#endif
   transform->SetInputConnection( usgReader ? usgReader->GetOutputPort() : polyReader->GetOutputPort() );
   if (usgReader)
     usgReader->Delete();
