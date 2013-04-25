@@ -9,17 +9,18 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkAxesActor.h"
 
-#include "vtkTransformFilter.h"
 #include "vtkPointData.h"
 #include "vtkCellData.h"
 #include "vtkDoubleArray.h"
 #ifdef VTK_CAN_USE_SMP
-  #include "vtkSMPTransform.h"
+  #include "vtkSMPDistributePolyData.h"
   #include "vtkSMPContourFilter.h"
   #include "vtkSMPMergePoints.h"
   #include "vtkSMPMinMaxTree.h"
   #include "vtkSMPZCurve.h"
+  #include "vtkSMPExecutive.h"
 #else
+  #include "vtkTransformFilter.h"
   #include "vtkTransform.h"
   #include "vtkContourFilter.h"
   #include "vtkSimpleScalarTree.h"
@@ -32,6 +33,12 @@ int main( int argc, char** argv )
     cout << "You must provide a file name" << endl;
     return 1;
     }
+
+#if VTK_CAN_USE_SMP
+  vtkSMPExecutive* exec = vtkSMPExecutive::New();
+//  vtkAlgorithm::SetDefaultExecutivePrototype( exec );
+  exec->Delete();
+#endif
 
   /* === Reading 3D model === */
   vtkUnstructuredGridReader* usgReader = 0;
@@ -55,14 +62,14 @@ int main( int argc, char** argv )
 
   /* === Distributing data === */
 #ifdef VTK_CAN_USE_SMP
-  vtkSMPTransform* t = vtkSMPTransform::New();
+  vtkSMPDistributePolyData* transform = vtkSMPDistributePolyData::New();
 #else
   vtkTransform* t = vtkTransform::New();
-#endif
   t->Identity();
   vtkTransformFilter* transform = vtkTransformFilter::New();
   transform->SetTransform( t );
   t->Delete();
+#endif
   transform->SetInputConnection( usgReader ? usgReader->GetOutputPort() : polyReader->GetOutputPort() );
   if (usgReader)
     usgReader->Delete();

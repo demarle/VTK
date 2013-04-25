@@ -19,7 +19,7 @@
 // vertices, lines, polygons, and/or triangle strips. Point and cell
 // attribute values (e.g., scalars, vectors, etc.) also are represented.
 //
-// The actual cell types (vtkCellType.h) supported by vtkPolyData are: 
+// The actual cell types (vtkCellType.h) supported by vtkPolyData are:
 // vtkVertex, vtkPolyVertex, vtkLine, vtkPolyLine, vtkTriangle, vtkQuad,
 // vtkPolygon, and vtkTriangleStrip.
 //
@@ -95,6 +95,8 @@ public:
   void GetCellNeighbors(vtkIdType cellId, vtkIdList *ptIds,
                         vtkIdList *cellIds);
 
+  int GetCellLocation(vtkIdType cellId);
+
   // Description:
   // Copy cells listed in idList from pd, including points, point data,
   // and cell data.  This method assumes that point and cell data have
@@ -102,7 +104,7 @@ public:
   // won't be duplicated in the output.
   void CopyCells(vtkPolyData *pd, vtkIdList *idList,
                  vtkPointLocator *locator = NULL);
-  
+
   // Description:
   // Copy a cells point ids into list provided. (Less efficient.)
   void GetCellPoints(vtkIdType cellId, vtkIdList *ptIds);
@@ -115,7 +117,7 @@ public:
   // Description:
   // Compute the (X, Y, Z)  bounds of the data.
   void ComputeBounds();
-  
+
   // Description:
   // Recover extra allocated memory when creating data whose initial size
   // is unknown. Examples include using the InsertNextCell() method, or
@@ -153,14 +155,14 @@ public:
   // Get the cell array defining polygons. If there are no polygons, an
   // empty array will be returned (convenience to simplify traversal).
   vtkCellArray *GetPolys();
-  
+
   // Description:
   // Set the cell array defining triangle strips.
   void SetStrips (vtkCellArray* s);
 
   // Description:
   // Get the cell array defining triangle strips. If there are no
-  // triangle strips, an empty array will be returned (convenience to 
+  // triangle strips, an empty array will be returned (convenience to
   // simplify traversal).
   vtkCellArray *GetStrips();
 
@@ -172,8 +174,8 @@ public:
   vtkIdType GetNumberOfStrips();
 
   // Description:
-  // Method allocates initial storage for vertex, line, polygon, and 
-  // triangle strip arrays. Use this method before the method 
+  // Method allocates initial storage for vertex, line, polygon, and
+  // triangle strip arrays. Use this method before the method
   // PolyData::InsertNextCell(). (Or, provide vertex, line, polygon, and
   // triangle strip cell arrays.)
   void Allocate(vtkIdType numCells=1000, int extSize=1000);
@@ -187,7 +189,7 @@ public:
   // inPolyData.)  Caution: if the inPolyData has no verts, and after
   // allocating with this method an PolyData::InsertNextCell() is invoked
   // where a vertex is inserted, bad things will happen.
-  void Allocate(vtkPolyData *inPolyData, vtkIdType numCells=1000, 
+  void Allocate(vtkPolyData *inPolyData, vtkIdType numCells=1000,
                 int extSize=1000);
 
   // Description:
@@ -218,7 +220,7 @@ public:
   // Description:
   // Create upward links from points to cells that use each point. Enables
   // topologically complex queries. Normally the links array is allocated
-  // based on the number of points in the vtkPolyData. The optional 
+  // based on the number of points in the vtkPolyData. The optional
   // initialSize parameter can be used to allocate a larger size initially.
   void BuildLinks(int initialSize=0);
 
@@ -231,15 +233,15 @@ public:
   // Description:
   // Release the upward links from point to cells that use each point.
   void DeleteLinks();
-  
+
   // Description:
   // Special (efficient) operations on poly data. Use carefully.
   void GetPointCells(vtkIdType ptId, unsigned short& ncells,
                      vtkIdType* &cells);
 
   // Description:
-  // Get the neighbors at an edge. More efficient than the general 
-  // GetCellNeighbors(). Assumes links have been built (with BuildLinks()), 
+  // Get the neighbors at an edge. More efficient than the general
+  // GetCellNeighbors(). Assumes links have been built (with BuildLinks()),
   // and looks specifically for edge neighbors.
   void GetCellEdgeNeighbors(vtkIdType cellId, vtkIdType p1, vtkIdType p2,
                             vtkIdList *cellIds);
@@ -250,14 +252,14 @@ public:
   void GetCellPoints(vtkIdType cellId, vtkIdType& npts, vtkIdType* &pts);
 
   // Description:
-  // Given three vertices, determine whether it's a triangle. Make sure 
+  // Given three vertices, determine whether it's a triangle. Make sure
   // BuildLinks() has been called first.
   int IsTriangle(int v1, int v2, int v3);
 
   // Description:
   // Determine whether two points form an edge. If they do, return non-zero.
-  // By definition PolyVertex and PolyLine have no edges since 1-dimensional 
-  // edges are only found on cells 2D and higher. 
+  // By definition PolyVertex and PolyLine have no edges since 1-dimensional
+  // edges are only found on cells 2D and higher.
   // Edges are defined as 1-D boundary entities to cells.
   // Make sure BuildLinks() has been called first.
   int IsEdge(vtkIdType p1, vtkIdType p2);
@@ -269,8 +271,8 @@ public:
 
   // Description:
   // Replace the points defining cell "cellId" with a new set of points. This
-  // operator is (typically) used when links from points to cells have not been 
-  // built (i.e., BuildLinks() has not been executed). Use the operator 
+  // operator is (typically) used when links from points to cells have not been
+  // built (i.e., BuildLinks() has not been executed). Use the operator
   // ReplaceLinkedCell() to replace a cell when cell structure has been built.
   void ReplaceCell(vtkIdType cellId, int npts, vtkIdType *pts);
 
@@ -278,7 +280,7 @@ public:
   // Replace a point in the cell connectivity list with a different point.
   void ReplaceCellPoint(vtkIdType cellId, vtkIdType oldPtId,
                         vtkIdType newPtId);
-  
+
   // Description:
   // Reverse the order of point ids defining the cell.
   void ReverseCell(vtkIdType cellId);
@@ -293,7 +295,7 @@ public:
   // VTK_EMPTY_CELL, but they still exist in the polys array.
   // Calling RemoveDeletedCells will travers the poly array and remove/compact
   // the cell array as well as any cell data thus truly removing the cells
-  // from the polydata object. WARNING. This only handles the polys 
+  // from the polydata object. WARNING. This only handles the polys
   // at the moment
   void RemoveDeletedCells();
 
@@ -303,35 +305,35 @@ public:
   // links to the cells.  (To use this method, make sure points are available
   // and BuildLinks() has been invoked.) Of the two methods below, one inserts
   // a point coordinate and the other just makes room for cell links.
-  int InsertNextLinkedPoint(int numLinks); 
-  int InsertNextLinkedPoint(double x[3], int numLinks); 
-  
+  int InsertNextLinkedPoint(int numLinks);
+  int InsertNextLinkedPoint(double x[3], int numLinks);
+
   // Description:
   // Add a new cell to the cell data structure (after cell pointers have been
   // built). This method adds the cell and then updates the links from the
   // points to the cells. (Memory is allocated as necessary.)
-  int InsertNextLinkedCell(int type, int npts, vtkIdType *pts); 
+  int InsertNextLinkedCell(int type, int npts, vtkIdType *pts);
 
   // Description:
   // Replace one cell with another in cell structure. This operator updates the
   // connectivity list and the point's link list. It does not delete references
-  // to the old cell in the point's link list. Use the operator 
+  // to the old cell in the point's link list. Use the operator
   // RemoveCellReference() to delete all references from points to (old) cell.
-  // You may also want to consider using the operator ResizeCellList() if the 
+  // You may also want to consider using the operator ResizeCellList() if the
   // link list is changing size.
   void ReplaceLinkedCell(vtkIdType cellId, int npts, vtkIdType *pts);
 
   // Description:
   // Remove all references to cell in cell structure. This means the links from
   // the cell's points to the cell are deleted. Memory is not reclaimed. Use the
-  // method ResizeCellList() to resize the link list from a point to its using 
+  // method ResizeCellList() to resize the link list from a point to its using
   // cells. (This operator assumes BuildLinks() has been called.)
   void RemoveCellReference(vtkIdType cellId);
 
   // Description:
   // Add references to cell in cell structure. This means the links from
   // the cell's points to the cell are modified. Memory is not extended. Use the
-  // method ResizeCellList() to resize the link list from a point to its using 
+  // method ResizeCellList() to resize the link list from a point to its using
   // cells. (This operator assumes BuildLinks() has been called.)
   void AddCellReference(vtkIdType cellId);
 
@@ -344,7 +346,7 @@ public:
 
   // Description:
   // Add a reference to a cell in a particular point's link list. (You may also
-  // consider using AddCellReference() to add the references from all the 
+  // consider using AddCellReference() to add the references from all the
   // cell's points to the cell.) This operator does not realloc memory; use the
   // operator ResizeCellList() to do this if necessary.
   void AddReferenceToCell(vtkIdType ptId, vtkIdType cellId);
@@ -378,7 +380,7 @@ public:
   // Description:
   // Get the ghost level.
   virtual int GetGhostLevel();
-  
+
   // Description:
   // Return the actual size of the data in kilobytes. This number
   // is valid only after the pipeline has updated. The memory size
@@ -387,10 +389,10 @@ public:
   // arrays, etc. are not included in the return value). THIS METHOD
   // IS THREAD SAFE.
   unsigned long GetActualMemorySize();
-  
+
   // Description:
   // Shallow and Deep copy.
-  void ShallowCopy(vtkDataObject *src);  
+  void ShallowCopy(vtkDataObject *src);
   void DeepCopy(vtkDataObject *src);
 
   // Description:
@@ -409,8 +411,8 @@ public:
   // Description:
   // Scalar field critical point classification (for manifold 2D meshes).
   // Reference: J. Milnor "Morse Theory", Princeton University Press, 1963.
-  //     
-  // Given a pointId and an attribute representing a scalar field, this member 
+  //
+  // Given a pointId and an attribute representing a scalar field, this member
   // returns the index of the critical point:
   // vtkPolyData::MINIMUM (index 0): local minimum;
   // vtkPolyData::SADDLE  (index 1): local saddle;
@@ -434,7 +436,7 @@ public:
     MAXIMUM = 2
     };
 //ETX
-  int GetScalarFieldCriticalIndex (vtkIdType pointId, 
+  int GetScalarFieldCriticalIndex (vtkIdType pointId,
                                    vtkDataArray *scalarField);
   int GetScalarFieldCriticalIndex (vtkIdType pointId, int fieldId);
   int GetScalarFieldCriticalIndex (vtkIdType pointId, const char* fieldName);
@@ -453,7 +455,7 @@ protected:
   vtkPolygon *Polygon;
   vtkTriangleStrip *TriangleStrip;
   vtkEmptyCell *EmptyCell;
-  
+
   // points inherited
   // point data (i.e., scalars, vectors, normals, tcoords) inherited
   vtkCellArray *Verts;
@@ -469,8 +471,8 @@ protected:
   vtkCellTypes *Cells;
   vtkCellLinks *Links;
 
-  // This method is called during an update.  
-  // If the CropFilter is set, the user reqquested a piece which the 
+  // This method is called during an update.
+  // If the CropFilter is set, the user reqquested a piece which the
   // source cannot generate, then it will break up the
   // data set in order to satisfy the request.
   virtual void Crop();
@@ -478,7 +480,7 @@ protected:
 
 private:
   // Hide these from the user and the compiler.
-  
+
   // Description:
   // For legacy compatibility. Do not use.
   void GetCellNeighbors(vtkIdType cellId, vtkIdList& ptIds, vtkIdList& cellIds)
@@ -491,7 +493,7 @@ private:
   void operator=(const vtkPolyData&);  // Not implemented.
 };
 
-inline void vtkPolyData::GetPointCells(vtkIdType ptId, unsigned short& ncells, 
+inline void vtkPolyData::GetPointCells(vtkIdType ptId, unsigned short& ncells,
                                        vtkIdType* &cells)
 {
   ncells = this->Links->GetNcells(ptId);
@@ -503,15 +505,15 @@ inline int vtkPolyData::IsTriangle(int v1, int v2, int v3)
   unsigned short int n1;
   int i, j, tVerts[3];
   vtkIdType *cells, *tVerts2, n2;
-  
+
   tVerts[0] = v1;
   tVerts[1] = v2;
   tVerts[2] = v3;
 
-  for (i=0; i<3; i++) 
+  for (i=0; i<3; i++)
     {
     this->GetPointCells(tVerts[i], n1, cells);
-    for (j=0; j<n1; j++) 
+    for (j=0; j<n1; j++)
       {
       this->GetCellPoints(cells[j], n2, tVerts2);
       if ( (tVerts[0] == tVerts2[0] || tVerts[0] == tVerts2[1] ||
@@ -531,7 +533,7 @@ inline int vtkPolyData::IsTriangle(int v1, int v2, int v3)
 inline int vtkPolyData::IsPointUsedByCell(vtkIdType ptId, vtkIdType cellId)
 {
   vtkIdType *pts, npts;
-  
+
   this->GetCellPoints(cellId, npts, pts);
   for (vtkIdType i=0; i < npts; i++)
     {
@@ -557,7 +559,7 @@ inline void vtkPolyData::DeleteCell(vtkIdType cellId)
 inline void vtkPolyData::RemoveCellReference(vtkIdType cellId)
 {
   vtkIdType *pts, npts;
-  
+
   this->GetCellPoints(cellId, npts, pts);
   for (vtkIdType i=0; i<npts; i++)
     {
@@ -568,7 +570,7 @@ inline void vtkPolyData::RemoveCellReference(vtkIdType cellId)
 inline void vtkPolyData::AddCellReference(vtkIdType cellId)
 {
   vtkIdType *pts, npts;
-  
+
   this->GetCellPoints(cellId, npts, pts);
   for (vtkIdType i=0; i<npts; i++)
     {
@@ -586,11 +588,11 @@ inline void vtkPolyData::ReplaceCellPoint(vtkIdType cellId, vtkIdType oldPtId,
 {
   int i;
   vtkIdType *verts, nverts;
-  
+
   this->GetCellPoints(cellId,nverts,verts);
   for ( i=0; i < nverts; i++ )
     {
-    if ( verts[i] == oldPtId ) 
+    if ( verts[i] == oldPtId )
       {
       verts[i] = newPtId; // this is very nasty! direct write!
       return;

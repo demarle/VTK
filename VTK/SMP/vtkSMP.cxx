@@ -680,4 +680,11 @@ namespace vtkSMP
     outputLocator->Delete();
     Functor->Delete();
     }
+
+  void vtkSpawnTasks::PrintSelf(ostream &os, vtkIndent indent)
+    {
+    this->Superclass::PrintSelf( os, indent );
+    }
+
+  vtkStandardNewMacro(vtkSpawnTasks);
 }

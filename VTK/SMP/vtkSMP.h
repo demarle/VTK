@@ -78,6 +78,7 @@ public:
                         vtkIdType polyTupleOffset,
                         vtkIdType stripCellOffset,
                         vtkIdType stripTupleOffset ) const {}
+  virtual void Execute( ) {}
 
 protected:
   vtkTask();
@@ -236,6 +237,10 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f, int grain = 0 );
 
+  void VTK_SMP_EXPORT StaticForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op );
+
+  void VTK_SMP_EXPORT StaticForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op );
+
   template<class T>
   void VTK_SMP_EXPORT Parallel( const vtkTask* function,
                                 typename vtkSMP::vtkThreadLocal<T>::iterator data1,
@@ -277,6 +282,22 @@ namespace vtkSMP
                                    vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
                                    vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData, int SkipThreads );
 
+  class VTK_SMP_EXPORT vtkSpawnTasks : public vtkObject {
+    protected:
+      vtkSpawnTasks();
+      ~vtkSpawnTasks();
+
+      void InternalSpawn( vtkTask* );
+
+    public:
+      vtkTypeMacro(vtkSpawnTasks,vtkObject);
+      static vtkSpawnTasks* New();
+      void PrintSelf(ostream &os, vtkIndent indent);
+
+    private:
+      vtkSpawnTasks( const vtkSpawnTasks& );
+      void operator =( const vtkSpawnTasks& );
+  };
 }
 
 #endif //__vtkSMP_h__

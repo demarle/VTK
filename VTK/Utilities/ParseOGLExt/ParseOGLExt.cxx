@@ -154,7 +154,7 @@ bool Extension::isExtension(char *line)
     }
 
   return false;
-} 
+}
 
 static Extension currentExtension;
 
@@ -366,7 +366,7 @@ Function::Function(char *line) : extensionType(currentExtension.type)
 
   this->arguments = t.GetRemainingString();
 
-#ifdef DEBUG_PARSE  
+#ifdef DEBUG_PARSE
   cerr << "Function arguments: " << this->arguments << endl;
 #endif
 }
@@ -560,7 +560,7 @@ static void WriteClassDeclarationGuts(ostream &hfile, int type)
         // confuses the C++ preprocessor terribly.  Don't write out a
         // definition for an enum with a name/value pair that's
         // already been used.
-        if (ConstantsAlreadyWritten.find(vtkstd::make_pair(iconst->GetName(), 
+        if (ConstantsAlreadyWritten.find(vtkstd::make_pair(iconst->GetName(),
                                                            iconst->GetValue()))
              == ConstantsAlreadyWritten.end())
           {
@@ -569,12 +569,12 @@ static void WriteClassDeclarationGuts(ostream &hfile, int type)
             // BCC/VS6/VS70 cannot digest this C99 macro
             hfile << "#if !defined(__BORLANDC__) && (!defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER>=1310))" << endl;
             }
-          
-          
+
+
           hfile << "  const GLenum " << iconst->GetName().c_str()
                 << " = static_cast<GLenum>(" << iconst->GetValue().c_str() << ");" << endl;
 
-          ConstantsAlreadyWritten.insert(vtkstd::make_pair(iconst->GetName(), 
+          ConstantsAlreadyWritten.insert(vtkstd::make_pair(iconst->GetName(),
                                                            iconst->GetValue()));
           if(strcmp(iconst->GetName().c_str(),"TIMEOUT_IGNORED")==0)
             {
@@ -687,7 +687,7 @@ static void WriteCode(ostream &hfile, ostream &cxxfile)
   hfile << "  typedef int64_t GLint64;" << endl;
   hfile << "  typedef uint64_t GLuint64;" << endl;
   hfile << "  typedef struct __GLsync *GLsync;" << endl;
-  
+
   ConstantsAlreadyWritten.clear();
   WriteClassDeclarationGuts(hfile, Extension::GL);
   hfile << endl << "  // Method to load functions for a particular extension.";
@@ -817,6 +817,12 @@ int main(int argc, char **argv)
   if (argc < 3)
     {
     cerr << "USAGE: " << argv[0] << "<output dir> <header files>" << endl;
+    int i = 0;
+    while (i<argc)
+      {
+      cerr << "Test: " << argv[i] << endl;
+      ++i;
+      }
     return 1;
     }
 

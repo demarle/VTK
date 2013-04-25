@@ -20,6 +20,8 @@ set(Kit_SRCS
   vtkSMPMergePoints.cxx
   vtkSMPMinMaxTree.cxx
   vtkSMPZCurve.cxx
+  vtkSMPExecutive.cxx
+  vtkSMPDistributePolyData.cxx
 )
 
 SET_SOURCE_FILES_PROPERTIES(
@@ -65,6 +67,8 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkSMPMergePoints.h
     vtkSMPMinMaxTree.h
     vtkSMPZCurve.h
+    vtkSMPExecutive.h
+    vtkSMPDistributePolyData.h
     )
 
   INSTALL(FILES ${__inst_files}

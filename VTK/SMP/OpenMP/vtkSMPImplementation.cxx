@@ -54,6 +54,27 @@ namespace vtkSMP
       (*op)( i );
     }
 
+  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op)
+    {
+    #pragma omp default(none)
+    #pragma omp parallel for
+    for ( vtkIdType i = first ; i < last ; ++i )
+      (*op)( i );
+    }
+
+  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op)
+    {
+    #pragma omp parallel
+    {
+    if ( op->ShouldInitialize( ) )
+      op->Init( );
+    }
+    #pragma omp default(none)
+    #pragma omp parallel for
+    for ( vtkIdType i = first ; i < last ; ++i )
+      (*op)( i );
+    }
+
   template<>
   void Parallel<vtkSMPMergePoints> ( const vtkTask* function,
                                      vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::iterator data,
@@ -118,6 +139,27 @@ namespace vtkSMP
         {
         omp_traversal( 0, 0, bf, Tree, func);
         }
+      }
+    }
+
+  vtkSpawnTasks::vtkSpawnTasks()
+    {
+    }
+
+  vtkSpawnTasks::~vtkSpawnTasks()
+    {
+    #pragma omp taskwait
+    }
+
+  void vtkSpawnTasks::InternalSpawn( vtkTask* func )
+    {
+    func->Register(this);
+    #pragma omp parallel
+    #pragma omp single nowait
+    #pragma omp task
+      {
+      func->Execute();
+      func->UnRegister(this);
       }
     }
 }
