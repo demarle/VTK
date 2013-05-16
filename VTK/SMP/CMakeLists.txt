@@ -22,6 +22,7 @@ set(Kit_SRCS
   vtkSMPZCurve.cxx
   vtkSMPExecutive.cxx
   vtkSMPDistributePolyData.cxx
+  vtkSMPImageConvolve.cxx
 )
 
 SET_SOURCE_FILES_PROPERTIES(
@@ -69,6 +70,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkSMPZCurve.h
     vtkSMPExecutive.h
     vtkSMPDistributePolyData.h
+    vtkSMPImageConvolve.h
     )
 
   INSTALL(FILES ${__inst_files}

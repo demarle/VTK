@@ -2,6 +2,7 @@
 #define __vtkSMP_h__
 
 #include "vtkSMPImplementation.h"
+#include "vtkInstantiator.h"
 #include "vtkObject.h"
 #include <vector>
 #include <typeinfo>
@@ -101,7 +102,7 @@ namespace vtkSMP
   class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
     {
     protected :
-      vtkThreadLocal() : vtkObject(), ThreadLocalStorage(InternalGetNumberOfThreads(), NULL) {}
+      vtkThreadLocal() : vtkObject(), ThreadLocalStorage(InternalGetNumberOfThreads(), NULL), Specific("") {}
       ~vtkThreadLocal()
         {
         for ( iterator it = ThreadLocalStorage.begin();
@@ -135,40 +136,39 @@ namespace vtkSMP
 
       T* NewLocal ( T* specificImpl )
         {
-        int tid = InternalGetTid();
-        if (this->ThreadLocalStorage[tid])
-          {
-          this->ThreadLocalStorage[tid]->UnRegister(this);
-          }
-
         T* item = specificImpl->NewInstance();
-        if (item)
-          {
-          item->Register(this);
-          item->Delete();
-          }
-        this->ThreadLocalStorage[tid] = item;
+        this->SetLocal( item );
+        if(item) item->Delete();
 
         return item;
         }
 
       T* NewLocal ( )
         {
-        int tid = InternalGetTid();
-        if (this->ThreadLocalStorage[tid])
+        if ( this->Specific != "" )
           {
-          this->ThreadLocalStorage[tid]->UnRegister(this);
+          return this->NewLocal(this->Specific.c_str());
           }
-
-        T* item = T::New();
-        if (item)
-          {
-          item->Register(this);
-          item->Delete();
-          }
-        this->ThreadLocalStorage[tid] = item;
+        T* item = static_cast<T*>(T::New());
+        this->SetLocal( item );
+        if(item) item->Delete();
 
         return item;
+        }
+
+      T* NewLocal ( const char* type )
+        {
+        vtkObject* obj = vtkInstantiator::CreateInstance(type);
+        T* item = T::SafeDownCast(obj);
+        if (item)
+          {
+          this->SetLocal(item);
+          item->Delete();
+          return item;
+          }
+        this->SetLocal(0);
+        if (obj) obj->Delete();
+        return 0;
         }
 
       iterator Begin( vtkIdType startItem = 0 )
@@ -185,6 +185,11 @@ namespace vtkSMP
       iterator End( )
         {
         return ThreadLocalStorage.end();
+        }
+
+      void SetSpecificClassName( const char* type )
+        {
+        this->Specific = vtkstd::string(type);
         }
 
       void SetLocal ( T* item )
@@ -205,7 +210,9 @@ namespace vtkSMP
 
       T* GetLocal()
         {
-        return this->ThreadLocalStorage[InternalGetTid()];
+        T* item = this->ThreadLocalStorage[InternalGetTid()];
+        if (item) return item;
+        return this->NewLocal();
         }
 
       template<class Derived>
@@ -230,6 +237,7 @@ namespace vtkSMP
 
     protected:
       vtkstd::vector<T*> ThreadLocalStorage;
+      vtkstd::string Specific;
     };
 
   // ForEach template : parallel loop over an iterator
