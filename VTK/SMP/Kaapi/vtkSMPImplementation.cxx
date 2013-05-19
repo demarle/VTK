@@ -52,7 +52,7 @@ class Work {
       end = _array+e;
       for ( beg = _array+b; beg < end; ++beg )
         {
-        (*_op)( beg );
+        (*_op)( beg, 0, 0 );
         }
       return true;
       }
@@ -202,7 +202,7 @@ void do_static_for( vtkIdType first, vtkIdType last, vtkFunctor* op )
   {
   for ( vtkIdType i = first; i < last; ++i )
     {
-    (*op)( i );
+    (*op)( i, 0, 0 );
     }
   }
 
@@ -212,7 +212,7 @@ void do_static_for_init( vtkIdType first, vtkIdType last, vtkFunctorInitialisabl
     op->Init();
   for ( vtkIdType i = first; i < last; ++i )
     {
-    (*op)( i );
+    (*op)( i, 0, 0 );
     }
   }
 
@@ -326,7 +326,7 @@ inline void doFor( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o )
   {
   for (int32_t k = b; k < e; ++k)
     {
-    (*o)( k );
+    (*o)( k, 0, 0 );
     }
   }
 inline void doForInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o )
@@ -335,7 +335,109 @@ inline void doForInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitia
     o->Init();
   for (int32_t k = b; k < e; ++k)
     {
-    (*o)( k );
+    (*o)( k, 0, 0 );
+    }
+  }
+inline void doForTwo( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
+  {
+  int32_t k0 = b % n0 + f0;
+  int32_t k1 = b / n0 + f1;
+  int32_t k = b;
+  int32_t e0 = f0 + n0;
+  for (; k0 < e0 && k < e; ++k0, ++k)
+    {
+    (*o)( k0, k1, 0 );
+    }
+  for (++k1; k < e; ++k1)
+    {
+    for (k0 = f0; k0 < e0 && k < e ; ++k0, ++k)
+      {
+      (*o)( k0, k1, 0 );
+      }
+    }
+  }
+inline void doForTwoInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
+  {
+  if (o->ShouldInitialize())
+    o->Init();
+  int32_t k0 = b % n0 + f0;
+  int32_t k1 = b / n0 + f1;
+  int32_t k = b;
+  int32_t e0 = f0 + n0;
+  for (; k0 < e0 && k < e; ++k0, ++k)
+    {
+    (*o)( k0, k1, 0 );
+    }
+  for (++k1; k < e; ++k1)
+    {
+    for (k0 = f0; k0 < e0 && k < e ; ++k0, ++k)
+      {
+      (*o)( k0, k1, 0 );
+      }
+    }
+  }
+inline void doForThree( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
+  {
+  vtkIdType slice = n0 * n1;
+  int32_t k0 = b % n0 + f0;
+  int32_t k1 = (b % slice) / n0 + f1;
+  int32_t k2 = b / slice + f2;
+  int32_t k = b;
+  int32_t e0 = n0 + f0;
+  int32_t e1 = n1 + f1;
+  for (; k0 < e0 && k < e; ++k0, ++k)
+    {
+    (*o)( k0, k1, k2 );
+    }
+  for (++k1; k1 < e1 && k < e; ++k1)
+    {
+    for (k0 = f0; k0 < e0 && k < e ; ++k0, ++k)
+      {
+      (*o)( k0, k1, k2 );
+      }
+    }
+  for (++k2; k < e; ++k2)
+    {
+    for (k1 = f1; k1 < e1 && k < e; ++k1)
+      {
+      for (k0 = f0; k0 < e0 && k < e ; ++k0, ++k)
+        {
+        (*o)( k0, k1, k2 );
+        }
+      }
+    }
+  }
+inline void doForThreeInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
+  {
+  if (o->ShouldInitialize())
+    o->Init();
+  vtkIdType slice = n0 * n1;
+  int32_t k0 = b % n0 + f0;
+  int32_t k1 = (b % slice) / n0 + f1;
+  int32_t k2 = b / slice + f2;
+  int32_t k = b;
+  int32_t e0 = n0 + f0;
+  int32_t e1 = n1 + f1;
+  for (; k0 < e0 && k < e; ++k0, ++k)
+    {
+    (*o)( k0, k1, k2 );
+    }
+  for (++k1; k1 < e1 && k < e; ++k1)
+    {
+    for (k0 = f0; k0 < e0 && k < e ; ++k0, ++k)
+      {
+      (*o)( k0, k1, k2 );
+      }
+    }
+  for (++k2; k < e; ++k2)
+    {
+    for (k1 = f1; k1 < e1 && k < e; ++k1)
+      {
+      for (k0 = f0; k0 < e0 && k < e ; ++k0, ++k)
+        {
+        (*o)( k0, k1, k2 );
+        }
+      }
     }
   }
 
@@ -374,6 +476,64 @@ namespace vtkSMP
     kaapic_foreach_attr_init(&attr);
     kaapic_foreach_attr_set_grains(&attr, g, g);
     kaapic_foreach( first, last, &attr, 1, doForInit, op );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_destroy(&attr);
+    }
+
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctor* op, int grain )
+    {
+    vtkIdType n0 = last0 - first0;
+    vtkIdType n = n0 * (last1 - first1);
+    int g = grain ? grain : sqrt(n);
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_t attr;
+    kaapic_foreach_attr_init(&attr);
+    kaapic_foreach_attr_set_grains(&attr, g, g);
+    kaapic_foreach( 0, n, &attr, 4, doForTwo, op, first0, first1, n0 );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_destroy(&attr);
+    }
+
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctorInitialisable* op, int grain )
+    {
+    vtkIdType n0 = last0 - first0;
+    vtkIdType n = n0 * (last1 - first1);
+    int g = grain ? grain : sqrt(n);
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_t attr;
+    kaapic_foreach_attr_init(&attr);
+    kaapic_foreach_attr_set_grains(&attr, g, g);
+    kaapic_foreach( 0, n, &attr, 4, doForTwoInit, op, first0, first1, n0 );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_destroy(&attr);
+    }
+
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctor* op, int grain )
+    {
+    vtkIdType n0 = last0 - first0;
+    vtkIdType n1 = last1 - first1;
+    vtkIdType n = n0 * n1 * (last2 - first2);
+    int g = grain ? grain : sqrt(n);
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_t attr;
+    kaapic_foreach_attr_init(&attr);
+    kaapic_foreach_attr_set_grains(&attr, g, g);
+    kaapic_foreach( 0, n, &attr, 6, doForThree, op, first0, first1, first2, n0, n1 );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_destroy(&attr);
+    }
+
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctorInitialisable* op, int grain )
+    {
+    vtkIdType n0 = last0 - first0;
+    vtkIdType n1 = last1 - first1;
+    vtkIdType n = n0 * n1 * (last2 - first2);
+    int g = grain ? grain : sqrt(n);
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_t attr;
+    kaapic_foreach_attr_init(&attr);
+    kaapic_foreach_attr_set_grains(&attr, g, g);
+    kaapic_foreach( 0, n, &attr, 6, doForThreeInit, op, first0, first1, first2, n0, n1 );
     kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
     kaapic_foreach_attr_destroy(&attr);
     }

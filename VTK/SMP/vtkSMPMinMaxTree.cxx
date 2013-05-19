@@ -70,7 +70,7 @@ public:
     Max = t->TreeSize;
     }
 
-  void operator ()( vtkIdType index ) const
+  void operator ()( vtkIdType index, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
     {
     double my_min = VTK_DOUBLE_MAX;
     double my_max = -VTK_DOUBLE_MAX;
@@ -236,7 +236,7 @@ int vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkFunctor* function 
     vtkIdType max_id = this->DataSet->GetNumberOfCells();
     for ( vtkIdType i = 0; i < this->BranchingFactor && cell_id < max_id; ++i, ++cell_id )
       {
-      (*function)( cell_id );
+      (*function)( cell_id, 0, 0 );
       }
     return 0;
     }

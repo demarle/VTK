@@ -689,7 +689,7 @@ struct AllModificator : public vtkFunctor {
   vtkDataArray* outVcs;
   double (*matrix)[4];
   double (*matrixInvTr)[4];
-  void operator()( vtkIdType id ) const
+  void operator()( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
   {
     double point[3];
     inPts->GetPoint(id, point);
@@ -763,7 +763,7 @@ struct PtsModificator : public vtkFunctor {
   vtkPoints* inPts;
   vtkPoints* outPts;
   double (*matrix)[4];
-  void operator () ( vtkIdType id ) const
+  void operator () ( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
   {
     double point[3];
     inPts->GetPoint( id, point );
@@ -808,7 +808,7 @@ struct NmsModificator : public vtkFunctor {
   vtkDataArray* inNms;
   vtkDataArray* outNms;
   double (*matrix)[4];
-  void operator () ( vtkIdType id ) const
+  void operator () ( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
   {
     double norm[3];
     inNms->GetTuple( id, norm );
@@ -861,7 +861,7 @@ struct VcsModificator : public vtkFunctor {
   vtkDataArray* inVcs;
   vtkDataArray* outVcs;
   double (*matrix)[4];
-  void operator () ( vtkIdType id ) const
+  void operator () ( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
   {
     double vec[3];
     inVcs->GetTuple( id, vec );

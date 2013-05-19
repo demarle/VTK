@@ -1,3 +1,23 @@
+/*=========================================================================
+
+  Program:   Visualization Toolkit
+  Module:    vtkImageConvolve.h
+
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
+// .NAME vtkImageConvolve - Convolution of an image with a kernel.
+// .SECTION Description
+// vtkImageConvolve convolves the image with a 3D NxNxN kernel or a
+// 2D NxN kernal.  The output image is cropped to the same size as
+// the input.
+
 #ifndef __vtkSMPImageConvolve_h
 #define __vtkSMPImageConvolve_h
 

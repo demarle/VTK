@@ -34,7 +34,7 @@
 #include "vtkCompositeDataPipeline.h"
 
 #include "vtkBenchTimer.h"
-int BENCH_MAX = 20;
+int BENCH_MAX = 50;
 
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_AFTER_FORWARD, Integer);
 vtkInformationKeyMacro(vtkExecutive, ALGORITHM_BEFORE_FORWARD, Integer);
@@ -752,7 +752,8 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
   if ( request->Has(vtkDemandDrivenPipeline::REQUEST_DATA()) &&
        (this->Algorithm->IsA("vtkContourFilter") ||
         this->Algorithm->IsA("vtkTransformFilter") ||
-        this->Algorithm->IsA("vtkSMPZCurve")) )
+        this->Algorithm->IsA("vtkImageConvolve") ||
+        this->Algorithm->IsA("vtkSMPImageConvolve")) )
     { // We want to monitor only these
     cout << endl << this->Algorithm->GetClassName() << endl;
     for (int i = 0; i < BENCH_MAX; ++i)

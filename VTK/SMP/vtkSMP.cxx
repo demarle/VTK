@@ -214,7 +214,7 @@ public:
   OffsetManager* polyOffset;
   OffsetManager* stripOffset;
 
-  void operator ()( vtkIdType pointId ) const
+  void operator ()( vtkIdType pointId, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
     {
     outputLocator->AddPointIdInBucket( pointId );
     }
@@ -543,7 +543,7 @@ struct LockPointMerger : public vtkFunctor
     this->Superclass::PrintSelf(os,indent);
     }
 
-  void operator()( vtkIdType id ) const
+  void operator()( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
     {
     vtkSMP::vtkThreadLocal<vtkPoints>::iterator itPoints = this->Functor->InPoints->Begin();
     vtkSMP::vtkThreadLocal<vtkPointData>::iterator itPd = this->Functor->InPd->Begin();

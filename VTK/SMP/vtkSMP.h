@@ -24,7 +24,7 @@ public:
   vtkTypeMacro(vtkFunctor,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  virtual void operator () ( vtkIdType ) const = 0;
+  virtual void operator () ( vtkIdType, vtkIdType, vtkIdType ) const = 0;
 
 protected:
   vtkFunctor();
@@ -244,6 +244,14 @@ namespace vtkSMP
   void VTK_SMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain = 0 );
 
   void VTK_SMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f, int grain = 0 );
+
+  void VTK_SMP_EXPORT ForEach( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctor* op, int grain = 0 );
+
+  void VTK_SMP_EXPORT ForEach( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctorInitialisable* f, int grain = 0 );
+
+  void VTK_SMP_EXPORT ForEach( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctor* op, int grain = 0 );
+
+  void VTK_SMP_EXPORT ForEach( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctorInitialisable* f, int grain = 0 );
 
   void VTK_SMP_EXPORT StaticForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op );
 

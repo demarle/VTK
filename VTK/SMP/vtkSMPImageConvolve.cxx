@@ -1,3 +1,17 @@
+/*=========================================================================
+
+  Program:   Visualization Toolkit
+  Module:    vtkImageConvolve.cxx
+
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
 #include "vtkSMPImageConvolve.h"
 #include "vtkSMP.h"
 
@@ -252,7 +266,7 @@ void vtkSMPImageConvolve::GetKernel(double *kernel)
     }
 }
 
-template<class T>
+template <class T>
 class ConvolveFunctor : public vtkFunctor
 {
     ConvolveFunctor(const ConvolveFunctor&);
@@ -293,7 +307,7 @@ class ConvolveFunctor : public vtkFunctor
       numInRow = outNumInRow;
       numInSlice = outNumInSlice;
 
-      inInc0 = inNumComp; inInc1 = inNumComp * (inExt[1] - inExt[0]); inInc2 = inInc1 * (inExt[3] - inExt[2]);
+      inInc0 = inNumComp; inInc1 = inNumComp * (inExt[1] - inExt[0] + 1); inInc2 = inInc1 * (inExt[3] - inExt[2] + 1);
       outInc0 = outNumComp; outInc1 = outNumComp * numInRow; outInc2 = outNumComp * numInSlice;
 
       kernelMiddle[0] = kernelSize[0] / 2;
@@ -309,16 +323,12 @@ class ConvolveFunctor : public vtkFunctor
       hoodMax2 = hoodMin2 + kernelSize[2] - 1;
       }
 
-    void operator ()(vtkIdType id) const
+    void operator ()( vtkIdType outIdx0, vtkIdType outIdx1, vtkIdType outIdx2 ) const
       {
-      T* inPtr = inGlobPtr + (id * inInc0);
-      T* outPtr = outGlobPtr + (id * outInc0);
-
       // Compute spacial index for pixel id
       // this replace the three sequential for loops
-      int outIdx2 = id / numInSlice;
-      int outIdx1 = (id % numInSlice) / numInRow;
-      int outIdx0 = id % numInRow;
+      T* outPtr = outGlobPtr + (outIdx0 * outInc0) + (outIdx1 * outInc1) + (outIdx2 * outInc2);
+      T* inPtr = inGlobPtr + (outIdx0 * inInc0) + (outIdx1 * inInc1) + (outIdx2 * inInc2);
 
       // For looping through hood pixels
       int hoodIdx0, hoodIdx1, hoodIdx2;
@@ -328,7 +338,7 @@ class ConvolveFunctor : public vtkFunctor
       int kernelIdx;
       double sum;
 
-      for (int outIdxC = 0; outIdxC < outInc0; ++outIdxC) //outInc0 = outData->GetNumberOfScalarComponents()
+      for (int outIdxC = 0; outIdxC < outInc0; ++outIdxC) //outInc0 is outData->GetNumberOfScalarComponents()
         {
         // Inner loop where we compute the kernel
 
@@ -404,8 +414,8 @@ void vtkSMPImageConvolveExecute(vtkSMPImageConvolve *self,
   double kernel[343];
   self->GetKernel7x7x7(kernel);
 
-  int numInRow = outExt[1] - outExt[0];
-  int numInSlice = numInRow * (outExt[3] - outExt[2]);
+  int numInRow = outExt[1] - outExt[0] + 1;
+  int numInSlice = numInRow * (outExt[3] - outExt[2] + 1);
 
   ConvolveFunctor<T>* functor = ConvolveFunctor<T>::New();
   functor->SetData( self->GetKernelSize(), kernel,
@@ -414,7 +424,7 @@ void vtkSMPImageConvolveExecute(vtkSMPImageConvolve *self,
                     outData->GetNumberOfScalarComponents(), numInRow, numInSlice);
 
   // loop through components
-  vtkSMP::ForEach(0, numInSlice * (outExt[5]-outExt[4]), functor);
+  vtkSMP::ForEach(outExt[0], outExt[1] + 1, outExt[2], outExt[3] + 1, outExt[4], outExt[5] + 1, functor);
   functor->Delete();
 }
 

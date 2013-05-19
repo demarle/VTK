@@ -160,7 +160,7 @@ public:
     Initialized();
     }
 
-  void operator ()( vtkIdType cellId ) const
+  void operator ()( vtkIdType cellId, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
     {
     vtkGenericCell *cell = this->Cells->GetLocal( );
     int cellType = input->GetCellType(cellId);
