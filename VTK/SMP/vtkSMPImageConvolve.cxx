@@ -290,7 +290,7 @@ class ConvolveFunctor : public vtkFunctor
 
   public:
     vtkTypeMacro(ConvolveFunctor,vtkFunctor);
-    static ConvolveFunctor* New() { return new ConvolveFunctor<T>; }
+    static ConvolveFunctor<T>* New() { return new ConvolveFunctor<T>; }
     void PrintSelf(ostream &os, vtkIndent indent)
       {
       this->Superclass::PrintSelf(os,indent);

@@ -9,43 +9,40 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkAxesActor.h"
 
-#include "vtkImageCanvasSource2D.h"
-#include "vtkImageConvolve.h"
+#include "vtkPNGReader.h"
+#include "vtkJPEGReader.h"
+#include "vtkImageDotProduct.h"
 #include "vtkImageViewer.h"
 #include "vtkRenderWindowInteractor.h"
 #ifdef VTK_CAN_USE_SMP
-  #include "vtkSMPImageConvolve.h"
+  #include "vtkSMPImageDotProduct.h"
 #endif
 
 int main( int argc, char** argv )
   {
-  vtkImageCanvasSource2D* image = vtkImageCanvasSource2D::New();
-  image->SetScalarTypeToFloat();
-  image->SetExtent(0,1023,0,1023,0,0);
-  image->SetDrawColor(0.0);
-  image->FillBox(0,1023,0,1023);
-  image->SetDrawColor(1.0);
-  image->FillBox(300,700,300,700);
-
-  double kernel[25] = {1,1,1,1,1,5,4,3,2,1,5,4,3,2,1,5,4,3,2,1,1,1,1,1,1};
+  vtkJPEGReader* image1 = vtkJPEGReader::New();
+  image1->SetFileName("/home/mathias/dataset.jpeg");
+  vtkJPEGReader* image2 = vtkJPEGReader::New();
+  image2->SetFileName("/home/mathias/dataset.jpeg");
 
 #ifdef VTK_CAN_USE_SMP
-  vtkSMPImageConvolve* convolve = vtkSMPImageConvolve::New();
+  vtkSMPImageDotProduct* filter = vtkSMPImageDotProduct::New();
 #else
-  vtkImageConvolve* convolve = vtkImageConvolve::New();
+  vtkImageDotProduct* filter = vtkImageDotProduct::New();
 #endif
-  convolve->SetInputConnection( image->GetOutputPort() );
-  convolve->SetKernel5x5(kernel);
-  image->Delete();
+  filter->SetInputConnection( image1->GetOutputPort() );
+  filter->SetInputConnection( 1, image2->GetOutputPort() );
+  image1->Delete();
+  image2->Delete();
 
   /* === Pipeline pull === */
 #ifndef HIDE_VTK_WINDOW
   vtkImageViewer* viewer = vtkImageViewer::New();
-  viewer->SetInputConnection( convolve->GetOutputPort() );
+  viewer->SetInputConnection( filter->GetOutputPort() );
   viewer->SetColorWindow(18);
   viewer->SetColorLevel(9);
   viewer->SetSize(1024,1024);
-  convolve->Delete();
+  filter->Delete();
 
   vtkRenderWindowInteractor* it = vtkRenderWindowInteractor::New();
   viewer->SetupInteractor(it);
@@ -55,8 +52,8 @@ int main( int argc, char** argv )
   it->Delete();
   viewer->Delete();
 #else
-  convolve->Update();
-  convolve->Delete();
+  filter->Update();
+  filter->Delete();
 #endif
 
   return 0;
