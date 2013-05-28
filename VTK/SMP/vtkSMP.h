@@ -210,9 +210,7 @@ namespace vtkSMP
 
       T* GetLocal()
         {
-        T* item = this->ThreadLocalStorage[InternalGetTid()];
-        if (item) return item;
-        return this->NewLocal();
+        return this->ThreadLocalStorage[InternalGetTid()];
         }
 
       template<class Derived>
@@ -233,6 +231,7 @@ namespace vtkSMP
           Derived* d = (*it) = Derived::SafeDownCast(*src);
           if ( d ) d->Register(other);
           }
+        other->SetSpecificClassName(this->Specific.c_str());
         }
 
     protected:

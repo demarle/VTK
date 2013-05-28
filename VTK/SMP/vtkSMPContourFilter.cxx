@@ -26,7 +26,6 @@
 
 #include "vtkSMP.h"
 #include "vtkSMPMergePoints.h"
-#include "vtkCommand.h"
 #include "vtkSMPMinMaxTree.h"
 
 #include "vtkBenchTimer.h"

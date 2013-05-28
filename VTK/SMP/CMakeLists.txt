@@ -24,6 +24,11 @@ set(Kit_SRCS
   vtkSMPDistributePolyData.cxx
   vtkSMPImageConvolve.cxx
   vtkSMPImageDotProduct.cxx
+  vtkSMPPipeline.cxx
+  vtkSMPAlgorithm.cxx
+  vtkSMPPolyDataAlgorithm.cxx
+  vtkSMPPointSetAlgorithm.cxx
+  vtkSMPContourFilter2.cxx
 )
 
 SET_SOURCE_FILES_PROPERTIES(
@@ -47,6 +52,7 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkFunctor
   vtkFunctorInitializable
   vtkTask
+  vtkSMPAlgorithm
   ABSTRACT
 )
 
@@ -73,6 +79,11 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkSMPDistributePolyData.h
     vtkSMPImageConvolve.h
     vtkSMPImageDotProduct.h
+    vtkSMPPipeline.h
+    vtkSMPAlgorithm.h
+    vtkSMPPolyDataAlgorithm.h
+    vtkSMPPointSetAlgorithm.h
+    vtkSMPContourFilter2.h
     )
 
   INSTALL(FILES ${__inst_files}

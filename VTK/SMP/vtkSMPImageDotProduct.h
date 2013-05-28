@@ -24,7 +24,7 @@
 
 #include "vtkThreadedImageAlgorithm.h"
 
-class VTK_IMAGING_EXPORT vtkSMPImageDotProduct : public vtkImageAlgorithm
+class VTK_SMP_EXPORT vtkSMPImageDotProduct : public vtkImageAlgorithm
 {
 public:
   static vtkSMPImageDotProduct *New();
