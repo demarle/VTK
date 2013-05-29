@@ -1,5 +1,7 @@
 #include "vtkSMP.h"
 
+#include <omp.h>
+
 void omp_traversal( vtkIdType index, int lvl, vtkIdType BranchingFactor, const vtkParallelTree* Tree, vtkFunctor* func )
   {
   vtkFunctorInitialisable* f = vtkFunctorInitialisable::SafeDownCast(func);
