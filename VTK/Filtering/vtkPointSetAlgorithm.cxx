@@ -48,7 +48,7 @@ vtkPointSet* vtkPointSetAlgorithm::GetOutput(int port)
 
 //----------------------------------------------------------------------------
 // Get the output as vtkPolyData.
-vtkPolyData *vtkPointSetAlgorithm::GetPolyDataOutput() 
+vtkPolyData *vtkPointSetAlgorithm::GetPolyDataOutput()
 {
   return vtkPolyData::SafeDownCast(this->GetOutput());
 }
@@ -134,8 +134,8 @@ vtkDataObject* vtkPointSetAlgorithm::GetInput()
 
 //----------------------------------------------------------------------------
 int vtkPointSetAlgorithm::ProcessRequest(
-  vtkInformation* request, 
-  vtkInformationVector** inputVector, 
+  vtkInformation* request,
+  vtkInformationVector** inputVector,
   vtkInformationVector* outputVector)
 {
   // generate the data
@@ -166,8 +166,8 @@ int vtkPointSetAlgorithm::ProcessRequest(
 
 //----------------------------------------------------------------------------
 int vtkPointSetAlgorithm::RequestDataObject(
-  vtkInformation*, 
-  vtkInformationVector** inputVector , 
+  vtkInformation*,
+  vtkInformationVector** inputVector ,
   vtkInformationVector* outputVector)
 {
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
@@ -177,7 +177,7 @@ int vtkPointSetAlgorithm::RequestDataObject(
     }
   vtkPointSet *input = vtkPointSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
-  
+
   if (input)
     {
     // for each output
@@ -186,12 +186,12 @@ int vtkPointSetAlgorithm::RequestDataObject(
       vtkInformation* info = outputVector->GetInformationObject(i);
       vtkPointSet *output = vtkPointSet::SafeDownCast(
         info->Get(vtkDataObject::DATA_OBJECT()));
-      
-      if (!output || !output->IsA(input->GetClassName())) 
+
+      if (!output || !output->IsA(input->GetClassName()))
         {
         output = input->NewInstance();
         output->SetPipelineInformation(info);
-        output->Delete();
+        output->FastDelete();
         }
       }
     return 1;

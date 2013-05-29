@@ -5,12 +5,23 @@ vtkInstantiatorNewMacro(vtkBenchTimer);
 
 vtkBenchTimer::vtkBenchTimer() : vtkObject(), depth_level ( 0 ) { }
 
+bool vtkBenchTimer::isActive = true;
 vtkBenchTimer* vtkBenchTimer::instance = 0;
 vtkBenchTimer::~vtkBenchTimer()
 {
   if ( instance )
     instance = 0;
 }
+
+void vtkBenchTimer::Deactivate()
+  {
+  isActive = false;
+  }
+
+void vtkBenchTimer::Activate()
+  {
+  isActive = true;
+  }
 
 void vtkBenchTimer::PrintSelf(ostream &os, vtkIndent indent)
 {
@@ -38,6 +49,8 @@ vtkBenchTimer* vtkBenchTimer::New()
 
 void vtkBenchTimer::start_bench_timer()
 {
+  if (!isActive)
+    return;
   if ( ret_value.size() == depth_level )
   {
     ret_value.push_back( 0 );
@@ -51,6 +64,11 @@ void vtkBenchTimer::start_bench_timer()
 
 void vtkBenchTimer::end_bench_timer()
 {
+  if (!isActive)
+    {
+    cout << ". ";
+    return;
+    }
   --depth_level;
   ret_value[depth_level] += clock_gettime(CLOCK_REALTIME, &t1[depth_level]);
   int s = t1[depth_level].tv_sec - t0[depth_level].tv_sec;

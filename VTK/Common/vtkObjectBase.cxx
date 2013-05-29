@@ -56,7 +56,7 @@ void vtkObjectBase::operator delete( void *p )
 {
   free(p);
 }
-#endif 
+#endif
 
 // ------------------------------------vtkObjectBase----------------------
 // This operator allows all subclasses of vtkObjectBase to be printed via <<.
@@ -69,7 +69,7 @@ ostream& operator<<(ostream& os, vtkObjectBase& o)
   return os;
 }
 
-// Create an object with Debug turned off and modified time initialized 
+// Create an object with Debug turned off and modified time initialized
 // to zero.
 vtkObjectBase::vtkObjectBase()
 {
@@ -77,7 +77,7 @@ vtkObjectBase::vtkObjectBase()
   this->WeakPointers = 0;
 }
 
-vtkObjectBase::~vtkObjectBase() 
+vtkObjectBase::~vtkObjectBase()
 {
   // warn user if reference counting is on and the object is being referenced
   // by another object
@@ -105,7 +105,7 @@ const char* vtkObjectBase::GetClassName() const
   return this->GetClassNameInternal();
 }
 
-int vtkObjectBase::IsTypeOf(const char *name) 
+int vtkObjectBase::IsTypeOf(const char *name)
 {
   if ( !strcmp("vtkObjectBase",name) )
     {
@@ -119,10 +119,10 @@ int vtkObjectBase::IsA(const char *type)
   return this->vtkObjectBase::IsTypeOf(type);
 }
 
-// Delete a vtk object. This method should always be used to delete an object 
+// Delete a vtk object. This method should always be used to delete an object
 // when the new operator was used to create it. Using the C++ delete method
 // will not work with reference counting.
-void vtkObjectBase::Delete() 
+void vtkObjectBase::Delete()
 {
   this->UnRegister(static_cast<vtkObjectBase *>(NULL));
 }
@@ -138,7 +138,7 @@ void vtkObjectBase::Print(ostream& os)
 {
   vtkIndent indent;
 
-  this->PrintHeader(os,vtkIndent(0)); 
+  this->PrintHeader(os,vtkIndent(0));
   this->PrintSelf(os, indent.GetNextIndent());
   this->PrintTrailer(os,vtkIndent(0));
 }
@@ -245,7 +245,7 @@ void vtkObjectBase::RegisterInternal(vtkObjectBase*, int check)
   if(!(check &&
        vtkObjectBaseToGarbageCollectorFriendship::TakeReference(this)))
     {
-    ++this->ReferenceCount;
+    __sync_add_and_fetch(&(this->ReferenceCount),1);
     }
 }
 
@@ -261,7 +261,7 @@ void vtkObjectBase::UnRegisterInternal(vtkObjectBase*, int check)
     }
 
   // Decrement the reference count, delete object if count goes to zero.
-  if(--this->ReferenceCount <= 0)
+  if(__sync_add_and_fetch(&(this->ReferenceCount),-1) <= 0)
     {
     // Clear all weak pointers to the object before deleting it.
     if (this->WeakPointers)

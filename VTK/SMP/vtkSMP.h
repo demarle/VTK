@@ -98,11 +98,16 @@ namespace vtkSMP
   int InternalGetNumberOfThreads();
   int InternalGetTid();
 
+  void VTK_SMP_EXPORT ThreadLovePrint( const char* message );
+  void VTK_SMP_EXPORT ThreadLovePrint( const vtkIdType& message );
+  void VTK_SMP_EXPORT ThreadLovePrint( int message );
+  void VTK_SMP_EXPORT ThreadLovePrint( void* message );
+
   template<class T>
   class VTK_SMP_EXPORT vtkThreadLocal : public vtkObject
     {
     protected :
-      vtkThreadLocal() : vtkObject(), ThreadLocalStorage(InternalGetNumberOfThreads(), NULL), Specific("") {}
+      vtkThreadLocal() : vtkObject(), ThreadLocalStorage(InternalGetNumberOfThreads(), NULL), Specific("NONE") {}
       ~vtkThreadLocal()
         {
         for ( iterator it = ThreadLocalStorage.begin();
@@ -145,7 +150,7 @@ namespace vtkSMP
 
       T* NewLocal ( )
         {
-        if ( this->Specific != "" )
+        if ( this->Specific != "NONE" )
           {
           return this->NewLocal(this->Specific.c_str());
           }

@@ -753,7 +753,7 @@ int vtkExecutive::CallAlgorithm(vtkInformation* request, int direction,
        (this->Algorithm->IsA("vtkContourFilter") ||
         this->Algorithm->IsA("vtkTransformFilter") ||
         this->Algorithm->IsA("vtkImageConvolve") ||
-        this->Algorithm->IsA("vtkSMPImageConvolve")) )
+        this->Algorithm->IsA("vtkSMPContourFilter2")) )
     { // We want to monitor only these
     cout << endl << this->Algorithm->GetClassName() << endl;
     for (int i = 0; i < BENCH_MAX; ++i)

@@ -540,67 +540,78 @@ namespace vtkSMP
 
   void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctor *op)
     {
-    int32_t cores = kaapic_get_concurrency();
-    int32_t chunk_size = (last - first) / cores + 1;
-    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
-    kaapic_spawn_attr_t attr[cores];
-    int32_t kproc;
-    vtkIdType f, l;
-    for (kproc = cores - 1, f = last - chunk_size, l = last; f > 0; l = f, f -= chunk_size, --kproc)
-      {
-      kaapic_spawn_attr_init(&(attr[kproc]));
-      kaapic_spawn_attr_flags(&(attr[kproc]), KAAPIC_TASK_UNSTEALABLE);
-      kaapic_spawn_attr_set_kproc(&(attr[kproc]), kproc);
-      kaapic_spawn(&(attr[kproc]), 3, (void(*)())do_static_for,
-                   KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, f,
-                   KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, l,
-                   KAAPIC_MODE_R, KAAPIC_TYPE_LLONG, 1, op);
-      }
-    kaapic_spawn_attr_init(&(attr[0]));
-    kaapic_spawn_attr_flags(&(attr[0]), KAAPIC_TASK_UNSTEALABLE);
-    kaapic_spawn_attr_set_kproc(&(attr[0]), 0);
-    kaapic_spawn(&(attr[0]), 3, (void(*)())do_static_for,
-        KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, 0,
-        KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, l,
-        KAAPIC_MODE_R, KAAPIC_TYPE_LLONG, 1, op);
-    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
-    for (kproc = 0; kproc < cores; ++kproc)
-      {
-      kaapic_spawn_attr_destroy(&(attr[kproc]));
-      }
+    ForEach(first, last, op);
     }
 
   void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable *op)
     {
-    int32_t cores = kaapic_get_concurrency();
-    int32_t chunk_size = (last - first) / cores + 1;
-    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
-    kaapic_spawn_attr_t attr[cores];
-    int32_t kproc;
-    vtkIdType f, l;
-    for (kproc = cores - 1, f = last - chunk_size, l = last; f > 0; l = f, f -= chunk_size, --kproc)
-      {
-      kaapic_spawn_attr_init(&(attr[kproc]));
-      kaapic_spawn_attr_flags(&(attr[kproc]), KAAPIC_TASK_UNSTEALABLE);
-      kaapic_spawn_attr_set_kproc(&(attr[kproc]), kproc);
-      kaapic_spawn(&(attr[kproc]), 3, (void(*)())do_static_for_init,
-                   KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, f,
-                   KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, l,
-                   KAAPIC_MODE_R, KAAPIC_TYPE_LLONG, 1, op);
-      }
-    kaapic_spawn_attr_init(&(attr[0]));
-    kaapic_spawn_attr_flags(&(attr[0]), KAAPIC_TASK_UNSTEALABLE);
-    kaapic_spawn_attr_set_kproc(&(attr[0]), 0);
-    kaapic_spawn(&(attr[0]), 3, (void(*)())do_static_for_init,
-        KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, 0,
-        KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, l,
-        KAAPIC_MODE_R, KAAPIC_TYPE_LLONG, 1, op);
-    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
-    for (kproc = 0; kproc < cores; ++kproc)
-      {
-      kaapic_spawn_attr_destroy(&(attr[kproc]));
-      }
+    ForEach(first, last, op);
     }
+
+//  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctor *op)
+//    {
+//    int32_t cores = kaapic_get_concurrency();
+//    int32_t chunk_size = (last - first) / cores + 1;
+//    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+//    kaapic_spawn_attr_t attr[cores];
+//    int32_t kproc;
+//    vtkIdType f, l;
+//    for (kproc = cores - 1, f = last - chunk_size, l = last; f > 0; l = f, f -= chunk_size, --kproc)
+//      {
+//      kaapic_spawn_attr_init(&(attr[kproc]));
+//      kaapic_spawn_attr_flags(&(attr[kproc]), KAAPIC_TASK_UNSTEALABLE);
+//      kaapic_spawn_attr_set_kproc(&(attr[kproc]), kproc);
+//      kaapic_spawn(&(attr[kproc]), 3, (void(*)())do_static_for,
+//                   KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, f,
+//                   KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, l,
+//                   KAAPIC_MODE_R, KAAPIC_TYPE_LLONG, 1, op);
+//      }
+//    kaapic_spawn_attr_init(&(attr[0]));
+//    kaapic_spawn_attr_flags(&(attr[0]), KAAPIC_TASK_UNSTEALABLE);
+//    kaapic_spawn_attr_set_kproc(&(attr[0]), 0);
+//    kaapic_spawn(&(attr[0]), 3, (void(*)())do_static_for,
+//        KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, 0,
+//        KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, l,
+//        KAAPIC_MODE_R, KAAPIC_TYPE_LLONG, 1, op);
+//    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+//    for (kproc = 0; kproc < cores; ++kproc)
+//      {
+//      kaapic_spawn_attr_destroy(&(attr[kproc]));
+//      }
+//    }
+
+//  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable *op)
+//    {
+//    int32_t cores = kaapic_get_concurrency();
+//    int32_t chunk_size = (last - first) / cores + 1;
+//    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+//    kaapic_spawn_attr_t attr[cores];
+//    int32_t kproc;
+//    vtkIdType f, l;
+//    for (kproc = cores - 1, f = last - chunk_size, l = last; f > 0; l = f, f -= chunk_size, --kproc)
+//      {
+//      kaapic_spawn_attr_init(&(attr[kproc]));
+//      kaapic_spawn_attr_flags(&(attr[kproc]), KAAPIC_TASK_UNSTEALABLE);
+//      kaapic_spawn_attr_set_kproc(&(attr[kproc]), kproc);
+//      kaapic_spawn(&(attr[kproc]), 3, (void(*)())do_static_for_init,
+//                   KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, f,
+//                   KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, l,
+//                   KAAPIC_MODE_R, KAAPIC_TYPE_LLONG, 1, op);
+//      }
+//    kaapic_spawn_attr_init(&(attr[0]));
+//    kaapic_spawn_attr_flags(&(attr[0]), KAAPIC_TASK_UNSTEALABLE);
+//    kaapic_spawn_attr_set_kproc(&(attr[0]), 0);
+//    kaapic_spawn(&(attr[0]), 3, (void(*)())do_static_for_init,
+//        KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, 0,
+//        KAAPIC_MODE_V, KAAPIC_TYPE_LLONG, 1, l,
+//        KAAPIC_MODE_R, KAAPIC_TYPE_LLONG, 1, op);
+//    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+//    for (kproc = 0; kproc < cores; ++kproc)
+//      {
+//      kaapic_spawn_attr_destroy(&(attr[kproc]));
+//      }
+//    }
+
   template<>
   void Parallel<vtkSMPMergePoints> ( const vtkTask* function,
                                      vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::iterator data1,

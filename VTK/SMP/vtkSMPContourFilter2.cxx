@@ -443,7 +443,7 @@ int vtkSMPContourFilter2::RequestData(
     vtkInformation* vtkNotUsed(request),
     vtkInformationVector** inputVector,
     vtkInformationVector* vtkNotUsed(outputVector),
-    vtkSMP::vtkThreadLocal<vtkDataObject>* outputs)
+    vtkSMP::vtkThreadLocal<vtkDataObject>** outputs)
 {
   // get the input
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
@@ -488,13 +488,10 @@ int vtkSMPContourFilter2::RequestData(
     vtkWarningMacro(<< "vtkStructuredGrid input not supported");
     } //if 3D SGrid
 
-  vtkIdType cellId;
-  int abortExecute=0;
   vtkDataArray *inScalars;
-  vtkPoints *newPts;
   vtkIdType numCells, estimatedSize;
 
-  if (!outputs) {return 0;}
+  if (!outputs[0]) {return 0;}
 
   vtkDebugMacro(<< "Executing contour filter");
   if (input->GetDataObjectType() == VTK_UNSTRUCTURED_GRID && !this->UseScalarTree)
@@ -529,15 +526,12 @@ int vtkSMPContourFilter2::RequestData(
       {
       this->CreateDefaultLocator();
       }
-    this->Locator->InitPointInsertion (newPts, input->GetBounds(),estimatedSize);
 
     // If enabled, build a scalar tree to accelerate search
     //
     vtkSMPMinMaxTree* parallelTree = vtkSMPMinMaxTree::SafeDownCast(this->ScalarTree);
     if ( !this->UseScalarTree || parallelTree )
       {
-      vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast( this->Locator );
-
       vtkBenchTimer* timer = vtkBenchTimer::New();
       timer->start_bench_timer();
       // Init (thread local init is drown into first ForEach)
@@ -548,7 +542,7 @@ int vtkSMPContourFilter2::RequestData(
       else
         my_contour = ThreadsFunctor2::New();
       my_contour->SetData( input, this->Locator, estimatedSize, values,
-                           numContours, inScalars, this->ComputeScalars, outputs );
+                           numContours, inScalars, this->ComputeScalars, outputs[0] );
       timer->end_bench_timer();
 
       // Exec

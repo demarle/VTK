@@ -7,11 +7,13 @@
 #include "vtkCompositeDataSet.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkInformationDoubleKey.h"
-#include "vtkInformationExecutivePortKey.h"
 #include "vtkObjectFactory.h"
 #include "vtkMultiPieceDataSet.h"
 #include "vtkInformationStringKey.h"
+#include "vtkInformationIntegerKey.h"
+#include "vtkInformationExecutivePortKey.h"
+
+#include "vtkBenchTimer.h"
 
 vtkInformationKeyMacro(vtkSMPPipeline, DATA_OBJECT_CONCRETE_TYPE, String);
 
@@ -28,11 +30,14 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable
         {
         for (vtkIdType i=0; i<this->Executive->GetNumberOfInputPorts(); ++i)
           {
+          inInfoVec[i]->Delete();
           inLocalInfo[i]->Delete();
           }
+        delete [] inInfoVec;
         delete [] inLocalInfo;
         }
       if (outLocalInfo) outLocalInfo->Delete();
+      if (outInfoVec) outInfoVec->Delete();
       if (requests) requests->Delete();
       }
 
@@ -76,8 +81,9 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable
       if (dobj)
         {
         vtkInformation* r = this->requests->GetLocal();
-        vtkInformationVector** inInfoVector = new vtkInformationVector*[this->Executive->GetNumberOfInputPorts()];
-        for (vtkIdType i=0; i<this->Executive->GetNumberOfInputPorts(); ++i)
+        vtkIdType numPorts = this->Executive->GetNumberOfInputPorts();
+        vtkInformationVector** inInfoVector = new vtkInformationVector*[numPorts];
+        for (vtkIdType i=0; i<numPorts; ++i)
           {
           inInfoVector[i] = this->inLocalInfo[i]->GetLocal();
           }
@@ -112,29 +118,28 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable
                      vtkInformationVector* _outInfoVec, vtkInformation* _request,
                      vtkSMPPipeline* self, int _compositePort, double* _times, int _n)
       {
-      compositePort = _compositePort;
-      inInfoVec = _inInfoVec;
-      outInfoVec = _outInfoVec;
-      times = _times;
-      numTimeSteps = _n;
-      Executive = self;
+      this->compositePort = _compositePort;
+      this->times = _times;
+      this->numTimeSteps = _n;
+      this->Executive = self;
 
       vtkIdType numPorts = self->GetNumberOfInputPorts();
+      this->inInfoVec = new vtkInformationVector*[numPorts];
+      this->outInfoVec = vtkInformationVector::New();
+      this->outInfoVec->Copy(_outInfoVec, 1);
+
       this->inLocalInfo = new vtkSMP::vtkThreadLocal<vtkInformationVector>*[numPorts];
       for (vtkIdType i = 0; i < numPorts; ++i)
         {
-        vtkSMP::vtkThreadLocal<vtkInformationVector>* inInformation = vtkSMP::vtkThreadLocal<vtkInformationVector>::New();
-        this->inLocalInfo[i] = inInformation;
-        vtkInformationVector* info = inInformation->NewLocal();
-        info->Copy(_inInfoVec[i], 1);
+        this->inInfoVec[i] = vtkInformationVector::New();
+        this->inInfoVec[i]->Copy(_inInfoVec[i], 1);
+        this->inLocalInfo[i] = vtkSMP::vtkThreadLocal<vtkInformationVector>::New();
         }
 
       this->outLocalInfo = vtkSMP::vtkThreadLocal<vtkInformationVector>::New();
-      this->outLocalInfo->NewLocal()->Copy(_outInfoVec, 1);
 
       this->request = _request;
       this->requests = vtkSMP::vtkThreadLocal<vtkInformation>::New();
-      this->requests->NewLocal()->Copy(_request, 1);
 
       this->inObjs.resize(0);
       for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
@@ -143,7 +148,7 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable
         }
       this->outObjs.resize(this->inObjs.size(), NULL);
 
-      this->Initialized();
+      this->Init();
       }
 
     size_t GetInputSize()
@@ -299,11 +304,13 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
     iter.TakeReference(input->NewIterator());
     iter->VisitOnlyLeavesOn();
 
+    vtkBenchTimer::Deactivate();
     ParallelFilterExecutor* functor = ParallelFilterExecutor::New();
     functor->PrepareData(iter,inInfoVec,outInfoVec,r,this,compositePort,times,numTimeSteps);
     vtkSMP::ForEach(0,functor->GetInputSize(),functor);
     functor->FinalizeData(iter,compositeOutput);
     functor->Delete();
+    vtkBenchTimer::Activate();
 
     // True when the pipeline is iterating over the current (simple)
     // filter to produce composite output. In this case,
@@ -357,14 +364,7 @@ int vtkSMPPipeline::CheckDataObject(int port, vtkInformationVector* outInfoVec)
     // For now, only create a Multi Piece Dataset. Checks
     // will come later.
     vtkMultiPieceDataSet* data = vtkMultiPieceDataSet::New();
-    vtkInformation* dataInfo = data->GetInformation();
-    if (!dataInfo)
-      {
-      dataInfo = vtkInformation::New();
-      data->SetInformation(dataInfo);
-      dataInfo->Delete();
-      }
-    dataInfo->Set(vtkSMPPipeline::DATA_OBJECT_CONCRETE_TYPE(),
+    outInfo->Set(vtkSMPPipeline::DATA_OBJECT_CONCRETE_TYPE(),
                   outInfo->Get(vtkDataObject::DATA_OBJECT())->GetClassName());
     this->SetOutputData(port, data, outInfo);
     }

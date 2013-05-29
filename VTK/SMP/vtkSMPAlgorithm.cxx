@@ -61,14 +61,9 @@ int vtkSMPAlgorithm::ProcessRequest(
     {
     outputs[i] = vtkSMP::vtkThreadLocal<vtkDataObject>::New();
     vtkInformation* outInfo = outputVector->GetInformationObject(i);
-    vtkInformation* concreteInfo = outInfo->Get(vtkDataObject::DATA_OBJECT())->GetInformation();
-    if (concreteInfo && concreteInfo->Has(vtkSMPPipeline::DATA_OBJECT_CONCRETE_TYPE()))
+    if (outInfo->Has(vtkSMPPipeline::DATA_OBJECT_CONCRETE_TYPE()))
       {
-      outputs[i]->SetSpecificClassName(concreteInfo->Get(vtkSMPPipeline::DATA_OBJECT_CONCRETE_TYPE()));
-      }
-    else
-      {
-      outputs[i]->SetSpecificClassName(outInfo->Get(vtkDataObject::DATA_TYPE_NAME()));
+      outputs[i]->SetSpecificClassName(outInfo->Get(vtkSMPPipeline::DATA_OBJECT_CONCRETE_TYPE()));
       }
     }
 

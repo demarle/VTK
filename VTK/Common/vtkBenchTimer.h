@@ -16,6 +16,7 @@ class VTK_COMMON_EXPORT vtkBenchTimer : public vtkObject
   void operator = (const vtkBenchTimer&);
 
   static vtkBenchTimer* instance;
+  static bool isActive;
 
 protected:
   vtkBenchTimer ();
@@ -29,6 +30,8 @@ public:
   void start_bench_timer();
   void end_bench_timer();
 
+  static void Deactivate();
+  static void Activate();
 };
 
 #endif // VTKBENCHTIMER_H

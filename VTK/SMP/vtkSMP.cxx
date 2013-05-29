@@ -687,4 +687,25 @@ namespace vtkSMP
     }
 
   vtkStandardNewMacro(vtkSpawnTasks);
+
+  void ThreadLovePrint(const char *message)
+    {
+    printf("[%d] %s\n", InternalGetTid(), message);
+    }
+
+  void ThreadLovePrint(const vtkIdType& message)
+    {
+    printf("[%d] %d\n", InternalGetTid(), message);
+    }
+
+  void ThreadLovePrint(int message)
+    {
+    printf("[%d] %d\n", InternalGetTid(), message);
+    }
+
+  void ThreadLovePrint(void *message)
+    {
+    printf("[%d] %p\n", InternalGetTid(), message);
+    }
+
 }
