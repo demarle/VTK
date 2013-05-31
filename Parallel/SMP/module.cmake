@@ -7,4 +7,9 @@ vtk_module(vtkParallelSMP
     vtkFiltersGeneral
     vtkParallelCore
   EXCLUDE_FROM_WRAPPING
+  TEST_DEPENDS
+    vtkTestingRendering
+    vtkRenderingOpenGL
+    vtkInteractionStyle
+    vtkFiltersModeling
   )
