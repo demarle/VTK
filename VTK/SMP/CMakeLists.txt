@@ -29,6 +29,7 @@ set(Kit_SRCS
   vtkSMPPolyDataAlgorithm.cxx
   vtkSMPPointSetAlgorithm.cxx
   vtkSMPContourFilter2.cxx
+  vtkSMPImageGaussianSmooth.cxx
 )
 
 SET_SOURCE_FILES_PROPERTIES(
@@ -84,6 +85,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkSMPPolyDataAlgorithm.h
     vtkSMPPointSetAlgorithm.h
     vtkSMPContourFilter2.h
+    vtkSMPImageGaussianSmooth.h
     )
 
   INSTALL(FILES ${__inst_files}
