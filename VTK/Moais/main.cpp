@@ -1,6 +1,5 @@
 #include "vtkPolyDataReader.h"
 #include "vtkPolyData.h"
-#include "vtkCompositePolyDataMapper.h"
 #include "vtkUnstructuredGridReader.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkActor.h"
@@ -9,15 +8,13 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkAxesActor.h"
 
-#include "vtkDataObject.h"
-#include "vtkTransformFilter.h"
-#include "vtkTransform.h"
+#include "vtkPNGReader.h"
+#include "vtkJPEGReader.h"
+#include "vtkImageAppendComponents.h"
+#include "vtkImageGaussianSmooth.h"
+#include "vtkImageViewer.h"
 #ifdef VTK_CAN_USE_SMP
-  #include "vtkSMPContourFilter2.h"
-  #include "vtkSMPPipeline.h"
-#else
-  #include "vtkContourFilter.h"
-  #include "vtkCompositeDataPipeline.h"
+  #include "vtkSMPImageGaussianSmooth.h"
 #endif
 
 int main( int argc, char** argv )
@@ -27,66 +24,40 @@ int main( int argc, char** argv )
     cout << "You must provide at least one file name." << endl;
     return 1;
     }
-#ifdef VTK_CAN_USE_SMP
-  vtkSMPPipeline* p = vtkSMPPipeline::New();
-#else
-  vtkCompositeDataPipeline* p = vtkCompositeDataPipeline::New();
-#endif
-  vtkAlgorithm::SetDefaultExecutivePrototype(p);
-  p->Delete();
 
-  vtkPolyDataReader* reader = vtkPolyDataReader::New();
+  vtkJPEGReader* reader = vtkJPEGReader::New();
   reader->SetFileName(argv[1]);
 
 #ifdef VTK_CAN_USE_SMP
-  vtkSMPContourFilter2* filter = vtkSMPContourFilter2::New();
+  vtkSMPImageGaussianSmooth* filter = vtkSMPImageGaussianSmooth::New();
 #else
-  vtkContourFilter* filter = vtkContourFilter::New();
+  vtkImageGaussianSmooth* filter = vtkImageGaussianSmooth::New();
 #endif
   filter->SetInputConnection( reader->GetOutputPort() );
-  filter->GenerateValues(11, 0., 1.);
-  filter->UseScalarTreeOff();
+  filter->SetDimensionality(3);
+  filter->SetStandardDeviation(.3,.3,.3);
   reader->Delete();
-
-  vtkTransformFilter* transform = vtkTransformFilter::New();
-  transform->SetInputConnection( filter->GetOutputPort() );
-  filter->Delete();
-
-  vtkTransform* t = vtkTransform::New();
-  t->RotateWXYZ(45.,1.,1.,1.);
-  transform->SetTransform(t);
-  t->Delete();
 
   /* === Pipeline pull === */
 #ifdef HIDE_VTK_WINDOW
-  transform->Update();
-  transform->GetOutputDataObject(0)->Print( cout );
-  transform->Delete();
+  filter->Update();
+  filter->Delete();
 #else
-  vtkCompositePolyDataMapper* mapper = vtkCompositePolyDataMapper::New();
-  mapper->SetInputConnection( transform->GetOutputPort() );
-  transform->Delete();
+  vtkImageViewer* viewer = vtkImageViewer::New();
+  viewer->SetInputConnection( filter->GetOutputPort() );
+  viewer->SetColorWindow(18);
+  viewer->SetColorLevel(9);
+  viewer->SetSize(1546,1161);
+  filter->Delete();
 
-  vtkActor* actor = vtkActor::New();
-  actor->SetMapper(mapper);
-  mapper->Delete();
+  vtkRenderWindowInteractor* it = vtkRenderWindowInteractor::New();
+  viewer->SetupInteractor(it);
 
-  vtkRenderer* ren = vtkRenderer::New();
-  ren->AddActor(actor);
-  actor->Delete();
+  it->Initialize();
+  it->Start();
 
-  vtkRenderWindow* win = vtkRenderWindow::New();
-  win->AddRenderer(ren);
-  ren->Delete();
-
-  vtkRenderWindowInteractor* inter = vtkRenderWindowInteractor::New();
-  inter->SetRenderWindow(win);
-  win->Delete();
-
-  inter->Initialize();
-  inter->Start();
-
-  inter->Delete();
+  it->Delete();
+  viewer->Delete();
 #endif
 
   return 0;
