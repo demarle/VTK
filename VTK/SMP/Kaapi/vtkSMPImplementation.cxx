@@ -52,7 +52,7 @@ class Work {
       end = _array+e;
       for ( beg = _array+b; beg < end; ++beg )
         {
-        (*_op)( beg, 0, 0 );
+        (*_op)( beg );
         }
       return true;
       }
@@ -114,10 +114,10 @@ struct TaskBodyCPU<TaskWork<Functor> > {
 };
 
 template<>
-struct TaskBodyCPU<TaskWork<vtkFunctorInitialisable> > {
-  void operator() ( ka::pointer_rw<Work<vtkFunctorInitialisable> > work )
+struct TaskBodyCPU<TaskWork<vtkFunctorInitialisable<vtkIdType> > > {
+  void operator() ( ka::pointer_rw<Work<vtkFunctorInitialisable<vtkIdType> > > work )
     {
-    const vtkFunctorInitialisable* functor = work->getFunctor();
+    const vtkFunctorInitialisable<vtkIdType>* functor = work->getFunctor();
     if ( functor->ShouldInitialize() )
       functor->Init();
     while( work->doWork() );
@@ -198,21 +198,21 @@ struct TaskBodyCPU<TaskSpawnable> {
     }
 };
 
-void do_static_for( vtkIdType first, vtkIdType last, vtkFunctor* op )
+void do_static_for( vtkIdType first, vtkIdType last, vtkFunctor<vtkIdType>* op )
   {
   for ( vtkIdType i = first; i < last; ++i )
     {
-    (*op)( i, 0, 0 );
+    (*op)( i );
     }
   }
 
-void do_static_for_init( vtkIdType first, vtkIdType last, vtkFunctorInitialisable* op )
+void do_static_for_init( vtkIdType first, vtkIdType last, vtkFunctorInitialisable<vtkIdType>* op )
   {
   if (op->ShouldInitialize())
     op->Init();
   for ( vtkIdType i = first; i < last; ++i )
     {
-    (*op)( i, 0, 0 );
+    (*op)( i );
     }
   }
 
@@ -220,7 +220,7 @@ typedef struct tree_work
 {
   kaapi_workqueue_t wq;
   const vtkParallelTree* Tree;
-  vtkFunctor* op;
+  vtkFunctor<vtkIdType>* op;
   int max_level;
   int cur_level;
   vtkIdType branching_factor;
@@ -253,7 +253,7 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
   {
   work_t* const work = (work_t*)(args);
 
-  vtkFunctorInitialisable* iop = vtkFunctorInitialisable::SafeDownCast( work->op );
+  vtkFunctorInitialisable<vtkIdType>* iop = vtkFunctorInitialisable<vtkIdType>::SafeDownCast( work->op );
   if ( iop && iop->ShouldInitialize( ) )
     iop->Init( );
 
@@ -322,23 +322,23 @@ static int splitter(
   return 0;
   }
 
-inline void doFor( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o )
+inline void doFor( int32_t b, int32_t e, int32_t tid, const vtkFunctor<vtkIdType>* o )
   {
   for (int32_t k = b; k < e; ++k)
     {
-    (*o)( k, 0, 0 );
+    (*o)( k );
     }
   }
-inline void doForInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o )
+inline void doForInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable<vtkIdType>* o )
   {
   if (o->ShouldInitialize())
     o->Init();
   for (int32_t k = b; k < e; ++k)
     {
-    (*o)( k, 0, 0 );
+    (*o)( k );
     }
   }
-inline void doForTwo( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
+inline void doForTwo( int32_t b, int32_t e, int32_t tid, const vtkFunctor<vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
   {
   int32_t k0 = b % n0 + f0;
   int32_t k1 = b / n0 + f1;
@@ -346,17 +346,17 @@ inline void doForTwo( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vt
   int32_t e0 = f0 + n0;
   for (; k0 < e0 && k < e; ++k0, ++k)
     {
-    (*o)( k0, k1, 0 );
+    (*o)( k0, k1 );
     }
   for (++k1; k < e; ++k1)
     {
     for (k0 = f0; k0 < e0 && k < e ; ++k0, ++k)
       {
-      (*o)( k0, k1, 0 );
+      (*o)( k0, k1 );
       }
     }
   }
-inline void doForTwoInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
+inline void doForTwoInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable<vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
   {
   if (o->ShouldInitialize())
     o->Init();
@@ -366,17 +366,17 @@ inline void doForTwoInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorIni
   int32_t e0 = f0 + n0;
   for (; k0 < e0 && k < e; ++k0, ++k)
     {
-    (*o)( k0, k1, 0 );
+    (*o)( k0, k1 );
     }
   for (++k1; k < e; ++k1)
     {
     for (k0 = f0; k0 < e0 && k < e ; ++k0, ++k)
       {
-      (*o)( k0, k1, 0 );
+      (*o)( k0, k1 );
       }
     }
   }
-inline void doForThree( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
+inline void doForThree( int32_t b, int32_t e, int32_t tid, const vtkFunctor<vtkIdType,vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
   {
   vtkIdType slice = n0 * n1;
   int32_t k0 = b % n0 + f0;
@@ -407,7 +407,7 @@ inline void doForThree( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o, 
       }
     }
   }
-inline void doForThreeInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
+inline void doForThreeInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable<vtkIdType,vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
   {
   if (o->ShouldInitialize())
     o->Init();
@@ -454,7 +454,7 @@ namespace vtkSMP
     return kaapi_get_self_kid();
     }
 
-  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
+  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor<vtkIdType>* op, int grain )
     {
     vtkIdType n = last - first;
     int g = grain ? grain : sqrt(n);
@@ -467,7 +467,7 @@ namespace vtkSMP
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op, int grain )
+  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable<vtkIdType>* op, int grain )
     {
     vtkIdType n = last - first;
     int g = grain ? grain : sqrt(n);
@@ -480,7 +480,7 @@ namespace vtkSMP
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctor* op, int grain )
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctor<vtkIdType,vtkIdType>* op, int grain )
     {
     vtkIdType n0 = last0 - first0;
     vtkIdType n = n0 * (last1 - first1);
@@ -494,7 +494,7 @@ namespace vtkSMP
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctorInitialisable* op, int grain )
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctorInitialisable<vtkIdType,vtkIdType>* op, int grain )
     {
     vtkIdType n0 = last0 - first0;
     vtkIdType n = n0 * (last1 - first1);
@@ -508,7 +508,7 @@ namespace vtkSMP
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctor* op, int grain )
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctor<vtkIdType,vtkIdType,vtkIdType>* op, int grain )
     {
     vtkIdType n0 = last0 - first0;
     vtkIdType n1 = last1 - first1;
@@ -523,7 +523,7 @@ namespace vtkSMP
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctorInitialisable* op, int grain )
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctorInitialisable<vtkIdType,vtkIdType,vtkIdType>* op, int grain )
     {
     vtkIdType n0 = last0 - first0;
     vtkIdType n1 = last1 - first1;
@@ -538,12 +538,12 @@ namespace vtkSMP
     kaapic_foreach_attr_destroy(&attr);
     }
 
-  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctor *op)
+  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctor<vtkIdType> *op)
     {
     ForEach(first, last, op);
     }
 
-  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable *op)
+  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable<vtkIdType> *op)
     {
     ForEach(first, last, op);
     }
@@ -666,7 +666,7 @@ namespace vtkSMP
 //    kaapi_end_parallel( KAAPI_SCHEDFLAG_DEFAULT );
     }
 
-  void Traverse( const vtkParallelTree *Tree, vtkFunctor* func )
+  void Traverse( const vtkParallelTree *Tree, vtkFunctor<vtkIdType>* func )
     {
     work_t work;
     kaapi_workqueue_index_t i, nil;

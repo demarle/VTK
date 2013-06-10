@@ -17,7 +17,7 @@
 
 vtkInformationKeyMacro(vtkSMPPipeline, DATA_OBJECT_CONCRETE_TYPE, String);
 
-class ParallelFilterExecutor : public vtkFunctorInitialisable
+class ParallelFilterExecutor : public vtkFunctorInitialisable<vtkIdType>
 {
     ParallelFilterExecutor(const ParallelFilterExecutor&);
     void operator =(const ParallelFilterExecutor&);
@@ -54,7 +54,7 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable
     vtkSMPPipeline* Executive;
 
   public:
-    vtkTypeMacro(ParallelFilterExecutor, vtkFunctorInitialisable);
+    vtkTypeMacro(ParallelFilterExecutor, vtkFunctorInitialisable<vtkIdType>);
     static ParallelFilterExecutor* New();
     void PrintSelf(ostream &os, vtkIndent indent)
       {
@@ -75,7 +75,7 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable
       this->Initialized();
       }
 
-    void operator ()(vtkIdType id, vtkIdType vtkNotUsed(id1), vtkIdType vtkNotUsed(id2)) const
+    void operator ()(vtkIdType id) const
       {
       vtkDataObject* dobj = this->inObjs[id];
       if (dobj)

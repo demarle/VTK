@@ -267,7 +267,7 @@ void vtkSMPImageConvolve::GetKernel(double *kernel)
 }
 
 template <class T>
-class ConvolveFunctor : public vtkFunctor
+class ConvolveFunctor : public vtkFunctor<vtkIdType,vtkIdType,vtkIdType>
 {
     ConvolveFunctor(const ConvolveFunctor&);
     void operator =(const ConvolveFunctor&);
@@ -289,7 +289,9 @@ class ConvolveFunctor : public vtkFunctor
     int numInSlice, numInRow;
 
   public:
-    vtkTypeMacro(ConvolveFunctor,vtkFunctor);
+#define MY_COMMA() ,
+    vtkTypeMacro(ConvolveFunctor,vtkFunctor<vtkIdType MY_COMMA() vtkIdType MY_COMMA() vtkIdType>);
+#undef MY_COMMA
     static ConvolveFunctor<T>* New() { return new ConvolveFunctor<T>; }
     void PrintSelf(ostream &os, vtkIndent indent)
       {

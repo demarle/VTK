@@ -65,7 +65,7 @@ vtkSMPWarpVector::~vtkSMPWarpVector()
 
 //----------------------------------------------------------------------------
 template <class T1, class T2>
-struct vtkSMPWarpVectorOp : public vtkFunctor
+struct vtkSMPWarpVectorOp : public vtkFunctor<vtkIdType>
 {
   static vtkSMPWarpVectorOp<T1,T2>* New() { return new vtkSMPWarpVectorOp<T1,T2>(); }
 
@@ -74,7 +74,7 @@ struct vtkSMPWarpVectorOp : public vtkFunctor
   vtkArrayIteratorTemplate<T2> *inVecIter;
   T1 scaleFactor;
 
-  void  operator()( vtkIdType index, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void  operator()( vtkIdType index ) const
     {
     T1* inTuple = inIter->GetTuple(index);
     T1* outTuple = outIter->GetTuple(index);

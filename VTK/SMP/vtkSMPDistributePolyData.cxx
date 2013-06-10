@@ -15,12 +15,12 @@
 
 vtkStandardNewMacro(vtkSMPDistributePolyData);
 
-class PointDistribute : public vtkFunctor {
+class PointDistribute : public vtkFunctor<vtkIdType> {
   PointDistribute( const PointDistribute& );
   void operator =( const PointDistribute& );
 
 public:
-  vtkTypeMacro(PointDistribute,vtkFunctor);
+  vtkTypeMacro(PointDistribute,vtkFunctor<vtkIdType>);
   static PointDistribute* New();
 
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -44,7 +44,7 @@ public:
     if (outPd) outPd->Register(this);
     }
 
-  void operator ()( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator ()( vtkIdType id ) const
     {
     double x[3];
     in->GetPoint(id, x);
@@ -68,12 +68,12 @@ protected:
 
 vtkStandardNewMacro(PointDistribute);
 
-class CellDistribute : public vtkFunctor {
+class CellDistribute : public vtkFunctor<vtkIdType> {
   CellDistribute( const CellDistribute& );
   void operator =( const CellDistribute& );
 
 public:
-  vtkTypeMacro(CellDistribute,vtkFunctor);
+  vtkTypeMacro(CellDistribute,vtkFunctor<vtkIdType>);
   static CellDistribute* New();
 
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -150,7 +150,7 @@ public:
     numCells[3] = _num_of_cells;
     }
 
-  void operator ()( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator ()( vtkIdType id ) const
     {
     int loc = cellsInfo->GetCellLocation( id );
     vtkIdType *pSrc, *pDest, Num;

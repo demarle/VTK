@@ -50,7 +50,7 @@ class MyOctreeLocator : public vtkOctreePointLocator
     void operator =(const MyOctreeLocator&);
 };
 
-class PointsFunctor : public vtkFunctor
+class PointsFunctor : public vtkFunctor<vtkIdType>
 {
 protected:
   PointsFunctor()
@@ -90,7 +90,7 @@ public:
     this->locator = locator;
     }
 
-  virtual void operator ()( vtkIdType i, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  virtual void operator ()( vtkIdType i ) const
     {
     double pt[3];
     vtkIdType id = locator->GetSortedPoints( i, pt );

@@ -18,24 +18,24 @@ const TBBInit performInit;
 
 class FuncCall
 {
-  const vtkFunctor* o;
+  const vtkFunctor<vtkIdType>* o;
 
 public:
   void operator() ( const tbb::blocked_range<vtkIdType>& r ) const
     {
     for ( vtkIdType k = r.begin(); k < r.end(); ++k )
       {
-      (*o)( k, 0, 0 );
+      (*o)( k );
       }
     }
 
-  FuncCall ( const vtkFunctor* _o ) : o(_o) { }
+  FuncCall ( const vtkFunctor<vtkIdType>* _o ) : o(_o) { }
   ~FuncCall () { }
 };
 
 class FuncCallInit
 {
-  const vtkFunctorInitialisable* o;
+  const vtkFunctorInitialisable<vtkIdType>* o;
 
 public:
   void operator() ( const tbb::blocked_range<vtkIdType>& r ) const
@@ -46,17 +46,17 @@ public:
       }
     for ( vtkIdType k = r.begin(); k < r.end(); ++k )
       {
-      (*o)( k, 0, 0 );
+      (*o)( k );
       }
     }
 
-  FuncCallInit ( const vtkFunctorInitialisable* _o ) : o(_o) { }
+  FuncCallInit ( const vtkFunctorInitialisable<vtkIdType>* _o ) : o(_o) { }
   ~FuncCallInit () { }
 };
 
 class FuncCallTwo
 {
-    const vtkFunctor* o;
+    const vtkFunctor<vtkIdType,vtkIdType>* o;
 
   public:
     void operator() ( const tbb::blocked_range2d<vtkIdType>& r ) const
@@ -65,18 +65,18 @@ class FuncCallTwo
         {
         for ( vtkIdType l = r.rows().begin(); l < r.rows().end(); ++l )
           {
-          (*o)( l, k, 0 );
+          (*o)( l, k );
           }
         }
       }
 
-    FuncCallTwo ( const vtkFunctor* _o ) : o(_o) { }
+    FuncCallTwo ( const vtkFunctor<vtkIdType,vtkIdType>* _o ) : o(_o) { }
     ~FuncCallTwo () {}
 };
 
 class FuncCallTwoInit
 {
-    const vtkFunctorInitialisable* o;
+    const vtkFunctorInitialisable<vtkIdType,vtkIdType>* o;
 
   public:
     void operator() ( const tbb::blocked_range2d<vtkIdType>& r ) const
@@ -89,18 +89,18 @@ class FuncCallTwoInit
         {
         for ( vtkIdType l = r.rows().begin(); l < r.rows().end(); ++l )
           {
-          (*o)( l, k, 0 );
+          (*o)( l, k );
           }
         }
       }
 
-    FuncCallTwoInit ( const vtkFunctorInitialisable* _o ) : o(_o) { }
+    FuncCallTwoInit ( const vtkFunctorInitialisable<vtkIdType,vtkIdType>* _o ) : o(_o) { }
     ~FuncCallTwoInit () {}
 };
 
 class FuncCallThree
 {
-    const vtkFunctor* o;
+    const vtkFunctor<vtkIdType,vtkIdType,vtkIdType>* o;
 
   public:
     void operator() ( const tbb::blocked_range3d<vtkIdType>& r ) const
@@ -117,13 +117,13 @@ class FuncCallThree
         }
       }
 
-    FuncCallThree ( const vtkFunctor* _o ) : o(_o) { }
+    FuncCallThree ( const vtkFunctor<vtkIdType,vtkIdType,vtkIdType>* _o ) : o(_o) { }
     ~FuncCallThree () {}
 };
 
 class FuncCallThreeInit
 {
-    const vtkFunctorInitialisable* o;
+    const vtkFunctorInitialisable<vtkIdType,vtkIdType,vtkIdType>* o;
 
   public:
     void operator() ( const tbb::blocked_range3d<vtkIdType>& r ) const
@@ -144,7 +144,7 @@ class FuncCallThreeInit
         }
       }
 
-    FuncCallThreeInit ( const vtkFunctorInitialisable* _o ) : o(_o) { }
+    FuncCallThreeInit ( const vtkFunctorInitialisable<vtkIdType,vtkIdType,vtkIdType>* _o ) : o(_o) { }
     ~FuncCallThreeInit () {}
 };
 
@@ -187,15 +187,15 @@ class TaskParallel_ : public tbb::task {
 
 class TaskTraverse {
     const vtkParallelTree* Tree;
-    vtkFunctor* Functor;
+    vtkFunctor<vtkIdType>* Functor;
     const int level;
     const vtkIdType index, BranchingFactor;
   public:
-    TaskTraverse( const vtkParallelTree* t, vtkFunctor* f, int l, vtkIdType i, vtkIdType b )
+    TaskTraverse( const vtkParallelTree* t, vtkFunctor<vtkIdType>* f, int l, vtkIdType i, vtkIdType b )
       : Tree(t), Functor(f), level(l), index(i), BranchingFactor(b) { }
     void operator() () const
       {
-      vtkFunctorInitialisable* f = vtkFunctorInitialisable::SafeDownCast(Functor);
+      vtkFunctorInitialisable<vtkIdType>* f = vtkFunctorInitialisable<vtkIdType>::SafeDownCast(Functor);
       if ( f && f->ShouldInitialize() ) f->Init();
       if ( Tree->TraverseNode(index, level, Functor) )
         {
@@ -225,17 +225,17 @@ namespace vtkSMP
     return performInit.getTID();
     }
 
-  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctor *op)
+  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctor<vtkIdType> *op)
     {
     ForEach(first, last, op);
     }
 
-  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable *op)
+  void StaticForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable<vtkIdType> *op)
     {
     ForEach(first, last, op);
     }
 
-  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
+  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor<vtkIdType>* op, int grain )
     {
     vtkIdType n = last - first;
     if (!n) return;
@@ -243,7 +243,7 @@ namespace vtkSMP
     tbb::parallel_for( tbb::blocked_range<vtkIdType>( first, last, g ), FuncCall( op ) );
     }
 
-  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op, int grain )
+  void ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable<vtkIdType>* op, int grain )
     {
     vtkIdType n = last - first;
     if (!n) return;
@@ -251,7 +251,7 @@ namespace vtkSMP
     tbb::parallel_for( tbb::blocked_range<vtkIdType>( first, last, g ), FuncCallInit( op ) );
     }
 
-  void ForEach(vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctor *op, int grain)
+  void ForEach(vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctor<vtkIdType,vtkIdType> *op, int grain)
     {
     vtkIdType n0 = last0 - first0;
     vtkIdType n1 = last1 - first1;
@@ -261,7 +261,7 @@ namespace vtkSMP
     tbb::parallel_for( tbb::blocked_range2d<vtkIdType>( first0, last0, g0, first1, last1, g1 ), FuncCallTwo( op ) );
     }
 
-  void ForEach(vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctorInitialisable *op, int grain)
+  void ForEach(vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctorInitialisable<vtkIdType,vtkIdType> *op, int grain)
     {
     vtkIdType n0 = last0 - first0;
     vtkIdType n1 = last1 - first1;
@@ -271,7 +271,7 @@ namespace vtkSMP
     tbb::parallel_for( tbb::blocked_range2d<vtkIdType>( first0, last0, g0, first1, last1, g1 ), FuncCallTwoInit( op ) );
     }
 
-  void ForEach(vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctor *op, int grain)
+  void ForEach(vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctor<vtkIdType,vtkIdType,vtkIdType> *op, int grain)
     {
     vtkIdType n0 = last0 - first0;
     vtkIdType n1 = last1 - first1;
@@ -283,7 +283,7 @@ namespace vtkSMP
     tbb::parallel_for( tbb::blocked_range3d<vtkIdType>( first2, last2, g2, first0, last0, g0, first1, last1, g1 ), FuncCallThree( op ) );
     }
 
-  void ForEach(vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctorInitialisable *op, int grain)
+  void ForEach(vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFunctorInitialisable<vtkIdType,vtkIdType,vtkIdType> *op, int grain)
     {
     vtkIdType n0 = last0 - first0;
     vtkIdType n1 = last1 - first1;
@@ -343,7 +343,7 @@ namespace vtkSMP
     tbb::task::spawn_root_and_wait(list);
     }
 
-  void Traverse(const vtkParallelTree *Tree, vtkFunctor *func)
+  void Traverse(const vtkParallelTree *Tree, vtkFunctor<vtkIdType> *func)
     {
     int level;
     vtkIdType bf;

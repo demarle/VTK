@@ -43,7 +43,7 @@ int vtkSMPImageDotProduct::RequestInformation (
 }
 
 template <class T>
-class DotProductFunctor : public vtkFunctor
+class DotProductFunctor : public vtkFunctor<vtkIdType,vtkIdType,vtkIdType>
 {
     DotProductFunctor( const DotProductFunctor& );
     void operator =( const DotProductFunctor& );
@@ -65,7 +65,9 @@ class DotProductFunctor : public vtkFunctor
     vtkIdType outIncrement[3];
 
   public:
-    vtkTypeMacro(DotProductFunctor, vtkFunctor);
+#define MY_COMMA() ,
+    vtkTypeMacro(DotProductFunctor,vtkFunctor<vtkIdType MY_COMMA() vtkIdType MY_COMMA() vtkIdType>);
+#undef MY_COMMA
     static DotProductFunctor<T>* New() { return new DotProductFunctor<T>; }
     void PrintSelf(ostream &os, vtkIndent indent)
       {

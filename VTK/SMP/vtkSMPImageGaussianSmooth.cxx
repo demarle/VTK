@@ -143,35 +143,56 @@ void vtkSMPImageGaussianSmooth::InternalRequestUpdateExtent(int *inExt,
 }
 
 template <class T>
-class ImageGaussianSmoothExecutor : public vtkFunctor
+class ImageGaussianSmoothExecutor : public vtkFancyFunctor<vtkIdType,vtkIdType>
 {
   ImageGaussianSmoothExecutor(const ImageGaussianSmoothExecutor&);
   void operator =(const ImageGaussianSmoothExecutor&);
 
 protected:
-  ImageGaussianSmoothExecutor(){}
-  ~ImageGaussianSmoothExecutor(){}
+  ImageGaussianSmoothExecutor() : inGlobalPtr(0), outGlobalPtr(0)
+    {
+    inPtr = vtkSMP::vtkThreadLocal<T>::New();
+    outPtr = vtkSMP::vtkThreadLocal<T>::New();
+    }
+  ~ImageGaussianSmoothExecutor()
+    {
+    inPtr->Delete();
+    outPtr->Delete();
+    }
 
   T *inGlobalPtr, *outGlobalPtr;
+  vtkSMP::vtkThreadLocal<T> *inPtr, *outPtr;
   int kernelSize, maxC, max0, max1;
   vtkIdType inInc0, outInc0, inInc1, outInc1, inIncK;
   double *kernel;
 
 public:
-  vtkTypeMacro(ImageGaussianSmoothExecutor,vtkFunctor);
+#define MY_COMMA() ,
+  vtkTypeMacro(ImageGaussianSmoothExecutor,vtkFancyFunctor<vtkIdType MY_COMMA() vtkIdType>);
+#undef MY_COMMA
   static ImageGaussianSmoothExecutor<T>* New() { return new ImageGaussianSmoothExecutor<T>; }
   void PrintSelf(ostream &os, vtkIndent indent)
     {
     this->Superclass::PrintSelf(os,indent);
     }
 
+  void SetBasePointer(T* inPtrC, T* outPtrC)
+    {
+    this->inGlobalPtr = inPtrC;
+    this->outGlobalPtr = outPtrC;
+    }
+
+  void ThreadedMoveBasePointer(vtkIdType off0, vtkIdType off1) const
+    {
+    this->inPtr->SetLocal(this->inGlobalPtr + off0 * inInc0 + off1 * inInc1);
+    this->outPtr->SetLocal(this->outGlobalPtr + off0 * outInc0 + off1 * inInc1);
+    }
+
   void SetData(int axis, int kernelSize, double *kernel, vtkImageData* inData,
-               vtkImageData* outData, T* inPtrC, T* outPtrC)
+               vtkImageData* outData)
     {
     this->kernelSize = kernelSize;
     this->kernel = kernel;
-    this->inGlobalPtr = inPtrC;
-    this->outGlobalPtr = outPtrC;
 
     vtkIdType *inIncs, *outIncs;
     // Do the correct shuffling of the axes (increments, extents)
@@ -196,14 +217,16 @@ public:
       }
     }
 
-  void operator ()(vtkIdType idx0, vtkIdType idx1, vtkIdType vtkNotUsed(id2)) const
+  void operator ()() const
     {
     T *inPtrC, *inPtrK, *outPtrC;
     double *ptrK, sum;
     int idxC, idxK;
 
-    inPtrC = inGlobalPtr + idx0 * inInc0 + idx1 * inInc1;
-    outPtrC = outGlobalPtr + idx0 * outInc0 + idx1 * outInc1;
+    inPtrC = inPtr->GetLocal();
+    outPtrC = outPtr->GetLocal();
+    inPtr->SetLocal(inPtrC + inInc0);
+    outPtr->SetLocal(outPtrC + outInc0);
 
     for (idxC = 0; idxC < maxC; ++idxC)
       {
@@ -238,7 +261,8 @@ vtkSMPImageGaussianSmoothExecute(vtkSMPImageGaussianSmooth *self, int axis,
 //                              int *pcount, int total)
 {
   ImageGaussianSmoothExecutor<T>* functor = ImageGaussianSmoothExecutor<T>::New();
-  functor->SetData(axis, kernelSize, kernel, inData, outData, inPtrC, outPtrC);
+  functor->SetData(axis, kernelSize, kernel, inData, outData);
+  functor->SetBasePointer(inPtrC, outPtrC);
   switch(axis)
     {
     case 0:

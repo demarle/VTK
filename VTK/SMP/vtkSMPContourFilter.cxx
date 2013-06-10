@@ -43,7 +43,7 @@ void vtkSMPContourFilter::PrintSelf(ostream& os, vtkIndent indent)
 /* ================================================================================
   Generic contouring: Functors for parallel execution without ScalarTree
  ================================================================================ */
-class ThreadsFunctor : public vtkFunctorInitialisable
+class ThreadsFunctor : public vtkFunctorInitialisable<vtkIdType>
 {
   ThreadsFunctor( const ThreadsFunctor& );
   void operator =( const ThreadsFunctor& );
@@ -76,7 +76,7 @@ protected:
     }
 
 public:
-  vtkTypeMacro(ThreadsFunctor,vtkFunctorInitialisable);
+  vtkTypeMacro(ThreadsFunctor,vtkFunctorInitialisable<vtkIdType>);
   static ThreadsFunctor* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {
@@ -159,7 +159,7 @@ public:
     Initialized();
     }
 
-  void operator ()( vtkIdType cellId, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator ()( vtkIdType cellId ) const
     {
     vtkGenericCell *cell = this->Cells->GetLocal( );
     int cellType = input->GetCellType(cellId);

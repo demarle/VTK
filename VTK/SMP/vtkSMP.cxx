@@ -11,51 +11,6 @@
 
 #include "vtkBenchTimer.h"
 
-//--------------------------------------------------------------------------------
-vtkFunctor::vtkFunctor() { }
-
-vtkFunctor::~vtkFunctor() { }
-
-void vtkFunctor::PrintSelf(ostream &os, vtkIndent indent)
-  {
-  this->Superclass::PrintSelf( os, indent );
-  }
-
-//--------------------------------------------------------------------------------
-vtkFunctorInitialisable::vtkFunctorInitialisable() :
-    vtkFunctor(), IsInitialized(vtkSMP::InternalGetNumberOfThreads(), 0)
-  {
-  }
-
-vtkFunctorInitialisable::~vtkFunctorInitialisable()
-  {
-  IsInitialized.clear();
-  }
-
-bool vtkFunctorInitialisable::ShouldInitialize( ) const
-  {
-  return !IsInitialized[vtkSMP::InternalGetTid()];
-  }
-
-void vtkFunctorInitialisable::Initialized( ) const
-  {
-  IsInitialized[vtkSMP::InternalGetTid()] = 1;
-  }
-
-void vtkFunctorInitialisable::PrintSelf(ostream &os, vtkIndent indent)
-  {
-  this->Superclass::PrintSelf( os, indent );
-  os << indent << "Is initialized: " << endl;
-  for ( vtkstd::vector<vtkIdType>::size_type i = 0; i < IsInitialized.size(); ++i )
-    {
-    os << indent.GetNextIndent() << "Id " << i << ": ";
-    if ( IsInitialized[i] )
-      os << "true";
-    else
-      os << "false";
-    os << endl;
-    }
-  }
 
 //--------------------------------------------------------------------------------
 vtkTask::vtkTask() { }
@@ -131,7 +86,7 @@ public:
 
 vtkStandardNewMacro(OffsetManager);
 
-class DummyMergeFunctor : public vtkFunctor
+class DummyMergeFunctor : public vtkFunctor<vtkIdType>
 {
   DummyMergeFunctor ( const DummyMergeFunctor& );
   void operator =( const DummyMergeFunctor& );
@@ -181,7 +136,7 @@ protected:
     }
 
 public:
-  vtkTypeMacro(DummyMergeFunctor,vtkFunctor);
+  vtkTypeMacro(DummyMergeFunctor,vtkFunctor<vtkIdType>);
   static DummyMergeFunctor* New();
   void PrintSelf(ostream &os, vtkIndent indent)
     {
@@ -214,7 +169,7 @@ public:
   OffsetManager* polyOffset;
   OffsetManager* stripOffset;
 
-  void operator ()( vtkIdType pointId, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator ()( vtkIdType pointId ) const
     {
     outputLocator->AddPointIdInBucket( pointId );
     }
@@ -531,19 +486,19 @@ private:
   void operator =(const ParallelCellMerger&);
 };
 
-struct LockPointMerger : public vtkFunctor
+struct LockPointMerger : public vtkFunctor<vtkIdType>
 {
   DummyMergeFunctor* Functor;
   vtkIdType NumberOfPointsFirstThread;
 
-  vtkTypeMacro(LockPointMerger,vtkFunctor);
+  vtkTypeMacro(LockPointMerger,vtkFunctor<vtkIdType>);
   static LockPointMerger* New();
   void PrintSelf(ostream &os, vtkIndent indent)
     {
     this->Superclass::PrintSelf(os,indent);
     }
 
-  void operator()( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator()( vtkIdType id ) const
     {
     vtkSMP::vtkThreadLocal<vtkPoints>::iterator itPoints = this->Functor->InPoints->Begin();
     vtkSMP::vtkThreadLocal<vtkPointData>::iterator itPd = this->Functor->InPd->Begin();

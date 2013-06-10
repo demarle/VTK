@@ -673,8 +673,8 @@ void vtkSMPTransform::InternalTransformDerivative(const double in[3],
 // derivative, while vectors are simply multiplied by the derivative.
 // Note that the derivative of the inverse transform is simply the
 // inverse of the derivative of the forward transform.
-struct AllModificator : public vtkFunctor {
-  vtkTypeMacro(AllModificator,vtkFunctor);
+struct AllModificator : public vtkFunctor<vtkIdType> {
+  vtkTypeMacro(AllModificator,vtkFunctor<vtkIdType>);
   static AllModificator* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {
@@ -689,7 +689,7 @@ struct AllModificator : public vtkFunctor {
   vtkDataArray* outVcs;
   double (*matrix)[4];
   double (*matrixInvTr)[4];
-  void operator()( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator()( vtkIdType id ) const
   {
     double point[3];
     inPts->GetPoint(id, point);
@@ -752,8 +752,8 @@ void vtkSMPTransform::TransformPointsNormalsVectors(vtkPoints *inPts,
 }
 
 //----------------------------------------------------------------------------
-struct PtsModificator : public vtkFunctor {
-  vtkTypeMacro(PtsModificator,vtkFunctor);
+struct PtsModificator : public vtkFunctor<vtkIdType> {
+  vtkTypeMacro(PtsModificator,vtkFunctor<vtkIdType>);
   static PtsModificator* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {
@@ -763,7 +763,7 @@ struct PtsModificator : public vtkFunctor {
   vtkPoints* inPts;
   vtkPoints* outPts;
   double (*matrix)[4];
-  void operator () ( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator () ( vtkIdType id ) const
   {
     double point[3];
     inPts->GetPoint( id, point );
@@ -797,8 +797,8 @@ void vtkSMPTransform::TransformPoints(vtkPoints *inPts,
 }
 
 //----------------------------------------------------------------------------
-struct NmsModificator : public vtkFunctor {
-  vtkTypeMacro(NmsModificator,vtkFunctor);
+struct NmsModificator : public vtkFunctor<vtkIdType> {
+  vtkTypeMacro(NmsModificator,vtkFunctor<vtkIdType>);
   static NmsModificator* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {
@@ -808,7 +808,7 @@ struct NmsModificator : public vtkFunctor {
   vtkDataArray* inNms;
   vtkDataArray* outNms;
   double (*matrix)[4];
-  void operator () ( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator () ( vtkIdType id ) const
   {
     double norm[3];
     inNms->GetTuple( id, norm );
@@ -850,8 +850,8 @@ void vtkSMPTransform::TransformNormals(vtkDataArray *inNms,
 }
 
 //----------------------------------------------------------------------------
-struct VcsModificator : public vtkFunctor {
-  vtkTypeMacro(VcsModificator,vtkFunctor);
+struct VcsModificator : public vtkFunctor<vtkIdType> {
+  vtkTypeMacro(VcsModificator,vtkFunctor<vtkIdType>);
   static VcsModificator* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {
@@ -861,7 +861,7 @@ struct VcsModificator : public vtkFunctor {
   vtkDataArray* inVcs;
   vtkDataArray* outVcs;
   double (*matrix)[4];
-  void operator () ( vtkIdType id, vtkIdType vtkNotUsed(index1), vtkIdType vtkNotUsed(index2) ) const
+  void operator () ( vtkIdType id ) const
   {
     double vec[3];
     inVcs->GetTuple( id, vec );
