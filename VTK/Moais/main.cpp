@@ -11,10 +11,10 @@
 #include "vtkPNGReader.h"
 #include "vtkJPEGReader.h"
 #include "vtkImageAppendComponents.h"
-#include "vtkImageGaussianSmooth.h"
+#include "vtkImageDotProduct.h"
 #include "vtkImageViewer.h"
 #ifdef VTK_CAN_USE_SMP
-  #include "vtkSMPImageGaussianSmooth.h"
+  #include "vtkSMPImageDotProduct.h"
 #endif
 
 int main( int argc, char** argv )
@@ -29,13 +29,12 @@ int main( int argc, char** argv )
   reader->SetFileName(argv[1]);
 
 #ifdef VTK_CAN_USE_SMP
-  vtkSMPImageGaussianSmooth* filter = vtkSMPImageGaussianSmooth::New();
+  vtkSMPImageDotProduct* filter = vtkSMPImageDotProduct::New();
 #else
-  vtkImageGaussianSmooth* filter = vtkImageGaussianSmooth::New();
+  vtkImageDotProduct* filter = vtkImageDotProduct::New();
 #endif
   filter->SetInputConnection( reader->GetOutputPort() );
-  filter->SetDimensionality(3);
-  filter->SetStandardDeviation(.3,.3,.3);
+  filter->SetInputConnection( 1, reader->GetOutputPort() );
   reader->Delete();
 
   /* === Pipeline pull === */

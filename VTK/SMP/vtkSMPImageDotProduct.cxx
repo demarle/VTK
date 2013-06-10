@@ -43,7 +43,7 @@ int vtkSMPImageDotProduct::RequestInformation (
 }
 
 template <class T>
-class DotProductFunctor : public vtkFunctor<vtkIdType,vtkIdType,vtkIdType>
+class DotProductFunctor : public vtkFancyFunctor<vtkIdType,vtkIdType,vtkIdType>
 {
     DotProductFunctor( const DotProductFunctor& );
     void operator =( const DotProductFunctor& );
@@ -53,12 +53,22 @@ class DotProductFunctor : public vtkFunctor<vtkIdType,vtkIdType,vtkIdType>
       in1Increment[0] = in1Increment[1] = in1Increment[2] = 0;
       in2Increment[0] = in2Increment[1] = in2Increment[2] = 0;
       outIncrement[0] = outIncrement[1] = outIncrement[2] = 0;
+      inPtr1 = vtkSMP::vtkThreadLocal<T>::New();
+      inPtr2 = vtkSMP::vtkThreadLocal<T>::New();
+      outPtr = vtkSMP::vtkThreadLocal<T>::New();
       }
-    ~DotProductFunctor(){}
+    ~DotProductFunctor()
+      {
+      inPtr1->Delete();
+      inPtr2->Delete();
+      outPtr->Delete();
+      }
 
     T* in1GlobalPointer;
     T* in2GlobalPointer;
     T* outGlobalPointer;
+
+    vtkSMP::vtkThreadLocal<T> *inPtr1, *inPtr2, *outPtr;
 
     vtkIdType in1Increment[3];
     vtkIdType in2Increment[3];
@@ -66,7 +76,7 @@ class DotProductFunctor : public vtkFunctor<vtkIdType,vtkIdType,vtkIdType>
 
   public:
 #define MY_COMMA() ,
-    vtkTypeMacro(DotProductFunctor,vtkFunctor<vtkIdType MY_COMMA() vtkIdType MY_COMMA() vtkIdType>);
+    vtkTypeMacro(DotProductFunctor,vtkFancyFunctor<vtkIdType MY_COMMA() vtkIdType MY_COMMA() vtkIdType>);
 #undef MY_COMMA
     static DotProductFunctor<T>* New() { return new DotProductFunctor<T>; }
     void PrintSelf(ostream &os, vtkIndent indent)
@@ -85,17 +95,25 @@ class DotProductFunctor : public vtkFunctor<vtkIdType,vtkIdType,vtkIdType>
       outData->GetIncrements(outIncrement[0], outIncrement[1], outIncrement[2]);
       }
 
-    void operator ()(vtkIdType idx0, vtkIdType idx1, vtkIdType idx2) const
+    void ThreadedMoveBasePointer(vtkIdType idx0, vtkIdType idx1, vtkIdType idx2) const
       {
-      T* inSI1 = in1GlobalPointer + (idx0 * in1Increment[0])
-                                  + (idx1 * in1Increment[1])
-                                  + (idx2 * in1Increment[2]);
-      T* inSI2 = in2GlobalPointer + (idx0 * in2Increment[0])
-                                  + (idx1 * in2Increment[1])
-                                  + (idx2 * in2Increment[2]);
-      T* outSI = outGlobalPointer + (idx0 * outIncrement[0])
-                                  + (idx1 * outIncrement[1])
-                                  + (idx2 * outIncrement[2]);
+      inPtr1->SetLocal(in1GlobalPointer + (idx0 * in1Increment[0])
+          + (idx1 * in1Increment[1])
+          + (idx2 * in1Increment[2]));
+      inPtr2->SetLocal(in2GlobalPointer + (idx0 * in2Increment[0])
+          + (idx1 * in2Increment[1])
+          + (idx2 * in2Increment[2]));
+      outPtr->SetLocal(outGlobalPointer + (idx0 * outIncrement[0])
+          + (idx1 * outIncrement[1])
+          + (idx2 * outIncrement[2]));
+      }
+
+    void operator ()() const
+      {
+      T* inSI1 = inPtr1->GetLocal();
+      T* inSI2 = inPtr2->GetLocal();
+      T* outSI = outPtr->GetLocal();
+
       float dot;
       int idxC, maxC = in1Increment[0];
 
@@ -108,6 +126,10 @@ class DotProductFunctor : public vtkFunctor<vtkIdType,vtkIdType,vtkIdType>
         ++inSI2;
         }
       *outSI = static_cast<T>(dot);
+
+      inPtr1->SetLocal(inSI1);
+      inPtr2->SetLocal(inSI2);
+      outPtr->SetLocal(outSI + outIncrement[0]);
       }
 };
 
@@ -175,9 +197,6 @@ int vtkSMPImageDotProduct::RequestData(
                   << inData1->GetNumberOfScalarComponents());
     return 0;
     }
-
-  cout << "InData has " << inData0->GetNumberOfScalarComponents() << " scalars components." << endl;
-  cout << "OutData has " << outData->GetNumberOfScalarComponents() << " of them." << endl;
 
   int outExt[6];
   outputVector->GetInformationObject(0)->Get(

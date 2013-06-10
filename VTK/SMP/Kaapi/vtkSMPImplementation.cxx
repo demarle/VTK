@@ -338,6 +338,7 @@ inline void doForInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitia
     (*o)( k );
     }
   }
+
 inline void doForTwo( int32_t b, int32_t e, int32_t tid, const vtkFunctor<vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
   {
   int32_t k0 = b % n0 + f0;
@@ -356,6 +357,18 @@ inline void doForTwo( int32_t b, int32_t e, int32_t tid, const vtkFunctor<vtkIdT
       }
     }
   }
+
+inline void doForTwoFancy( int32_t b, int32_t e, int32_t tid, const vtkFancyFunctor<vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
+  {
+  int32_t k0 = b % n0 + f0;
+  int32_t k1 = b / n0 + f1;
+  o->ThreadedMoveBasePointer(k0, k1);
+  for (int32_t k = b; k < e; ++k)
+    {
+    (*o)();
+    }
+  }
+
 inline void doForTwoInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable<vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType n0 )
   {
   if (o->ShouldInitialize())
@@ -376,6 +389,7 @@ inline void doForTwoInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorIni
       }
     }
   }
+
 inline void doForThree( int32_t b, int32_t e, int32_t tid, const vtkFunctor<vtkIdType,vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
   {
   vtkIdType slice = n0 * n1;
@@ -407,6 +421,20 @@ inline void doForThree( int32_t b, int32_t e, int32_t tid, const vtkFunctor<vtkI
       }
     }
   }
+
+inline void doForThreeFancy( int32_t b, int32_t e, int32_t tid, const vtkFancyFunctor<vtkIdType,vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
+  {
+  vtkIdType slice = n0 * n1;
+  int32_t k0 = b % n0 + f0;
+  int32_t k1 = (b % slice) / n0 + f1;
+  int32_t k2 = b / slice + f2;
+  o->ThreadedMoveBasePointer(k0,k1,k2);
+  for (int32_t k = b; k < e; ++k)
+    {
+    (*o)();
+    }
+  }
+
 inline void doForThreeInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable<vtkIdType,vtkIdType,vtkIdType>* o, vtkIdType f0, vtkIdType f1, vtkIdType f2, vtkIdType n0, vtkIdType n1 )
   {
   if (o->ShouldInitialize())
@@ -494,6 +522,20 @@ namespace vtkSMP
     kaapic_foreach_attr_destroy(&attr);
     }
 
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFancyFunctor<vtkIdType,vtkIdType>* op, int grain )
+    {
+    vtkIdType n0 = last0 - first0;
+    vtkIdType n = n0 * (last1 - first1);
+    int g = grain ? grain : sqrt(n);
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_t attr;
+    kaapic_foreach_attr_init(&attr);
+    kaapic_foreach_attr_set_grains(&attr, g, g);
+    kaapic_foreach( 0, n, &attr, 4, doForTwoFancy, op, first0, first1, n0 );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_destroy(&attr);
+    }
+
   void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, const vtkFunctorInitialisable<vtkIdType,vtkIdType>* op, int grain )
     {
     vtkIdType n0 = last0 - first0;
@@ -519,6 +561,21 @@ namespace vtkSMP
     kaapic_foreach_attr_init(&attr);
     kaapic_foreach_attr_set_grains(&attr, g, g);
     kaapic_foreach( 0, n, &attr, 6, doForThree, op, first0, first1, first2, n0, n1 );
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_destroy(&attr);
+    }
+
+  void ForEach ( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFancyFunctor<vtkIdType,vtkIdType,vtkIdType>* op, int grain )
+    {
+    vtkIdType n0 = last0 - first0;
+    vtkIdType n1 = last1 - first1;
+    vtkIdType n = n0 * n1 * (last2 - first2);
+    int g = grain ? grain : sqrt(n);
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+    kaapic_foreach_attr_t attr;
+    kaapic_foreach_attr_init(&attr);
+    kaapic_foreach_attr_set_grains(&attr, g, g);
+    kaapic_foreach( 0, n, &attr, 6, doForThreeFancy, op, first0, first1, first2, n0, n1 );
     kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
     kaapic_foreach_attr_destroy(&attr);
     }
