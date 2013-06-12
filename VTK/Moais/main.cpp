@@ -1,20 +1,18 @@
 #include "vtkPolyDataReader.h"
 #include "vtkPolyData.h"
+#include "vtkPolyDataMapper.h"
+#include "vtkDataSetSurfaceFilter.h"
 #include "vtkUnstructuredGridReader.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkActor.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
-#include "vtkAxesActor.h"
 
-#include "vtkPNGReader.h"
-#include "vtkJPEGReader.h"
-#include "vtkImageAppendComponents.h"
-#include "vtkImageDotProduct.h"
-#include "vtkImageViewer.h"
 #ifdef VTK_CAN_USE_SMP
-  #include "vtkSMPImageDotProduct.h"
+  #include "vtkSMPClipDataSet.h"
+#else
+  #include "vtkClipDataSet.h"
 #endif
 
 int main( int argc, char** argv )
@@ -24,17 +22,20 @@ int main( int argc, char** argv )
     cout << "You must provide at least one file name." << endl;
     return 1;
     }
+  vtkstd::string filename(argv[1]);
+  cout << "Using file " << filename.substr(filename.find_last_of('/')).substr(0,filename.find_last_of('.'));
 
-  vtkJPEGReader* reader = vtkJPEGReader::New();
-  reader->SetFileName(argv[1]);
+  vtkPolyDataReader* reader = vtkPolyDataReader::New();
+  reader->SetFileName(filename.c_str());
 
 #ifdef VTK_CAN_USE_SMP
-  vtkSMPImageDotProduct* filter = vtkSMPImageDotProduct::New();
+  vtkSMPClipDataSet* filter = vtkSMPClipDataSet::New();
 #else
-  vtkImageDotProduct* filter = vtkImageDotProduct::New();
+  vtkClipDataSet* filter = vtkClipDataSet::New();
 #endif
   filter->SetInputConnection( reader->GetOutputPort() );
-  filter->SetInputConnection( 1, reader->GetOutputPort() );
+  filter->SetValue(0.0);
+  filter->UseValueAsOffsetOff();
   reader->Delete();
 
   /* === Pipeline pull === */
@@ -42,21 +43,35 @@ int main( int argc, char** argv )
   filter->Update();
   filter->Delete();
 #else
-  vtkImageViewer* viewer = vtkImageViewer::New();
-  viewer->SetInputConnection( filter->GetOutputPort() );
-  viewer->SetColorWindow(18);
-  viewer->SetColorLevel(9);
-  viewer->SetSize(1546,1161);
+  vtkDataSetSurfaceFilter* pdf = vtkDataSetSurfaceFilter::New();
+  pdf->SetInputConnection( filter->GetOutputPort() );
   filter->Delete();
 
+  vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
+  mapper->SetInputConnection( pdf->GetOutputPort() );
+  pdf->Delete();
+
+  vtkActor* obj = vtkActor::New();
+  obj->SetMapper(mapper);
+  mapper->Delete();
+
+  vtkRenderer* viewport = vtkRenderer::New();
+  viewport->AddActor(obj);
+  viewport->SetBackground(.3,.3,.3);
+  obj->Delete();
+
+  vtkRenderWindow* window = vtkRenderWindow::New();
+  window->AddRenderer(viewport);
+  viewport->Delete();
+
   vtkRenderWindowInteractor* it = vtkRenderWindowInteractor::New();
-  viewer->SetupInteractor(it);
+  it->SetRenderWindow(window);
+  window->Delete();
 
   it->Initialize();
   it->Start();
 
   it->Delete();
-  viewer->Delete();
 #endif
 
   return 0;

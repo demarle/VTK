@@ -34,6 +34,7 @@ set(Kit_SRCS
   vtkSMPPolyDataAlgorithm.cxx
   vtkSMPPointSetAlgorithm.cxx
   vtkSMPContourFilter2.cxx
+  vtkSMPClipDataSet.cxx
   vtkSMPImageGaussianSmooth.cxx
 )
 
@@ -90,6 +91,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkSMPPolyDataAlgorithm.h
     vtkSMPPointSetAlgorithm.h
     vtkSMPContourFilter2.h
+    vtkSMPClipDataSet.h
     vtkSMPImageGaussianSmooth.h
     )
 
