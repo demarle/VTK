@@ -15,6 +15,7 @@
 #include "vtkSMPWarpVector.h"
 
 #include "vtkCellData.h"
+#include "vtkFunctor.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"

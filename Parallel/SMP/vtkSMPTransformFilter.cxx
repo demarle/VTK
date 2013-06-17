@@ -18,6 +18,7 @@
 
 #include "vtkCellData.h"
 #include "vtkFloatArray.h"
+#include "vtkFunctor.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkLinearTransform.h"

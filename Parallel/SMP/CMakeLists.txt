@@ -16,16 +16,27 @@ include(${VTK_SMP_CMAKE_IMPLEMENTATION_FILE})
 message("${VTK_SMP_IMPLEMENTATION_TYPE}")
 set(vtkParallelSMP_SYSTEM_INCLUDE_DIRS ${VTK_SMP_IMPLEMENTATION_HEADER_DIR})
 
-set(Module_SRCS
+set(SMP_Core
   vtkSMP.cxx
-  vtkSMPContourFilter.cxx
+  vtkFunctor.cxx
+  vtkFunctorInitializable.cxx
+  vtkTask.cxx
   ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPImplementation.cxx
-  vtkSMPMergePoints.cxx
   vtkSMPMinMaxTree.cxx
+)
+
+set(SMP_Filters
+  vtkSMPContourFilter.cxx
+  vtkSMPMergePoints.cxx
   vtkSMPTransform.cxx
   #vtkSMPTransformFilter.cxx
   vtkSMPWarpVector.cxx
   vtkSMPZCurve.cxx
+)
+
+set(Module_SRCS
+  ${SMP_Core}
+  ${SMP_Filters}
 )
 
 vtk_module_library(vtkParallelSMP ${Module_SRCS})

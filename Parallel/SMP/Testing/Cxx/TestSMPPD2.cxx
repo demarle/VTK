@@ -58,7 +58,7 @@ int TestSMPPD2( int argc, char * argv [] )
   bool sequential = 0;//(threads==0);
 
   vtkDataSetReader* aa = vtkDataSetReader::New();
-  aa->SetFileName("/Data/vtkSMP/lucy-first48-100pieces.vtk");
+  aa->SetFileName("/Data/vtkSMP/lucy-100pieces.vtk");
 
   cerr << "Reading " << aa->GetFileName() << endl;
   t0 = timer->GetCPUTime();

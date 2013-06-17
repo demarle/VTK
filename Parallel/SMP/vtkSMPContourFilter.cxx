@@ -1,33 +1,33 @@
 #include "vtkSMPContourFilter.h"
 #include "vtkObjectFactory.h"
 
+#include "vtkCell.h"
+#include "vtkCellArray.h"
+#include "vtkCellData.h"
+#include "vtkCommand.h"
+#include "vtkContourGrid.h"
+#include "vtkCutter.h"
+#include "vtkFunctorInitializable.h"
+#include "vtkGenericCell.h"
+#include "vtkGridSynchronizedTemplates3D.h"
+#include "vtkImageData.h"
+#include "vtkIncrementalPointLocator.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkImageData.h"
-#include "vtkUniformGrid.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkSynchronizedTemplates2D.h"
-#include "vtkSynchronizedTemplates3D.h"
-#include "vtkRectilinearGrid.h"
+#include "vtkMergePoints.h"
 #include "vtkPointData.h"
-#include "vtkCellData.h"
+#include "vtkRectilinearGrid.h"
 #include "vtkRectilinearSynchronizedTemplates.h"
 #include "vtkScalarTree.h"
 #include "vtkSimpleScalarTree.h"
-#include "vtkGenericCell.h"
-#include "vtkCell.h"
-#include "vtkGridSynchronizedTemplates3D.h"
-#include "vtkContourGrid.h"
-#include "vtkStructuredGrid.h"
-#include "vtkCellArray.h"
-#include "vtkCutter.h"
-#include "vtkIncrementalPointLocator.h"
-#include "vtkMergePoints.h"
-
 #include "vtkSMP.h"
 #include "vtkSMPMergePoints.h"
-#include "vtkCommand.h"
 #include "vtkSMPMinMaxTree.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkStructuredGrid.h"
+#include "vtkSynchronizedTemplates2D.h"
+#include "vtkSynchronizedTemplates3D.h"
+#include "vtkUniformGrid.h"
 
 vtkStandardNewMacro(vtkSMPContourFilter);
 
@@ -42,7 +42,7 @@ void vtkSMPContourFilter::PrintSelf(ostream& os, vtkIndent indent)
 /* ================================================================================
   Generic contouring: Functors for parallel execution without ScalarTree
  ================================================================================ */
-class ThreadsFunctor : public vtkFunctorInitialisable
+class ThreadsFunctor : public vtkFunctorInitializable
 {
   ThreadsFunctor( const ThreadsFunctor& );
   void operator =( const ThreadsFunctor& );
@@ -75,7 +75,7 @@ protected:
     }
 
 public:
-  vtkTypeMacro(ThreadsFunctor,vtkFunctorInitialisable);
+  vtkTypeMacro(ThreadsFunctor,vtkFunctorInitializable);
   static ThreadsFunctor* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {

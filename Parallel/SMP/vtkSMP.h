@@ -1,106 +1,32 @@
 #ifndef __vtkSMP_h__
 #define __vtkSMP_h__
 
-
 #include "vtkParallelSMPModule.h" // For export macro
-#include "vtkSMPImplementation.h"
 #include "vtkObject.h"
 #include <vector>
-#include <typeinfo>
 
-class vtkPoints;
-class vtkPointData;
+#include "vtkFunctorInitializable.h"
+
 class vtkCellArray;
 class vtkCellData;
+class vtkFunctor;
+class vtkFunctorIntializable;
+class vtkParallelTree;
+class vtkPointData;
+class vtkPoints;
 class vtkSMPMergePoints;
-class vtkIdList;
-namespace vtkSMP { class vtkIdTypeThreadLocal; }
+class vtkTask;
 
-class VTKPARALLELSMP_EXPORT vtkFunctor : public vtkObject
-{
-  vtkFunctor ( const vtkFunctor& );
-  void operator =( const vtkFunctor& );
-
-public:
-  vtkTypeMacro(vtkFunctor,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
-
-  virtual void operator () ( vtkIdType ) const = 0;
-
-protected:
-  vtkFunctor();
-  ~vtkFunctor();
-};
-
-class VTKPARALLELSMP_EXPORT vtkFunctorInitialisable : public vtkFunctor
-{
-  vtkFunctorInitialisable ( const vtkFunctorInitialisable& );
-  void operator =( const vtkFunctorInitialisable& );
-
-public:
-  vtkTypeMacro(vtkFunctorInitialisable,vtkFunctor);
-  void PrintSelf(ostream& os, vtkIndent indent);
-
-  virtual void Init ( ) const = 0;
-  bool ShouldInitialize( ) const;
-
-protected:
-  void Initialized( ) const;
-  mutable vtkstd::vector<vtkIdType> IsInitialized;
-
-  vtkFunctorInitialisable();
-  ~vtkFunctorInitialisable();
-};
-
-class VTKPARALLELSMP_EXPORT vtkTask : public vtkObjectBase
-{
-  vtkTask(const vtkTask&);
-  void operator =(const vtkTask&);
-
-public:
-  vtkTypeMacro(vtkTask, vtkObjectBase);
-  void PrintSelf(ostream &os, vtkIndent indent);
-
-  void Execute( ... ) const
-    {
-    cout << "Shouldn't be invocked." << endl;
-    }
-  virtual void Execute( vtkSMPMergePoints* ) const {}
-  virtual void Execute( vtkIdList* map,
-                        vtkCellData* clData,
-                        vtkCellArray* verts,
-                        vtkCellArray* lines,
-                        vtkCellArray* polys,
-                        vtkCellArray* strips,
-                        vtkIdType vertCellOffset,
-                        vtkIdType vertTupleOffset,
-                        vtkIdType lineCellOffset,
-                        vtkIdType lineTupleOffset,
-                        vtkIdType polyCellOffset,
-                        vtkIdType polyTupleOffset,
-                        vtkIdType stripCellOffset,
-                        vtkIdType stripTupleOffset ) const {}
-
-protected:
-  vtkTask();
-  ~vtkTask();
-};
-
-class VTKPARALLELSMP_EXPORT vtkParallelTree
-{
-public:
-  virtual int TraverseNode( vtkIdType id, int lvl, vtkFunctor* function ) const = 0;
-  virtual void GetTreeSize ( int& max_level, vtkIdType& branching_factor ) const = 0;
-};
-
+//======================================================================================
 namespace vtkSMP
 {
   int InternalGetNumberOfThreads();
   int InternalGetTid();
 
+  //======================================================================================
   template<class T>
   class VTKPARALLELSMP_EXPORT vtkThreadLocal : public vtkObject
-    {
+  {
     protected :
       vtkThreadLocal() : vtkObject(), ThreadLocalStorage(InternalGetNumberOfThreads(), NULL) {}
       ~vtkThreadLocal()
@@ -233,10 +159,11 @@ namespace vtkSMP
       vtkstd::vector<T*> ThreadLocalStorage;
     };
 
+  //======================================================================================
   // ForEach template : parallel loop over an iterator
   void VTKPARALLELSMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain = 0 );
 
-  void VTKPARALLELSMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* f, int grain = 0 );
+  void VTKPARALLELSMP_EXPORT ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* f, int grain = 0 );
 
   template<class T>
   void VTKPARALLELSMP_EXPORT Parallel( const vtkTask* function,

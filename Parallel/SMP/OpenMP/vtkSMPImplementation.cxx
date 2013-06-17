@@ -1,21 +1,25 @@
 #include "vtkSMP.h"
+#include "vtkFunctor.h"
+#include "vtkFunctorInitializable.h"
+#include "vtkParallelTree.h"
+#include "vtkTask.h"
 
 #include <omp.h>
 
 void omp_traversal( vtkIdType index, int lvl, vtkIdType BranchingFactor, const vtkParallelTree* Tree, vtkFunctor* func )
-  {
-  vtkFunctorInitialisable* f = vtkFunctorInitialisable::SafeDownCast(func);
+{
+  vtkFunctorInitializable* f = vtkFunctorInitializable::SafeDownCast(func);
   if ( f && f->ShouldInitialize() ) f->Init();
   if ( Tree->TraverseNode(index, lvl, func) )
     {
     for ( vtkIdType i = index * BranchingFactor + 1, j = 0; j < BranchingFactor; ++i, ++j )
       {
-      #pragma omp task
-        omp_traversal( i, lvl + 1, BranchingFactor, Tree, func );
+#pragma omp task
+      omp_traversal( i, lvl + 1, BranchingFactor, Tree, func );
       }
-    #pragma omp taskwait
+#pragma omp taskwait
     }
-  }
+}
 
 namespace vtkSMP
 {
@@ -43,7 +47,7 @@ namespace vtkSMP
       (*op)( i );
     }
 
-  void ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op, int grain)
+  void ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain)
     {
     #pragma omp parallel
     {

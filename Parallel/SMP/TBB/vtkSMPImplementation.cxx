@@ -1,4 +1,6 @@
 #include "vtkSMP.h"
+#include "vtkFunctor.h"
+#include "vtkTask.h"
 
 int fillTid() {return -1;}
 

@@ -1,5 +1,6 @@
 #include "vtkSMPTransform.h"
 #include "vtkDataArray.h"
+#include "vtkFunctor.h"
 #include "vtkMath.h"
 #include "vtkMatrix4x4.h"
 #include "vtkPoints.h"
