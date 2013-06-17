@@ -161,7 +161,7 @@ int vtkSMPZCurve::RequestData(
 
   PointsFunctor* pf = PointsFunctor::New();
   pf->Initialize( locator, input->GetPointData(), output->GetPointData() );
-  vtkSMP::ForEach( 0, input->GetNumberOfPoints(), pf );
+  vtkSMPForEachOp( 0, input->GetNumberOfPoints(), pf );
   output->SetPoints( pf->GetNewPoints() );
 
   vtkIdList* oldToNew = pf->GetOldToNew();

@@ -107,7 +107,7 @@ void vtkSMPWarpVectorExecute2(vtkSMPWarpVector *self,
   op->inVecIter = inVecIter;
   op->scaleFactor = (T1)self->GetScaleFactor();
 
-  vtkSMP::ForEach( 0, size, op);
+  vtkSMPForEachOp( 0, size, op);
 
   op->Delete();
 }

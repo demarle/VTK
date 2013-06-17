@@ -27,8 +27,8 @@ class InitializeFunctor : public vtkFunctor
 protected:
   InitializeFunctor()
     {
-    this->TLS_Cell = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
-    this->TLS_CellScalars = vtkSMP::vtkThreadLocal<vtkDoubleArray>::New();
+    this->TLS_Cell = vtkThreadLocal<vtkGenericCell>::New();
+    this->TLS_CellScalars = vtkThreadLocal<vtkDoubleArray>::New();
     this->Locks = 0;
     }
   ~InitializeFunctor()
@@ -43,8 +43,8 @@ protected:
   vtkIdType Size, BF, Offset, Max;
   vtkDataSet* DS;
   vtkDataArray* Scalars;
-  vtkSMP::vtkThreadLocal<vtkGenericCell>* TLS_Cell;
-  vtkSMP::vtkThreadLocal<vtkDoubleArray>* TLS_CellScalars;
+  vtkThreadLocal<vtkGenericCell>* TLS_Cell;
+  vtkThreadLocal<vtkDoubleArray>* TLS_CellScalars;
   vtkIdType* Locks;
 
 public:
@@ -197,7 +197,7 @@ void vtkSMPMinMaxTree::BuildTree()
 
   InitializeFunctor* InitTree = InitializeFunctor::New();
   InitTree->InitializeData( this );
-  vtkSMP::ForEach( offset, numNodes, InitTree );
+  vtkSMPForEachOp( offset, numNodes, InitTree );
   InitTree->Delete();
 
   this->BuildTime.Modified();

@@ -332,7 +332,7 @@ int vtkSMPTransformFilter::RequestData(
   for (int i = 0; i < vtKaapiRuns; ++i)
   {
     clock_gettime(CLOCK_REALTIME, &t0);
-    vtkSMP::ForEach( 0, inPts->GetNumberOfPoints(), mypointiterator );
+    vtkSMPForEachOp( 0, inPts->GetNumberOfPoints(), mypointiterator );
     clock_gettime(CLOCK_REALTIME, &t1);
 
     int s = t1.tv_sec - t0.tv_sec;
@@ -361,7 +361,7 @@ int vtkSMPTransformFilter::RequestData(
       myvectoriterator.inVectors = inCellVectors;
       myvectoriterator.outVectors = newCellVectors;
       myvectoriterator.Transform = lt;
-      vtkSMP::ForEach( 0, inCellVectors->GetNumberOfTuples(), myvectoriterator );
+      vtkSMPForEachOp( 0, inCellVectors->GetNumberOfTuples(), myvectoriterator );
 //      lt->TransformVectors(inCellVectors,newCellVectors);
       }
     if ( inCellNormals )
@@ -375,7 +375,7 @@ int vtkSMPTransformFilter::RequestData(
       mynormaliterator.inVectors = inCellNormals;
       mynormaliterator.outVectors = newCellNormals;
       mynormaliterator.Transform = lt;
-      vtkSMP::ForEach( 0, inCellNormals->GetNumberOfTuples(), mynormaliterator );
+      vtkSMPForEachOp( 0, inCellNormals->GetNumberOfTuples(), mynormaliterator );
 //      lt->TransformNormals(inCellNormals,newCellNormals);
       }
     }
