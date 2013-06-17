@@ -3,7 +3,7 @@
 
 //======================================================================================
 vtkFunctorInitializable::vtkFunctorInitializable() :
-    vtkFunctor(), IsInitialized(vtkSMP::InternalGetNumberOfThreads(), 0)
+    vtkFunctor(), IsInitialized(vtkSMPInternalGetNumberOfThreads(), 0)
   {
   }
 
@@ -16,13 +16,13 @@ vtkFunctorInitializable::~vtkFunctorInitializable()
 //--------------------------------------------------------------------------------
 bool vtkFunctorInitializable::ShouldInitialize( ) const
   {
-  return !IsInitialized[vtkSMP::InternalGetTid()];
+  return !IsInitialized[vtkSMPInternalGetTid()];
   }
 
 //--------------------------------------------------------------------------------
 void vtkFunctorInitializable::Initialized( ) const
   {
-  IsInitialized[vtkSMP::InternalGetTid()] = 1;
+  IsInitialized[vtkSMPInternalGetTid()] = 1;
   }
 
 //--------------------------------------------------------------------------------

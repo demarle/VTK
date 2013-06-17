@@ -747,7 +747,7 @@ void vtkSMPTransform::TransformPointsNormalsVectors(vtkPoints *inPts,
     mymodificator->matrixInvTr = matrix;
     }
 
-  vtkSMP::ForEach( 0, n, mymodificator );
+  vtkSMPForEachOp( 0, n, mymodificator );
 
   mymodificator->Delete();
 }
@@ -792,7 +792,7 @@ void vtkSMPTransform::TransformPoints(vtkPoints *inPts,
   mypointsmodificator->outPts = outPts;
   mypointsmodificator->matrix = this->Matrix->Element;
 
-  vtkSMP::ForEach( 0, n, mypointsmodificator );
+  vtkSMPForEachOp( 0, n, mypointsmodificator );
 
   mypointsmodificator->Delete();
 }
@@ -845,7 +845,7 @@ void vtkSMPTransform::TransformNormals(vtkDataArray *inNms,
   mynormalsmodificator->outNms = outNms;
   mynormalsmodificator->matrix = matrix;
 
-  vtkSMP::ForEach( 0, n, mynormalsmodificator );
+  vtkSMPForEachOp( 0, n, mynormalsmodificator );
 
   mynormalsmodificator->Delete();
 }
@@ -890,7 +890,7 @@ void vtkSMPTransform::TransformVectors(vtkDataArray *inNms,
   myvectorsmodificator->outVcs = outNms;
   myvectorsmodificator->matrix = this->Matrix->Element;
 
-  vtkSMP::ForEach( 0, n, myvectorsmodificator );
+  vtkSMPForEachOp( 0, n, myvectorsmodificator );
 
   myvectorsmodificator->Delete();
 }

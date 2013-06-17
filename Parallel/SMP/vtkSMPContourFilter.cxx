@@ -50,15 +50,15 @@ class ThreadsFunctor : public vtkFunctorInitializable
 protected:
   ThreadsFunctor()
     {
-    Locator = vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>::New();
-    newPts = vtkSMP::vtkThreadLocal<vtkPoints>::New();
-    newVerts = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    newLines = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    newPolys = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    outPd = vtkSMP::vtkThreadLocal<vtkPointData>::New();
-    outCd = vtkSMP::vtkThreadLocal<vtkCellData>::New();
-    Cells = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
-    CellsScalars = vtkSMP::vtkThreadLocal<vtkDataArray>::New();
+    Locator = vtkThreadLocal<vtkIncrementalPointLocator>::New();
+    newPts = vtkThreadLocal<vtkPoints>::New();
+    newVerts = vtkThreadLocal<vtkCellArray>::New();
+    newLines = vtkThreadLocal<vtkCellArray>::New();
+    newPolys = vtkThreadLocal<vtkCellArray>::New();
+    outPd = vtkThreadLocal<vtkPointData>::New();
+    outCd = vtkThreadLocal<vtkCellData>::New();
+    Cells = vtkThreadLocal<vtkGenericCell>::New();
+    CellsScalars = vtkThreadLocal<vtkDataArray>::New();
     }
 
   ~ThreadsFunctor()
@@ -82,15 +82,15 @@ public:
     this->Superclass::PrintSelf(os,indent);
   }
 
-  vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
-  vtkSMP::vtkThreadLocal<vtkPoints>* newPts;
-  vtkSMP::vtkThreadLocal<vtkCellArray>* newVerts;
-  vtkSMP::vtkThreadLocal<vtkCellArray>* newLines;
-  vtkSMP::vtkThreadLocal<vtkCellArray>* newPolys;
-  vtkSMP::vtkThreadLocal<vtkPointData>* outPd;
-  vtkSMP::vtkThreadLocal<vtkCellData>* outCd;
-  vtkSMP::vtkThreadLocal<vtkGenericCell>* Cells;
-  vtkSMP::vtkThreadLocal<vtkDataArray>* CellsScalars;
+  vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
+  vtkThreadLocal<vtkPoints>* newPts;
+  vtkThreadLocal<vtkCellArray>* newVerts;
+  vtkThreadLocal<vtkCellArray>* newLines;
+  vtkThreadLocal<vtkCellArray>* newPolys;
+  vtkThreadLocal<vtkPointData>* outPd;
+  vtkThreadLocal<vtkCellData>* outCd;
+  vtkThreadLocal<vtkGenericCell>* Cells;
+  vtkThreadLocal<vtkDataArray>* CellsScalars;
 
   vtkDataArray* inScalars;
   vtkDataSet* input;
@@ -407,7 +407,7 @@ int vtkSMPContourFilter::RequestData(
   vtkCellData *inCd=input->GetCellData(), *outCd=output->GetCellData();
 
   vtkDebugMacro(<< "Executing contour filter");
-  // Do not handle UnStructuredGrid since vtkSMP::ForEach can't apply.
+  // Do not handle UnStructuredGrid since vtkSMPForEachOp can't apply.
   // vtkContourGrid iterates over cells in a non-independant way
 
   numCells = input->GetNumberOfCells();
@@ -478,22 +478,22 @@ int vtkSMPContourFilter::RequestData(
         {
         TreeContour->ScalarValue = values[i];
         parallelTree->InitTraversal( values[i] );
-        vtkSMP::Traverse( parallelTree, TreeContour );
+        vtkSMPTraverseOp( parallelTree, TreeContour );
         }
       }
     else
       {
       for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
         {
-        vtkSMP::ForEach( 0, numCells, my_contour );
+        vtkSMPForEachOp( 0, numCells, my_contour );
         }
       }
     // Merge
     if ( parallelLocator )
       {
-      vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* SMPLocator = vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::New();
+      vtkThreadLocal<vtkSMPMergePoints>* SMPLocator = vtkThreadLocal<vtkSMPMergePoints>::New();
       my_contour->Locator->FillDerivedThreadLocal(SMPLocator);
-      vtkSMP::MergePoints( parallelLocator, SMPLocator,
+      vtkSMPMergePointsOp( parallelLocator, SMPLocator,
                            outPd, my_contour->outPd,
                            newVerts, my_contour->newVerts,
                            newLines, my_contour->newLines,
@@ -503,7 +503,7 @@ int vtkSMPContourFilter::RequestData(
       }
     else
       {
-      vtkSMP::MergePoints( newPts, my_contour->newPts, input->GetBounds(),
+      vtkSMPMergePointsOp( newPts, my_contour->newPts, input->GetBounds(),
                            outPd, my_contour->outPd,
                            newVerts, my_contour->newVerts,
                            newLines, my_contour->newLines,
