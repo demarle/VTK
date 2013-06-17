@@ -1,5 +1,6 @@
 #include "vtkSMP.h"
 #include "vtkCommand.h"
+#include "vtkFunctor.h"
 #include <kaapic.h>
 #include <cmath>
 

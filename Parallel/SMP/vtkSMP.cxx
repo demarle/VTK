@@ -8,63 +8,9 @@
 #include "vtkCellData.h"
 #include "vtkCellArray.h"
 #include "vtkMutexLock.h"
+#include "vtkTask.h"
 
-//--------------------------------------------------------------------------------
-vtkFunctor::vtkFunctor() { }
-
-vtkFunctor::~vtkFunctor() { }
-
-void vtkFunctor::PrintSelf(ostream &os, vtkIndent indent)
-  {
-  this->Superclass::PrintSelf( os, indent );
-  }
-
-//--------------------------------------------------------------------------------
-vtkFunctorInitialisable::vtkFunctorInitialisable() :
-    vtkFunctor(), IsInitialized(vtkSMP::InternalGetNumberOfThreads(), 0)
-  {
-  }
-
-vtkFunctorInitialisable::~vtkFunctorInitialisable()
-  {
-  IsInitialized.clear();
-  }
-
-bool vtkFunctorInitialisable::ShouldInitialize( ) const
-  {
-  return !IsInitialized[vtkSMP::InternalGetTid()];
-  }
-
-void vtkFunctorInitialisable::Initialized( ) const
-  {
-  IsInitialized[vtkSMP::InternalGetTid()] = 1;
-  }
-
-void vtkFunctorInitialisable::PrintSelf(ostream &os, vtkIndent indent)
-  {
-  this->Superclass::PrintSelf( os, indent );
-  os << indent << "Is initialized: " << endl;
-  for ( vtkstd::vector<vtkIdType>::size_type i = 0; i < IsInitialized.size(); ++i )
-    {
-    os << indent.GetNextIndent() << "Id " << i << ": ";
-    if ( IsInitialized[i] )
-      os << "true";
-    else
-      os << "false";
-    os << endl;
-    }
-  }
-
-//--------------------------------------------------------------------------------
-vtkTask::vtkTask() { }
-
-vtkTask::~vtkTask() { }
-
-void vtkTask::PrintSelf(ostream &os, vtkIndent indent)
-  {
-  this->Superclass::PrintSelf(os,indent);
-  }
-
+//======================================================================================
 //--------------------------------------------------------------------------------
 class OffsetManager : public vtkObject
 {
@@ -129,6 +75,7 @@ public:
 
 vtkStandardNewMacro(OffsetManager);
 
+//======================================================================================
 class DummyMergeFunctor : public vtkFunctor
 {
   DummyMergeFunctor ( const DummyMergeFunctor& );
@@ -366,6 +313,7 @@ int MustTreatBucket( vtkIdType idx )
   return !__sync_fetch_and_add(&(TreatedTable[idx]), &one);
   }
 
+//======================================================================================
 struct ParallelPointMerger : public vtkTask
 {
   DummyMergeFunctor* self;
@@ -407,6 +355,7 @@ private:
   void operator =(const ParallelPointMerger&);
 };
 
+//======================================================================================
 struct ParallelCellMerger : public vtkTask
 {
   DummyMergeFunctor* self;
@@ -530,6 +479,7 @@ private:
   void operator =(const ParallelCellMerger&);
 };
 
+//======================================================================================
 struct LockPointMerger : public vtkFunctor
 {
   DummyMergeFunctor* Functor;
@@ -573,6 +523,7 @@ private:
 
 vtkStandardNewMacro(LockPointMerger);
 
+//======================================================================================
 namespace vtkSMP
 {
   void MergePoints(vtkSMPMergePoints *outPoints, vtkThreadLocal<vtkSMPMergePoints> *inPoints, vtkPointData *outPtsData, vtkThreadLocal<vtkPointData> *inPtsData, vtkCellArray *outVerts, vtkThreadLocal<vtkCellArray> *inVerts, vtkCellArray *outLines, vtkThreadLocal<vtkCellArray> *inLines, vtkCellArray *outPolys, vtkThreadLocal<vtkCellArray> *inPolys, vtkCellArray *outStrips, vtkThreadLocal<vtkCellArray> *inStrips, vtkCellData *outCellsData, vtkThreadLocal<vtkCellData> *inCellsData, int SkipThreads)

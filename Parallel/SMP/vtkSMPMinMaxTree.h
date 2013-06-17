@@ -2,10 +2,12 @@
 #define VTKSMPMINMAXTREE_H
 
 #include "vtkParallelSMPModule.h" // For export macro
+#include "vtkParallelTree.h"
 #include "vtkSimpleScalarTree.h"
 #include "vtkSMP.h"
 
 class vtkGenericCell;
+class vtkFunctor;
 class InitializeFunctor;
 
 class VTKPARALLELSMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree, public vtkParallelTree

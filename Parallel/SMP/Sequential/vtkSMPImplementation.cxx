@@ -1,4 +1,5 @@
 #include "vtkSMP.h"
+#include "vtkFunctor.h"
 
 void sequential_traverse( vtkIdType index, int lvl, vtkIdType BranchingFactor, const vtkParallelTree* Tree, vtkFunctor* func )
   {
