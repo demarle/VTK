@@ -1,6 +1,9 @@
 #ifndef __vtkTask_h__
 #define __vtkTask_h__
 
+//Base class for specifying some code that is to be run on each thread.
+//vtkTask is something like a heavy weight vtkFunctor
+
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObject.h"
 

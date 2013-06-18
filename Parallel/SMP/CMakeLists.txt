@@ -16,18 +16,31 @@ include(${VTK_SMP_CMAKE_IMPLEMENTATION_FILE})
 message("${VTK_SMP_IMPLEMENTATION_TYPE}")
 set(vtkParallelSMP_SYSTEM_INCLUDE_DIRS ${VTK_SMP_IMPLEMENTATION_HEADER_DIR})
 
-set(SMP_Core
-  vtkSMP.cxx
-  vtkFunctor.cxx
-  vtkFunctorInitializable.cxx
+#internal implementation details
+set(SMP_Internals
+  vtkDummyMergeFunctor.cxx
+  vtkLockPointMerger.cxx
+  vtkOffsetManager.cxx
+  vtkParallelCellMerger.cxx
+  vtkParallelPointMerger.cxx
   vtkTask.cxx
   ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPImplementation.cxx
-  vtkSMPMinMaxTree.cxx
 )
 
+#components that developers use to make SMP filters from
+set(SMP_Core
+  #vtkParallelTree.cxx #required by TraverseOp
+  vtkFunctor.cxx #requirement of ForEachOp
+  vtkFunctorInitializable.cxx
+  vtkSMP.cxx
+  #vtkThreadLocal.cxx
+)
+
+#end user SMP accelerated vtk facilities (mostly filters)
 set(SMP_Filters
   vtkSMPContourFilter.cxx
   vtkSMPMergePoints.cxx
+  vtkSMPMinMaxTree.cxx
   vtkSMPTransform.cxx
   #vtkSMPTransformFilter.cxx
   vtkSMPWarpVector.cxx
@@ -35,6 +48,7 @@ set(SMP_Filters
 )
 
 set(Module_SRCS
+  ${SMP_Internals}
   ${SMP_Core}
   ${SMP_Filters}
 )
