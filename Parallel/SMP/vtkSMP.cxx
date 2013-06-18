@@ -1,531 +1,22 @@
 #include "vtkSMP.h"
 
-#include "vtkPoints.h"
-#include "vtkFloatArray.h"
-#include "vtkObjectFactory.h"
-#include "vtkSMPMergePoints.h"
-#include "vtkPointData.h"
-#include "vtkCellData.h"
 #include "vtkCellArray.h"
-#include "vtkMutexLock.h"
-#include "vtkTask.h"
-
-//======================================================================================
-//--------------------------------------------------------------------------------
-class OffsetManager : public vtkObject
-{
-  OffsetManager( const OffsetManager& );
-  void operator =( const OffsetManager& );
-  vtkstd::vector<vtkIdType> cells;
-  vtkstd::vector<vtkIdType> tuples;
-  vtkIdType CellsOffset;
-  vtkIdType TuplesOffset;
-  vtkstd::vector<vtkIdType>::iterator itCells;
-  vtkstd::vector<vtkIdType>::iterator itTuples;
-
-protected:
-  OffsetManager() : vtkObject(),
-                    cells(vtkSMPInternalGetNumberOfThreads(), 0),
-                    tuples(vtkSMPInternalGetNumberOfThreads(), 0) { }
-  ~OffsetManager() { }
-public:
-  vtkTypeMacro(OffsetManager,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf( os, indent );
-    os << indent << "Offsets for cells index: " << endl;
-    for ( vtkstd::vector<vtkIdType>::size_type i = 0; i < cells.size(); ++i )
-      {
-      os << indent.GetNextIndent() << "Id " << i << ": " << cells[i];
-      }
-    os << indent << "Offsets for tuples: " << endl;
-    for ( vtkstd::vector<vtkIdType>::size_type i = 0; i < tuples.size(); ++i )
-      {
-      os << indent.GetNextIndent() << "Id " << i << ": " << tuples[i];
-      }
-    os << indent << "Number of cells: " << CellsOffset << endl;
-    os << indent << "Number of tuples: " << TuplesOffset << endl;
-    }
-  static OffsetManager* New();
-
-  void InitManageValues ()
-    {
-    CellsOffset = 0;
-    TuplesOffset = 0;
-    itCells = cells.begin();
-    itTuples = tuples.begin();
-    }
-
-  void ManageNextValue ( vtkCellArray* ca )
-    {
-    *itCells = CellsOffset;
-    *itTuples = TuplesOffset;
-    if ( ca )
-      {
-      CellsOffset += ca->GetNumberOfCells();
-      TuplesOffset += ca->GetData()->GetNumberOfTuples();
-      }
-    ++itCells;
-    ++itTuples;
-    }
-
-  vtkIdType GetNumberOfCells() { return CellsOffset; }
-  vtkIdType GetNumberOfTuples() { return TuplesOffset; }
-  vtkstd::vector<vtkIdType>::iterator GetCellsOffset ( ) { return cells.begin(); }
-  vtkstd::vector<vtkIdType>::iterator GetTuplesOffset ( ) { return tuples.begin(); }
-};
-
-vtkStandardNewMacro(OffsetManager);
-
-//======================================================================================
-class DummyMergeFunctor : public vtkFunctor
-{
-  DummyMergeFunctor ( const DummyMergeFunctor& );
-  void operator =( const DummyMergeFunctor& );
-
-protected:
-  vtkIdType NumberOfCells;
-  vtkIdType NumberOfPoints;
-
-  DummyMergeFunctor ()
-    {
-    vertOffset = OffsetManager::New();
-    lineOffset = OffsetManager::New();
-    polyOffset = OffsetManager::New();
-    stripOffset = OffsetManager::New();
-
-    vertOffset->Register( this );
-    lineOffset->Register( this );
-    polyOffset->Register( this );
-    stripOffset->Register( this );
-
-    vertOffset->Delete();
-    lineOffset->Delete();
-    polyOffset->Delete();
-    stripOffset->Delete();
-
-    Maps = vtkThreadLocal<vtkIdList>::New();
-    Maps->Register( this );
-    Maps->Delete();
-
-    Locators = 0;
-    InPoints = 0;
-    outputLocator = 0;
-    }
-  ~DummyMergeFunctor ()
-    {
-    vertOffset->UnRegister( this );
-    lineOffset->UnRegister( this );
-    polyOffset->UnRegister( this );
-    stripOffset->UnRegister( this );
-
-    Maps->UnRegister( this );
-
-    InVerts->UnRegister( this );
-    InLines->UnRegister( this );
-    InPolys->UnRegister( this );
-    InStrips->UnRegister( this );
-    }
-
-public:
-  vtkTypeMacro(DummyMergeFunctor,vtkFunctor);
-  static DummyMergeFunctor* New();
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os,indent);
-    }
-
-  vtkThreadLocal<vtkSMPMergePoints>* Locators;
-  vtkThreadLocal<vtkPoints>* InPoints;
-
-  vtkThreadLocal<vtkPointData>* InPd;
-  vtkThreadLocal<vtkCellData>* InCd;
-
-  vtkThreadLocal<vtkIdList>* Maps;
-
-  vtkThreadLocal<vtkCellArray>* InVerts;
-  vtkThreadLocal<vtkCellArray>* InLines;
-  vtkThreadLocal<vtkCellArray>* InPolys;
-  vtkThreadLocal<vtkCellArray>* InStrips;
-
-  vtkSMPMergePoints* outputLocator;
-  vtkCellArray* outputVerts;
-  vtkCellArray* outputLines;
-  vtkCellArray* outputPolys;
-  vtkCellArray* outputStrips;
-  vtkCellData* outputCd;
-  vtkPointData* outputPd;
-
-  OffsetManager* vertOffset;
-  OffsetManager* lineOffset;
-  OffsetManager* polyOffset;
-  OffsetManager* stripOffset;
-
-  void operator ()( vtkIdType pointId ) const
-    {
-    outputLocator->AddPointIdInBucket( pointId );
-    }
-
-  vtkIdType GetNumberOfCells() const { return NumberOfCells; }
-  vtkIdType GetNumberOfPoints() const { return NumberOfPoints; }
-
-  void InitializeNeeds( vtkThreadLocal<vtkSMPMergePoints>* _locator,
-                        vtkThreadLocal<vtkPoints>* _points,
-                        vtkSMPMergePoints* _outlocator,
-                        vtkThreadLocal<vtkCellArray>* _inverts,
-                        vtkCellArray* _outverts,
-                        vtkThreadLocal<vtkCellArray>* _inlines,
-                        vtkCellArray* _outlines,
-                        vtkThreadLocal<vtkCellArray>* _inpolys,
-                        vtkCellArray* _outpolys,
-                        vtkThreadLocal<vtkCellArray>* _instrips,
-                        vtkCellArray* _outstrips,
-                        vtkThreadLocal<vtkPointData>* _inpd,
-                        vtkPointData* _outpd,
-                        vtkThreadLocal<vtkCellData>* _incd,
-                        vtkCellData* _outcd )
-    {
-    Locators = _locator;
-    InPoints = _points;
-    outputLocator = _outlocator;
-
-    if ( _inverts )
-      {
-      InVerts = _inverts;
-      InVerts->Register(this);
-      }
-    else
-      {
-      InVerts = vtkThreadLocal<vtkCellArray>::New();
-      InVerts->Register(this);
-      InVerts->Delete();
-      }
-    if ( _inlines )
-      {
-      InLines = _inlines;
-      InLines->Register(this);
-      }
-    else
-      {
-      InLines = vtkThreadLocal<vtkCellArray>::New();
-      InLines->Register(this);
-      InLines->Delete();
-      }
-    if ( _inpolys )
-      {
-      InPolys = _inpolys;
-      InPolys->Register(this);
-      }
-    else
-      {
-      InPolys = vtkThreadLocal<vtkCellArray>::New();
-      InPolys->Register(this);
-      InPolys->Delete();
-      }
-    if ( _instrips )
-      {
-      InStrips = _instrips;
-      InStrips->Register(this);
-      }
-    else
-      {
-      InStrips = vtkThreadLocal<vtkCellArray>::New();
-      InStrips->Register(this);
-      InStrips->Delete();
-      }
-    outputVerts = _outverts;
-    outputLines = _outlines;
-    outputPolys = _outpolys;
-    outputStrips = _outstrips;
-
-    InPd = _inpd;
-    outputPd = _outpd;
-
-    InCd = _incd;
-    outputCd = _outcd;
-
-    NumberOfPoints = 0;
-    vtkThreadLocal<vtkSMPMergePoints>::iterator itLocator;
-    if ( _locator )
-      itLocator = Locators->Begin();
-    vtkThreadLocal<vtkPoints>::iterator itPoints;
-    if ( _points )
-      itPoints = InPoints->Begin();
-    vtkThreadLocal<vtkCellArray>::iterator itVerts = InVerts->Begin();
-    vtkThreadLocal<vtkCellArray>::iterator itLines = InLines->Begin();
-    vtkThreadLocal<vtkCellArray>::iterator itPolys = InPolys->Begin();
-    vtkThreadLocal<vtkCellArray>::iterator itStrips = InStrips->Begin();
-    vertOffset->InitManageValues();
-    lineOffset->InitManageValues();
-    polyOffset->InitManageValues();
-    stripOffset->InitManageValues();
-    for ( vtkThreadLocal<vtkIdList>::iterator itMaps = Maps->Begin(); itMaps != this->Maps->End(); ++itMaps )
-      {
-      vtkIdType n;
-      if ( this->InPoints )
-        {
-        n = *itPoints ? (*itPoints)->GetNumberOfPoints() : 0;
-        ++itPoints;
-        }
-      else
-        {
-        n = *itLocator ? static_cast<vtkMergePoints*>(*itLocator)->GetPoints()->GetNumberOfPoints() : 0;
-        ++itLocator;
-        }
-
-      if ( n )
-        {
-        vtkIdList* map = *itMaps = vtkIdList::New();
-        map->Allocate( n );
-        NumberOfPoints += n;
-        }
-
-      vertOffset->ManageNextValue( *itVerts++ );
-      lineOffset->ManageNextValue( *itLines++ );
-      polyOffset->ManageNextValue( *itPolys++ );
-      stripOffset->ManageNextValue( *itStrips++ );
-      }
-
-    NumberOfCells = vertOffset->GetNumberOfCells() +
-        lineOffset->GetNumberOfCells() +
-        polyOffset->GetNumberOfCells() +
-        stripOffset->GetNumberOfCells();
-
-    if ( this->outputVerts ) this->outputVerts->GetData()->Resize( vertOffset->GetNumberOfTuples() );
-    if ( this->outputLines ) this->outputLines->GetData()->Resize( lineOffset->GetNumberOfTuples() );
-    if ( this->outputPolys ) this->outputPolys->GetData()->Resize( polyOffset->GetNumberOfTuples() );
-    if ( this->outputStrips ) this->outputStrips->GetData()->Resize( stripOffset->GetNumberOfTuples() );
-    // Copy on itself means resize
-    this->outputPd->CopyAllocate( this->outputPd, NumberOfPoints, NumberOfPoints );
-    this->outputCd->CopyAllocate( this->outputCd, NumberOfCells, NumberOfCells );
-    outputLocator->GetPoints()->GetData()->Resize( NumberOfPoints );
-    outputLocator->GetPoints()->SetNumberOfPoints( NumberOfPoints );
-    }
-};
-
-vtkStandardNewMacro(DummyMergeFunctor);
+#include "vtkCellData.h"
+#include "vtkDummyMergeFunctor.h"
+#include "vtkLockPointMerger.h"
+#include "vtkOffsetManager.h"
+#include "vtkParallelCellMerger.h"
+#include "vtkParallelPointMerger.h"
+#include "vtkPointData.h"
+#include "vtkPoints.h"
+#include "vtkSMPMergePoints.h"
+#include "vtkThreadLocal.h"
 
 typedef vtkIdType *vtkIdTypePtr;
+
 vtkIdType** TreatedTable = 0;
 
-int MustTreatBucket( vtkIdType idx )
-  {
-  if ( !TreatedTable ) return 0;
-  vtkIdType one = 1;
-  return !__sync_fetch_and_add(&(TreatedTable[idx]), &one);
-  }
-
-//======================================================================================
-struct ParallelPointMerger : public vtkTask
-{
-  DummyMergeFunctor* self;
-
-  vtkTypeMacro(ParallelPointMerger,vtkTask);
-  static ParallelPointMerger* New() { return new ParallelPointMerger; }
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os,indent);
-    }
-
-  void Execute( vtkSMPMergePoints* locator ) const
-    {
-    if ( !locator ) return;
-
-    vtkIdType NumberOfBuckets = self->outputLocator->GetNumberOfBuckets();
-    vtkSMPMergePoints* l;
-
-    for ( vtkIdType i = 0; i < NumberOfBuckets; ++i )
-      {
-      if ( locator->GetNumberOfIdInBucket(i) )
-        if ( MustTreatBucket(i) )
-          {
-          vtkThreadLocal<vtkPointData>::iterator itPd = self->InPd->Begin( 1 );
-          vtkThreadLocal<vtkIdList>::iterator itMaps = self->Maps->Begin( 1 );
-          for ( vtkThreadLocal<vtkSMPMergePoints>::iterator itLocator = self->Locators->Begin( 1 );
-                itLocator != self->Locators->End(); ++itLocator, ++itPd, ++itMaps )
-            if ( (l = *itLocator) )
-              self->outputLocator->Merge( l, i, self->outputPd, *itPd, *itMaps );
-          }
-      }
-    }
-protected:
-  ParallelPointMerger() { }
-  ~ParallelPointMerger() { }
-
-private:
-  ParallelPointMerger(const ParallelPointMerger&);
-  void operator =(const ParallelPointMerger&);
-};
-
-//======================================================================================
-struct ParallelCellMerger : public vtkTask
-{
-  DummyMergeFunctor* self;
-
-  vtkTypeMacro(ParallelCellMerger,vtkTask);
-  static ParallelCellMerger* New() { return new ParallelCellMerger; }
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os,indent);
-    }
-
-  void Execute( vtkIdList* map,
-                vtkCellData* clData,
-                vtkCellArray* verts,
-                vtkCellArray* lines,
-                vtkCellArray* polys,
-                vtkCellArray* strips,
-                vtkIdType vertCellOffset,
-                vtkIdType vertTupleOffset,
-                vtkIdType lineCellOffset,
-                vtkIdType lineTupleOffset,
-                vtkIdType polyCellOffset,
-                vtkIdType polyTupleOffset,
-                vtkIdType stripCellOffset,
-                vtkIdType stripTupleOffset ) const
-    {
-    if ( !map ) return;
-
-    vtkIdType *pts, totalNumber, newId, n, clIndex;
-    vtkCellArray* computedCells;
-
-    if ( self->outputVerts )
-      {
-      clIndex = 0;
-      computedCells = verts;
-      computedCells->InitTraversal();
-      totalNumber = vertTupleOffset;
-      newId = vertCellOffset - 1; // usage of ++newId instead of newId++
-      while (computedCells->GetNextCell( n, pts ))
-        {
-        vtkIdType* writePtr = self->outputVerts->WritePointer( 0, totalNumber );
-        writePtr += totalNumber;
-        *writePtr++ = n;
-        for (vtkIdType i = 0; i < n; ++i)
-          {
-          *writePtr++ = map->GetId(pts[i]);
-          }
-        self->outputCd->SetTuple(++newId, ++clIndex, clData);
-        totalNumber += n + 1;
-        }
-      }
-
-    if ( self->outputLines )
-      {
-      clIndex = 0;
-      computedCells = lines;
-      computedCells->InitTraversal();
-      totalNumber = lineTupleOffset;
-      newId = lineCellOffset - 1 + self->vertOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
-      while (computedCells->GetNextCell( n, pts ))
-        {
-        vtkIdType* writePtr = self->outputLines->WritePointer( 0, totalNumber );
-        writePtr += totalNumber;
-        *writePtr++ = n;
-        for (vtkIdType i = 0; i < n; ++i)
-          {
-          *writePtr++ = map->GetId(pts[i]);
-          }
-        self->outputCd->SetTuple(++newId, ++clIndex, clData);
-        totalNumber += n + 1;
-        }
-      }
-
-    if ( self->outputPolys )
-      {
-      clIndex = 0;
-      computedCells = polys;
-      computedCells->InitTraversal();
-      totalNumber = polyTupleOffset;
-      newId = polyCellOffset - 1 + self->lineOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
-      while (computedCells->GetNextCell( n, pts ))
-        {
-        vtkIdType* writePtr = self->outputPolys->WritePointer( 0, totalNumber );
-        writePtr += totalNumber;
-        *writePtr++ = n;
-        for (vtkIdType i = 0; i < n; ++i)
-          {
-          *writePtr++ = map->GetId(pts[i]);
-          }
-        self->outputCd->SetTuple(++newId, ++clIndex, clData);
-        totalNumber += n + 1;
-        }
-      }
-
-    if ( self->outputStrips )
-      {
-      clIndex = 0;
-      computedCells = strips;
-      computedCells->InitTraversal();
-      totalNumber = stripTupleOffset;
-      newId = stripCellOffset - 1 + self->polyOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
-      while (computedCells->GetNextCell( n, pts ))
-        {
-        vtkIdType* writePtr = self->outputStrips->WritePointer( 0, totalNumber );
-        writePtr += totalNumber;
-        *writePtr++ = n;
-        for (vtkIdType i = 0; i < n; ++i)
-          {
-          *writePtr++ = map->GetId(pts[i]);
-          }
-        self->outputCd->SetTuple(++newId, ++clIndex, clData);
-        totalNumber += n + 1;
-        }
-      }
-    }
-protected:
-  ParallelCellMerger() {}
-  ~ParallelCellMerger() {}
-private:
-  ParallelCellMerger(const ParallelCellMerger&);
-  void operator =(const ParallelCellMerger&);
-};
-
-//======================================================================================
-struct LockPointMerger : public vtkFunctor
-{
-  DummyMergeFunctor* Functor;
-  vtkIdType NumberOfPointsFirstThread;
-
-  vtkTypeMacro(LockPointMerger,vtkFunctor);
-  static LockPointMerger* New();
-  void PrintSelf(ostream &os, vtkIndent indent)
-    {
-    this->Superclass::PrintSelf(os,indent);
-    }
-
-  void operator()( vtkIdType id ) const
-    {
-    vtkThreadLocal<vtkPoints>::iterator itPoints = this->Functor->InPoints->Begin();
-    vtkThreadLocal<vtkPointData>::iterator itPd = this->Functor->InPd->Begin();
-    vtkThreadLocal<vtkIdList>::iterator itMaps = this->Functor->Maps->Begin();
-
-    vtkIdType NumberOfPoints = NumberOfPointsFirstThread, NewId;
-    while ( id >= NumberOfPoints )
-      {
-      id -= NumberOfPoints;
-      ++itPoints; ++itPd; ++itMaps;
-      NumberOfPoints = (*itPoints)->GetNumberOfPoints();
-      }
-
-    double* pt = new double[3];
-    (*itPoints)->GetPoint( id, pt );
-    if ( this->Functor->outputLocator->SetUniquePoint( pt, NewId ) )
-      this->Functor->outputPd->SetTuple( NewId, id, (*itPd) );
-    (*itMaps)->SetId( id, NewId );
-    delete [] pt;
-    }
-protected:
-  LockPointMerger() {}
-  ~LockPointMerger() {}
-private:
-  LockPointMerger(const LockPointMerger&);
-  void operator =(const LockPointMerger&);
-};
-
-vtkStandardNewMacro(LockPointMerger);
-
-//======================================================================================
+//------------------------------------------------------------------------------
 void vtkSMPMergePointsOp(vtkSMPMergePoints *outPoints,
                          vtkThreadLocal<vtkSMPMergePoints> *inPoints,
                          vtkPointData *outPtsData,
@@ -545,7 +36,7 @@ void vtkSMPMergePointsOp(vtkSMPMergePoints *outPoints,
   TreatedTable = new vtkIdTypePtr[outPoints->GetNumberOfBuckets()];
   memset( TreatedTable, 0, outPoints->GetNumberOfBuckets() * sizeof(vtkIdTypePtr) );
 
-  DummyMergeFunctor* DummyFunctor = DummyMergeFunctor::New();
+  vtkDummyMergeFunctor* DummyFunctor = vtkDummyMergeFunctor::New();
   DummyFunctor->InitializeNeeds( inPoints, 0, outPoints,
                                  inVerts, outVerts,
                                  inLines, outLines,
@@ -554,12 +45,12 @@ void vtkSMPMergePointsOp(vtkSMPMergePoints *outPoints,
                                  inPtsData, outPtsData,
                                  inCellsData, outCellsData );
 
-  ParallelPointMerger* TheMerge = ParallelPointMerger::New();
+  vtkParallelPointMerger* TheMerge = vtkParallelPointMerger::New();
   TheMerge->self = DummyFunctor;
   vtkSMPParallelOp<vtkSMPMergePoints>( TheMerge, DummyFunctor->Locators->Begin(), SkipThreads );
   TheMerge->Delete();
 
-  ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
+  vtkParallelCellMerger* TheCellMerge = vtkParallelCellMerger::New();
   TheCellMerge->self = DummyFunctor;
   vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>
     (
@@ -595,6 +86,7 @@ void vtkSMPMergePointsOp(vtkSMPMergePoints *outPoints,
   DummyFunctor->Delete();
 }
 
+//------------------------------------------------------------------------------
 void vtkSMPMergePointsOp(vtkPoints *outPoints,
                          vtkThreadLocal<vtkPoints> *inPoints,
                          const double bounds[6],
@@ -612,7 +104,7 @@ void vtkSMPMergePointsOp(vtkPoints *outPoints,
                          vtkThreadLocal<vtkCellData> *inCellsData,
                          int SkipThreads)
 {
-  DummyMergeFunctor* Functor = DummyMergeFunctor::New();
+  vtkDummyMergeFunctor* Functor = vtkDummyMergeFunctor::New();
   vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::New();
   vtkIdType NumberOfInPointsThread0 = (*(inPoints->Begin( 0 )))->GetNumberOfPoints();
   outputLocator->InitLockInsertion( outPoints, bounds, NumberOfInPointsThread0 );
@@ -630,13 +122,13 @@ void vtkSMPMergePointsOp(vtkPoints *outPoints,
                             inCellsData, outCellsData );
 
   vtkIdType StartPoint = SkipThreads ? NumberOfInPointsThread0 : 0;
-  LockPointMerger* TheMerge = LockPointMerger::New();
+  vtkLockPointMerger* TheMerge = vtkLockPointMerger::New();
   TheMerge->Functor = Functor;
   TheMerge->NumberOfPointsFirstThread = NumberOfInPointsThread0;
   vtkSMPForEachOp( StartPoint, Functor->GetNumberOfPoints(), TheMerge );
   TheMerge->Delete();
 
-  ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
+  vtkParallelCellMerger* TheCellMerge = vtkParallelCellMerger::New();
   TheCellMerge->self = Functor;
   vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>
     (
