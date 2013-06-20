@@ -15,12 +15,12 @@
 
 vtkStandardNewMacro(vtkSMPDistributePolyData);
 
-class PointDistribute : public vtkFunctor<vtkIdType> {
+class PointDistribute : public vtkFunctor {
   PointDistribute( const PointDistribute& );
   void operator =( const PointDistribute& );
 
 public:
-  vtkTypeMacro(PointDistribute,vtkFunctor<vtkIdType>);
+  vtkTypeMacro(PointDistribute,vtkFunctor);
   static PointDistribute* New();
 
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -68,12 +68,12 @@ protected:
 
 vtkStandardNewMacro(PointDistribute);
 
-class CellDistribute : public vtkFunctor<vtkIdType> {
+class CellDistribute : public vtkFunctor {
   CellDistribute( const CellDistribute& );
   void operator =( const CellDistribute& );
 
 public:
-  vtkTypeMacro(CellDistribute,vtkFunctor<vtkIdType>);
+  vtkTypeMacro(CellDistribute,vtkFunctor);
   static CellDistribute* New();
 
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -282,7 +282,7 @@ int vtkSMPDistributePolyData::RequestData(vtkInformation *vtkNotUsed(request), v
   //
   PointDistribute* distributePoints = PointDistribute::New();
   distributePoints->Setup( inPts, newPts, pd, outPD );
-  vtkSMP::StaticForEach( 0, numPts, distributePoints );
+  vtkSMPStaticForEachOp( 0, numPts, distributePoints );
   distributePoints->Delete();
 
   // Update ourselves and release memory
@@ -317,7 +317,7 @@ int vtkSMPDistributePolyData::RequestData(vtkInformation *vtkNotUsed(request), v
 
   CellDistribute* distributeCells = CellDistribute::New();
   distributeCells->Setup( inVerts, inLines, inPolys, inStrips, newVerts, newLines, newPolys, newStrips, cd, outCD, input );
-  vtkSMP::StaticForEach( 0, input->GetNumberOfCells(), distributeCells );
+  vtkSMPStaticForEachOp( 0, input->GetNumberOfCells(), distributeCells );
   distributeCells->Delete();
 
   // Let’s bring MaxId to their real values

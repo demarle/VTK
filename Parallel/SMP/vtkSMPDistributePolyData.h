@@ -1,9 +1,10 @@
 #ifndef VTKSMPDISTRIBUTEPOLYDATA_H
 #define VTKSMPDISTRIBUTEPOLYDATA_H
 
+#include "vtkParallelSMPModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
 
-class VTK_SMP_EXPORT vtkSMPDistributePolyData : public vtkPolyDataAlgorithm
+class VTKPARALLELSMP_EXPORT vtkSMPDistributePolyData : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSMPDistributePolyData *New();
