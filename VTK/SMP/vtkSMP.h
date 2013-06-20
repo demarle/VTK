@@ -16,6 +16,7 @@
 namespace vtkSMP
 {
   class vtkIdTypeThreadLocal;
+  template <class T> class vtkThreadLocal;
   int InternalGetNumberOfThreads();
   int InternalGetTid();
 }
@@ -98,39 +99,47 @@ protected:
   ~vtkFunctorInitialisable(){ IsInitialized.clear(); }
 };
 
+template <class T> struct TaskHelper { typedef T* type; };
+template<> struct TaskHelper<vtkIdType> { typedef vtkIdType type; };
+
+template <class... T>
 class VTK_SMP_EXPORT vtkTask : public vtkObjectBase
 {
   vtkTask(const vtkTask&);
   void operator =(const vtkTask&);
 
 public:
-  vtkTypeMacro(vtkTask, vtkObjectBase);
-  void PrintSelf(ostream &os, vtkIndent indent);
-
-  void Execute( ... ) const
+  vtkTypeMacro(vtkTask<T...>, vtkObjectBase);
+  void PrintSelf(ostream &os, vtkIndent indent)
     {
-    cout << "Shouldn't be invocked." << endl;
+    this->Superclass::PrintSelf(os,indent);
     }
-  virtual void Execute( vtkSMPMergePoints* ) const {}
-  virtual void Execute( vtkIdList* map,
-                        vtkCellData* clData,
-                        vtkCellArray* verts,
-                        vtkCellArray* lines,
-                        vtkCellArray* polys,
-                        vtkCellArray* strips,
-                        vtkIdType vertCellOffset,
-                        vtkIdType vertTupleOffset,
-                        vtkIdType lineCellOffset,
-                        vtkIdType lineTupleOffset,
-                        vtkIdType polyCellOffset,
-                        vtkIdType polyTupleOffset,
-                        vtkIdType stripCellOffset,
-                        vtkIdType stripTupleOffset ) const {}
-  virtual void Execute( ) {}
+
+  virtual void Execute(typename TaskHelper<T>::type... args) const = 0;
 
 protected:
-  vtkTask();
-  ~vtkTask();
+  vtkTask(){}
+  ~vtkTask(){}
+};
+
+template <>
+class VTK_SMP_EXPORT vtkTask<> : public vtkObjectBase
+{
+  vtkTask(const vtkTask&);
+  void operator =(const vtkTask&);
+
+public:
+  vtkTypeMacro(vtkTask<>, vtkObjectBase);
+  void PrintSelf(ostream &os, vtkIndent indent)
+    {
+    this->Superclass::PrintSelf(os,indent);
+    }
+
+  virtual void Execute() = 0;
+
+protected:
+  vtkTask(){}
+  ~vtkTask(){}
 };
 
 class VTK_SMP_EXPORT vtkParallelTree
@@ -140,12 +149,14 @@ public:
   virtual void GetTreeSize ( int& max_level, vtkIdType& branching_factor ) const = 0;
 };
 
+template <class T> struct IteratorHelper { typedef typename vtkSMP::vtkThreadLocal<T>::iterator type; };
+template<> struct IteratorHelper<vtkIdType> { typedef vtkstd::vector<vtkIdType>::iterator type; };
+
+#include "vtkSMPImplementation.txx"
+
 namespace vtkSMP
 {
-  void VTK_SMP_EXPORT ThreadLovePrint( const char* message );
-  void VTK_SMP_EXPORT ThreadLovePrint( const vtkIdType& message );
-  void VTK_SMP_EXPORT ThreadLovePrint( int message );
-  void VTK_SMP_EXPORT ThreadLovePrint( void* message );
+  void VTK_SMP_EXPORT ThreadedPrint(const char* message);
 
   template<bool v, class T>
   class vtkThreadLocalImpl : public vtkObject
@@ -402,28 +413,14 @@ namespace vtkSMP
 
   void VTK_SMP_EXPORT ForEach( vtkIdType first0, vtkIdType last0, vtkIdType first1, vtkIdType last1, vtkIdType first2, vtkIdType last2, const vtkFancyFunctor<vtkIdType,vtkIdType,vtkIdType>* op, int grain = 0 );
 
-  template<class T>
-  void VTK_SMP_EXPORT Parallel( const vtkTask* function,
-                                typename vtkSMP::vtkThreadLocal<T>::iterator data1,
-                                vtkIdType skipThreads = 1 );
-
-  template<class T1, class T2, class T3, class T4, class T5, class T6>
-  void VTK_SMP_EXPORT Parallel( const vtkTask* function,
-                                typename vtkSMP::vtkThreadLocal<T1>::iterator data1,
-                                typename vtkSMP::vtkThreadLocal<T2>::iterator data2,
-                                typename vtkSMP::vtkThreadLocal<T3>::iterator data3,
-                                typename vtkSMP::vtkThreadLocal<T4>::iterator data4,
-                                typename vtkSMP::vtkThreadLocal<T5>::iterator data5,
-                                typename vtkSMP::vtkThreadLocal<T6>::iterator data6,
-                                vtkstd::vector<vtkIdType>::iterator offset1,
-                                vtkstd::vector<vtkIdType>::iterator offset2,
-                                vtkstd::vector<vtkIdType>::iterator offset3,
-                                vtkstd::vector<vtkIdType>::iterator offset4,
-                                vtkstd::vector<vtkIdType>::iterator offset5,
-                                vtkstd::vector<vtkIdType>::iterator offset6,
-                                vtkstd::vector<vtkIdType>::iterator offset7,
-                                vtkstd::vector<vtkIdType>::iterator offset8,
-                                vtkIdType skipThreads = 1 );
+  template <class... T>
+  void VTK_SMP_EXPORT Parallel( const vtkTask<T...>* function, vtkIdType skipThreads, typename IteratorHelper<T>::type... data )
+    {
+    if (skipThreads)
+      ParallelSkip<T...>( function, 0, skipThreads, data... );
+    else
+      ParallelDo<T...>( function, 0, InternalGetNumberOfThreads(), data... );
+    }
 
   void VTK_SMP_EXPORT Traverse( const vtkParallelTree* Tree, vtkFunctor<vtkIdType>* func );
 
@@ -448,7 +445,7 @@ namespace vtkSMP
       vtkSpawnTasks();
       ~vtkSpawnTasks();
 
-      void InternalSpawn( vtkTask* );
+      void InternalSpawn( vtkTask<>* );
 
     public:
       vtkTypeMacro(vtkSpawnTasks,vtkObject);

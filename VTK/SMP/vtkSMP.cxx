@@ -13,16 +13,6 @@
 
 
 //--------------------------------------------------------------------------------
-vtkTask::vtkTask() { }
-
-vtkTask::~vtkTask() { }
-
-void vtkTask::PrintSelf(ostream &os, vtkIndent indent)
-  {
-  this->Superclass::PrintSelf(os,indent);
-  }
-
-//--------------------------------------------------------------------------------
 class OffsetManager : public vtkObject
 {
   OffsetManager( const OffsetManager& );
@@ -322,11 +312,11 @@ int MustTreatBucket( vtkIdType idx )
   return !__sync_fetch_and_add(&(TreatedTable[idx]), 1);
   }
 
-struct ParallelPointMerger : public vtkTask
+struct ParallelPointMerger : public vtkTask<vtkSMPMergePoints>
 {
   DummyMergeFunctor* self;
 
-  vtkTypeMacro(ParallelPointMerger,vtkTask);
+  vtkTypeMacro(ParallelPointMerger,vtkTask<vtkSMPMergePoints>);
   static ParallelPointMerger* New() { return new ParallelPointMerger; }
   void PrintSelf(ostream &os, vtkIndent indent)
     {
@@ -363,11 +353,13 @@ private:
   void operator =(const ParallelPointMerger&);
 };
 
-struct ParallelCellMerger : public vtkTask
+struct ParallelCellMerger : public vtkTask<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType>
 {
   DummyMergeFunctor* self;
 
-  vtkTypeMacro(ParallelCellMerger,vtkTask);
+#define MY_COMMA ,
+  vtkTypeMacro(ParallelCellMerger,vtkTask<vtkIdList MY_COMMA vtkCellData MY_COMMA vtkCellArray MY_COMMA vtkCellArray MY_COMMA vtkCellArray MY_COMMA vtkCellArray MY_COMMA vtkIdType MY_COMMA vtkIdType MY_COMMA vtkIdType MY_COMMA vtkIdType MY_COMMA vtkIdType MY_COMMA vtkIdType MY_COMMA vtkIdType MY_COMMA vtkIdType>);
+#undef MY_COMMA
   static ParallelCellMerger* New() { return new ParallelCellMerger; }
   void PrintSelf(ostream &os, vtkIndent indent)
     {
@@ -531,7 +523,13 @@ vtkStandardNewMacro(LockPointMerger);
 
 namespace vtkSMP
 {
-  void MergePoints(vtkSMPMergePoints *outPoints, vtkThreadLocal<vtkSMPMergePoints> *inPoints, vtkPointData *outPtsData, vtkThreadLocal<vtkPointData> *inPtsData, vtkCellArray *outVerts, vtkThreadLocal<vtkCellArray> *inVerts, vtkCellArray *outLines, vtkThreadLocal<vtkCellArray> *inLines, vtkCellArray *outPolys, vtkThreadLocal<vtkCellArray> *inPolys, vtkCellArray *outStrips, vtkThreadLocal<vtkCellArray> *inStrips, vtkCellData *outCellsData, vtkThreadLocal<vtkCellData> *inCellsData, int SkipThreads)
+  void MergePoints(vtkSMPMergePoints *outPoints, vtkThreadLocal<vtkSMPMergePoints> *inPoints,
+                   vtkPointData *outPtsData, vtkThreadLocal<vtkPointData> *inPtsData,
+                   vtkCellArray *outVerts, vtkThreadLocal<vtkCellArray> *inVerts,
+                   vtkCellArray *outLines, vtkThreadLocal<vtkCellArray> *inLines,
+                   vtkCellArray *outPolys, vtkThreadLocal<vtkCellArray> *inPolys,
+                   vtkCellArray *outStrips, vtkThreadLocal<vtkCellArray> *inStrips,
+                   vtkCellData *outCellsData, vtkThreadLocal<vtkCellData> *inCellsData, int SkipThreads)
     {
     TreatedTable = new vtkIdTypePtr[outPoints->GetNumberOfBuckets()];
     memset( TreatedTable, 0, outPoints->GetNumberOfBuckets() * sizeof(vtkIdTypePtr) );
@@ -541,27 +539,26 @@ namespace vtkSMP
 
     ParallelPointMerger* TheMerge = ParallelPointMerger::New();
     TheMerge->self = DummyFunctor;
-    Parallel<vtkSMPMergePoints>( TheMerge, DummyFunctor->Locators->Begin(), SkipThreads );
+    Parallel( TheMerge, SkipThreads, DummyFunctor->Locators->Begin() );
     TheMerge->Delete();
 
     ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
     TheCellMerge->self = DummyFunctor;
-    Parallel<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>( TheCellMerge,
-                                                                                              DummyFunctor->Maps->Begin(),
-                                                                                              DummyFunctor->InCd->Begin(),
-                                                                                              DummyFunctor->InVerts->Begin(),
-                                                                                              DummyFunctor->InLines->Begin(),
-                                                                                              DummyFunctor->InPolys->Begin(),
-                                                                                              DummyFunctor->InStrips->Begin(),
-                                                                                              DummyFunctor->vertOffset->GetCellsOffset(),
-                                                                                              DummyFunctor->vertOffset->GetTuplesOffset(),
-                                                                                              DummyFunctor->lineOffset->GetCellsOffset(),
-                                                                                              DummyFunctor->lineOffset->GetTuplesOffset(),
-                                                                                              DummyFunctor->polyOffset->GetCellsOffset(),
-                                                                                              DummyFunctor->polyOffset->GetTuplesOffset(),
-                                                                                              DummyFunctor->stripOffset->GetCellsOffset(),
-                                                                                              DummyFunctor->stripOffset->GetTuplesOffset(),
-                                                                                              SkipThreads );
+    Parallel( TheCellMerge, SkipThreads,
+              DummyFunctor->Maps->Begin(),
+              DummyFunctor->InCd->Begin(),
+              DummyFunctor->InVerts->Begin(),
+              DummyFunctor->InLines->Begin(),
+              DummyFunctor->InPolys->Begin(),
+              DummyFunctor->InStrips->Begin(),
+              DummyFunctor->vertOffset->GetCellsOffset(),
+              DummyFunctor->vertOffset->GetTuplesOffset(),
+              DummyFunctor->lineOffset->GetCellsOffset(),
+              DummyFunctor->lineOffset->GetTuplesOffset(),
+              DummyFunctor->polyOffset->GetCellsOffset(),
+              DummyFunctor->polyOffset->GetTuplesOffset(),
+              DummyFunctor->stripOffset->GetCellsOffset(),
+              DummyFunctor->stripOffset->GetTuplesOffset() );
     TheCellMerge->Delete();
 
     // Correcting size of arrays
@@ -604,22 +601,21 @@ namespace vtkSMP
 
     ParallelCellMerger* TheCellMerge = ParallelCellMerger::New();
     TheCellMerge->self = Functor;
-    Parallel<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>( TheCellMerge,
-                                                                                              Functor->Maps->Begin(),
-                                                                                              Functor->InCd->Begin(),
-                                                                                              Functor->InVerts->Begin(),
-                                                                                              Functor->InLines->Begin(),
-                                                                                              Functor->InPolys->Begin(),
-                                                                                              Functor->InStrips->Begin(),
-                                                                                              Functor->vertOffset->GetCellsOffset(),
-                                                                                              Functor->vertOffset->GetTuplesOffset(),
-                                                                                              Functor->lineOffset->GetCellsOffset(),
-                                                                                              Functor->lineOffset->GetTuplesOffset(),
-                                                                                              Functor->polyOffset->GetCellsOffset(),
-                                                                                              Functor->polyOffset->GetTuplesOffset(),
-                                                                                              Functor->stripOffset->GetCellsOffset(),
-                                                                                              Functor->stripOffset->GetTuplesOffset(),
-                                                                                              SkipThreads );
+    Parallel( TheCellMerge, SkipThreads,
+              Functor->Maps->Begin(),
+              Functor->InCd->Begin(),
+              Functor->InVerts->Begin(),
+              Functor->InLines->Begin(),
+              Functor->InPolys->Begin(),
+              Functor->InStrips->Begin(),
+              Functor->vertOffset->GetCellsOffset(),
+              Functor->vertOffset->GetTuplesOffset(),
+              Functor->lineOffset->GetCellsOffset(),
+              Functor->lineOffset->GetTuplesOffset(),
+              Functor->polyOffset->GetCellsOffset(),
+              Functor->polyOffset->GetTuplesOffset(),
+              Functor->stripOffset->GetCellsOffset(),
+              Functor->stripOffset->GetTuplesOffset() );
     TheCellMerge->Delete();
     timer->end_bench_timer();
 
@@ -643,24 +639,8 @@ namespace vtkSMP
 
   vtkStandardNewMacro(vtkSpawnTasks);
 
-  void ThreadLovePrint(const char *message)
+  void ThreadedPrint(const char *message)
     {
     printf("[%d] %s\n", InternalGetTid(), message);
     }
-
-  void ThreadLovePrint(const vtkIdType& message)
-    {
-    printf("[%d] %d\n", InternalGetTid(), message);
-    }
-
-  void ThreadLovePrint(int message)
-    {
-    printf("[%d] %d\n", InternalGetTid(), message);
-    }
-
-  void ThreadLovePrint(void *message)
-    {
-    printf("[%d] %p\n", InternalGetTid(), message);
-    }
-
 }

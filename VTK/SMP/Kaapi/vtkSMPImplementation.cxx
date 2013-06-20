@@ -1,7 +1,8 @@
-#include "vtkSMP.h"
 #include "vtkCommand.h"
 #include <kaapic.h>
 #include <cmath>
+
+#include "vtkSMP.h"
 
 KaapiInit::KaapiInit() // : com(ka::System::join_community()) { }
   {
@@ -161,37 +162,10 @@ int Work<Functor>::split (ka::StealContext* sc, int nreq, ka::ListRequest::itera
   return 0;
 }
 
-template<class T1, class T2, class T3, class T4, class T5, class T6>
-struct TaskParallel_ : public ka::Task<15>::Signature<const vtkTask*, T1*, T2*, T3*, T4*, T5*, T6*, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType, vtkIdType> {};
-
-template<> template<class T1, class T2, class T3, class T4, class T5, class T6>
-struct TaskBodyCPU<TaskParallel_<T1, T2, T3, T4, T5, T6> > {
-  void operator() ( const vtkTask* function,
-                    T1* data1, T2* data2, T3* data3, T4* data4, T5* data5, T6* data6,
-                    vtkIdType offset1, vtkIdType offset2,
-                    vtkIdType offset3, vtkIdType offset4,
-                    vtkIdType offset5, vtkIdType offset6,
-                    vtkIdType offset7, vtkIdType offset8 )
-    {
-    function->Execute( data1, data2, data3, data4, data5, data6, offset1, offset2, offset3, offset4, offset5, offset6, offset7, offset8 );
-    }
-};
-
-template<class T>
-struct TaskParallel : public ka::Task<2>::Signature<const vtkTask*, T*> {};
-
-template<> template<class T>
-struct TaskBodyCPU<TaskParallel<T> > {
-  void operator() ( const vtkTask* function, T* data )
-    {
-    function->Execute(data);
-    }
-};
-
-struct TaskSpawnable : public ka::Task<2>::Signature<vtkTask*, vtkSMP::vtkSpawnTasks*> {};
+struct TaskSpawnable : public ka::Task<2>::Signature<vtkTask<>*, vtkSMP::vtkSpawnTasks*> {};
 template<>
 struct TaskBodyCPU<TaskSpawnable> {
-  void operator() (vtkTask* func, vtkSMP::vtkSpawnTasks* spawner)
+  void operator() (vtkTask<>* func, vtkSMP::vtkSpawnTasks* spawner)
     {
     func->Execute( );
     func->UnRegister(spawner);
@@ -669,60 +643,6 @@ namespace vtkSMP
 //      }
 //    }
 
-  template<>
-  void Parallel<vtkSMPMergePoints> ( const vtkTask* function,
-                                     vtkSMP::vtkThreadLocal<vtkSMPMergePoints>::iterator data1,
-                                     vtkIdType skipThreads )
-    {
-    for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
-      {
-      ++data1;
-      }
-//    kaapi_begin_parallel( KAAPI_SCHEDFLAG_DEFAULT );
-    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
-    for ( vtkIdType tid = skipThreads; tid < kaapi_getconcurrency(); ++tid )
-      {
-      ka::Spawn<TaskParallel<vtkSMPMergePoints> >()( function, *data1++ );
-      }
-    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
-//    kaapi_end_parallel( KAAPI_SCHEDFLAG_DEFAULT );
-    }
-
-  template<>
-  void Parallel<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>( const vtkTask* function,
-                 vtkSMP::vtkThreadLocal<vtkIdList>::iterator data1,
-                 vtkSMP::vtkThreadLocal<vtkCellData>::iterator data2,
-                 vtkSMP::vtkThreadLocal<vtkCellArray>::iterator data3,
-                 vtkSMP::vtkThreadLocal<vtkCellArray>::iterator data4,
-                 vtkSMP::vtkThreadLocal<vtkCellArray>::iterator data5,
-                 vtkSMP::vtkThreadLocal<vtkCellArray>::iterator data6,
-                 vtkstd::vector<vtkIdType>::iterator offset1,
-                 vtkstd::vector<vtkIdType>::iterator offset2,
-                 vtkstd::vector<vtkIdType>::iterator offset3,
-                 vtkstd::vector<vtkIdType>::iterator offset4,
-                 vtkstd::vector<vtkIdType>::iterator offset5,
-                 vtkstd::vector<vtkIdType>::iterator offset6,
-                 vtkstd::vector<vtkIdType>::iterator offset7,
-                 vtkstd::vector<vtkIdType>::iterator offset8,
-                 vtkIdType skipThreads )
-    {
-    for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
-      {
-      ++data1; ++data2; ++data3; ++data4; ++data5; ++data6;
-      ++offset1; ++offset2; ++offset3; ++offset4; ++offset5; ++offset6; ++offset7; ++offset8;
-      }
-//    kaapi_begin_parallel( KAAPI_SCHEDFLAG_DEFAULT );
-    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
-    for ( vtkIdType tid = skipThreads; tid < kaapi_getconcurrency(); ++tid )
-      {
-      ka::Spawn<TaskParallel_<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray> >()(
-                    function, *data1++, *data2++, *data3++, *data4++, *data5++, *data6++,
-                    *offset1++, *offset2++, *offset3++, *offset4++, *offset5++, *offset6++, *offset7++, *offset8++ );
-      }
-    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
-//    kaapi_end_parallel( KAAPI_SCHEDFLAG_DEFAULT );
-    }
-
   void Traverse( const vtkParallelTree *Tree, vtkFunctor<vtkIdType>* func )
     {
     work_t work;
@@ -800,7 +720,7 @@ namespace vtkSMP
     kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
     }
 
-  void vtkSpawnTasks::InternalSpawn( vtkTask* func )
+  void vtkSpawnTasks::InternalSpawn( vtkTask<>* func )
     {
     func->Register(this);
     ka::Spawn<TaskSpawnable>()(func, this);

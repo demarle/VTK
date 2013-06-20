@@ -9,13 +9,13 @@
 
 class FilterSpawn;
 
-struct FilterTask : public vtkTask {
+struct FilterTask : public vtkTask<> {
   vtkInformation* request;
   vtkInformation* info;
   int* result;
   std::string name;
 
-  vtkTypeMacro(FilterTask,vtkTask);
+  vtkTypeMacro(FilterTask,vtkTask<>);
   static FilterTask* New() { return new FilterTask; }
   void PrintSelf(ostream &os, vtkIndent indent)
     {

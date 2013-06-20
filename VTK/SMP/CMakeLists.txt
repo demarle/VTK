@@ -74,6 +74,7 @@ INCLUDE(${VTK_CMAKE_DIR}/KitCommonBlock.cmake)
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
   SET(__inst_files
     ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPImplementation.h
+    ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPImplementation.cxx
     vtkSMP.h
     vtkSMPObjectFactory.h
     vtkSMPTransform.h

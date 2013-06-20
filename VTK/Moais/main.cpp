@@ -11,6 +11,7 @@
 
 #ifdef VTK_CAN_USE_SMP
   #include "vtkSMPClipDataSet.h"
+  #include "vtkSMPMergePoints.h"
 #else
   #include "vtkClipDataSet.h"
 #endif
@@ -30,6 +31,9 @@ int main( int argc, char** argv )
 
 #ifdef VTK_CAN_USE_SMP
   vtkSMPClipDataSet* filter = vtkSMPClipDataSet::New();
+  vtkSMPMergePoints* loc = vtkSMPMergePoints::New();
+  filter->SetLocator(loc);
+  loc->Delete();
 #else
   vtkClipDataSet* filter = vtkClipDataSet::New();
 #endif
