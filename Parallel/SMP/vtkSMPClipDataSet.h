@@ -1,9 +1,10 @@
 #ifndef __vtkSMPClipDataSet_h
 #define __vtkSMPClipDataSet_h
 
+#include "vtkParallelSMPModule.h" // For export macro
 #include "vtkClipDataSet.h"
 
-class VTK_SMP_EXPORT vtkSMPClipDataSet : public vtkClipDataSet
+class VTKPARALLELSMP_EXPORT vtkSMPClipDataSet : public vtkClipDataSet
 {
 public:
   vtkTypeMacro(vtkSMPClipDataSet,vtkClipDataSet);

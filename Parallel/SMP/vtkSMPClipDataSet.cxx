@@ -27,9 +27,7 @@
 
 #include <math.h>
 
-#include "vtkBenchTimer.h"
-
-class GenerateClipValueExecutor : public vtkFunctor<vtkIdType>
+class GenerateClipValueExecutor : public vtkFunctor
 {
   GenerateClipValueExecutor(const GenerateClipValueExecutor&);
   void operator =(const GenerateClipValueExecutor&);
@@ -43,7 +41,7 @@ protected:
   vtkImplicitFunction* clipFunction;
 
 public:
-  vtkTypeMacro(GenerateClipValueExecutor,vtkFunctor<vtkIdType>);
+  vtkTypeMacro(GenerateClipValueExecutor,vtkFunctor);
   static GenerateClipValueExecutor* New();
   void PrintSelf(ostream &os, vtkIndent indent)
     {
@@ -66,7 +64,7 @@ public:
     }
 };
 
-class DoClip : public vtkFunctorInitialisable<vtkIdType>
+class DoClip : public vtkFunctorInitialisable
 {
   DoClip(const DoClip&);
   void operator =(const DoClip&);
@@ -75,11 +73,11 @@ protected:
   DoClip() : input(0), clipScalars(0), inPD(0), inCD(0), estimatedSize(0),
              value(0.0), insideOut(0), numOutputs(0), refLocator(0)
     {
-    cell = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
-    cellScalars = vtkSMP::vtkThreadLocal<vtkFloatArray>::New();
-    newPoints = vtkSMP::vtkThreadLocal<vtkPoints>::New();
-    outPD = vtkSMP::vtkThreadLocal<vtkPointData>::New();
-    locator = vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>::New();
+    cell = vtkThreadLocal<vtkGenericCell>::New();
+    cellScalars = vtkThreadLocal<vtkFloatArray>::New();
+    newPoints = vtkThreadLocal<vtkPoints>::New();
+    outPD = vtkThreadLocal<vtkPointData>::New();
+    locator = vtkThreadLocal<vtkIncrementalPointLocator>::New();
 
     conn[0] = conn[1] = 0;
     outCD[0] = outCD[1] = 0;
@@ -113,18 +111,18 @@ protected:
   vtkIncrementalPointLocator* refLocator;
 
 public:
-  vtkSMP::vtkThreadLocal<vtkGenericCell>* cell;
-  vtkSMP::vtkThreadLocal<vtkFloatArray>* cellScalars;
-  vtkSMP::vtkThreadLocal<vtkPoints>* newPoints;
-  vtkSMP::vtkThreadLocal<vtkPointData>* outPD;
-  vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>* locator;
+  vtkThreadLocal<vtkGenericCell>* cell;
+  vtkThreadLocal<vtkFloatArray>* cellScalars;
+  vtkThreadLocal<vtkPoints>* newPoints;
+  vtkThreadLocal<vtkPointData>* outPD;
+  vtkThreadLocal<vtkIncrementalPointLocator>* locator;
 
-  vtkSMP::vtkThreadLocal<vtkCellArray>* conn[2];
-  vtkSMP::vtkThreadLocal<vtkCellData>* outCD[2];
-  vtkSMP::vtkThreadLocal<vtkUnsignedCharArray>* types[2];
-  vtkSMP::vtkThreadLocal<vtkIdTypeArray>* locs[2];
+  vtkThreadLocal<vtkCellArray>* conn[2];
+  vtkThreadLocal<vtkCellData>* outCD[2];
+  vtkThreadLocal<vtkUnsignedCharArray>* types[2];
+  vtkThreadLocal<vtkIdTypeArray>* locs[2];
 
-  vtkTypeMacro(DoClip,vtkFunctorInitialisable<vtkIdType>);
+  vtkTypeMacro(DoClip,vtkFunctorInitialisable);
   static DoClip* New();
   void PrintSelf(ostream &os, vtkIndent indent)
     {
@@ -146,13 +144,13 @@ public:
     outPD->SetLocal(out_pd);
     for (int i = 0; i < num; ++i)
       {
-      conn[i] = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
+      conn[i] = vtkThreadLocal<vtkCellArray>::New();
       conn[i]->SetLocal(_conn[i]);
-      outCD[i] = vtkSMP::vtkThreadLocal<vtkCellData>::New();
+      outCD[i] = vtkThreadLocal<vtkCellData>::New();
       outCD[i]->SetLocal(_out[i]);
-      types[i] = vtkSMP::vtkThreadLocal<vtkUnsignedCharArray>::New();
+      types[i] = vtkThreadLocal<vtkUnsignedCharArray>::New();
       types[i]->SetLocal(_types[i]);
-      locs[i] = vtkSMP::vtkThreadLocal<vtkIdTypeArray>::New();
+      locs[i] = vtkThreadLocal<vtkIdTypeArray>::New();
       locs[i]->SetLocal(_locs[i]);
       }
 
@@ -420,7 +418,7 @@ int vtkSMPClipDataSet::RequestData(
     GenerateClipValueExecutor* generateClipScalarFunctor =
         GenerateClipValueExecutor::New();
     generateClipScalarFunctor->SetData(tmpScalars,input,this->ClipFunction);
-    vtkSMP::ForEach(0,numPts,generateClipScalarFunctor);
+    vtkSMPForEachOp(0,numPts,generateClipScalarFunctor);
     generateClipScalarFunctor->Delete();
     clipScalars = tmpScalars;
     }
@@ -487,19 +485,20 @@ int vtkSMPClipDataSet::RequestData(
                    this->UseValueAsOffset || !this->ClipFunction ? this->Value : 0.0,
                    this->InsideOut, numOutputs, newPoints, outPD, this->Locator,
                    conn, outCD, types, locs);
-  vtkSMP::ForEach(0,numCells,functor);
+  vtkSMPForEachOp(0,numCells,functor);
 
+  //TODO: Get rid of comments and get correct results (i.e: write a Merge operator for vtkUnstructuredGrid)
 //  vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast(this->Locator);
 //  if (parallelLocator)
 //    {
-//    vtkSMP::vtkThreadLocal<vtkSMPMergePoints>* partialMeshes;
+//    vtkThreadLocal<vtkSMPMergePoints>* partialMeshes;
 //    functor->locator->FillDerivedThreadLocal(partialMeshes);
-//    vtkSMP::MergePoints(parallelLocator, partialMeshes, outPD, functor->outPD, conn[0], functor->conn[0], 0, 0, 0, 0, 0, 0, outCD[0], functor->outCD[0], 1);
+//    vtkSMPMergeUnstructuredGridOp(parallelLocator, partialMeshes, outPD, functor->outPD, conn[0], functor->conn[0], 0, 0, 0, 0, 0, 0, outCD[0], functor->outCD[0], 1);
 //    partialMeshes->Delete();
 //    }
 //  else
 //    {
-//    vtkSMP::MergePoints(newPoints, functor->newPoints, input->GetBounds(), outPD, functor->outPD, conn[0], functor->conn[0], 0, 0, 0, 0, 0, 0, outCD[0], functor->outCD[0], 1);
+//    vtkSMPMergeUnstructuredGridOp(newPoints, functor->newPoints, input->GetBounds(), outPD, functor->outPD, conn[0], functor->conn[0], 0, 0, 0, 0, 0, 0, outCD[0], functor->outCD[0], 1);
 //    }
   functor->Delete();
 

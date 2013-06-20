@@ -49,6 +49,8 @@ set(SMP_Filters
   #vtkSMPTransformFilter.cxx
   vtkSMPWarpVector.cxx
   vtkSMPZCurve.cxx
+  vtkSMPClipDataSet.cxx
+  vtkSMP2ContourFilter.cxx
 )
 
 set(Module_SRCS

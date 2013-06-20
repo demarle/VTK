@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkSMPContourFilter2.h
+  Module:    vtkSMP2ContourFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,9 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPContourFilter2 - generate isosurfaces/isolines from scalar values
+// .NAME vtkSMP2ContourFilter - generate isosurfaces/isolines from scalar values
 // .SECTION Description
-// vtkSMPContourFilter2 is a filter that takes as input any dataset and
+// vtkSMP2ContourFilter is a filter that takes as input any dataset and
 // generates on output isosurfaces and/or isolines. The exact form
 // of the output depends upon the dimensionality of the input data.
 // Data consisting of 3D cells will generate isosurfaces, data
@@ -41,9 +41,10 @@
 // vtkMarchingContourFilter vtkMarchingCubes vtkSliceCubes
 // vtkMarchingSquares vtkImageMarchingCubes
 
-#ifndef __vtkSMPContourFilter2_h
-#define __vtkSMPContourFilter2_h
+#ifndef __vtkSMP2ContourFilter_h
+#define __vtkSMP2ContourFilter_h
 
+#include "vtkParallelSMPModule.h" // For export macro
 #include "vtkSMPPolyDataAlgorithm.h"
 
 #include "vtkContourValues.h" // Needed for inline methods
@@ -55,18 +56,18 @@ class vtkSynchronizedTemplates3D;
 class vtkGridSynchronizedTemplates3D;
 class vtkRectilinearSynchronizedTemplates;
 
-namespace vtkSMP { template <class T> class vtkThreadLocal; }
+template <class T> class vtkThreadLocal;
 
-class VTK_SMP_EXPORT vtkSMPContourFilter2 : public vtkSMPPolyDataAlgorithm
+class VTKPARALLELSMP_EXPORT vtkSMP2ContourFilter : public vtkSMPPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSMPContourFilter2,vtkSMPPolyDataAlgorithm);
+  vtkTypeMacro(vtkSMP2ContourFilter,vtkSMPPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Construct object with initial range (0,1) and single contour value
   // of 0.0.
-  static vtkSMPContourFilter2 *New();
+  static vtkSMP2ContourFilter *New();
 
   // Description:
   // Methods to set / get contour values.
@@ -144,8 +145,8 @@ public:
                              vtkInformationVector*);
 
 protected:
-  vtkSMPContourFilter2();
-  ~vtkSMPContourFilter2();
+  vtkSMP2ContourFilter();
+  ~vtkSMP2ContourFilter();
 
   virtual void ReportReferences(vtkGarbageCollector*);
 
@@ -172,56 +173,56 @@ protected:
   vtkRectilinearSynchronizedTemplates *RectilinearSynchronizedTemplates;
 
 private:
-  vtkSMPContourFilter2(const vtkSMPContourFilter2&);  // Not implemented.
-  void operator=(const vtkSMPContourFilter2&);  // Not implemented.
+  vtkSMP2ContourFilter(const vtkSMP2ContourFilter&);  // Not implemented.
+  void operator=(const vtkSMP2ContourFilter&);  // Not implemented.
 };
 
 // Description:
 // Set a particular contour value at contour number i. The index i ranges
 // between 0<=i<NumberOfContours.
-inline void vtkSMPContourFilter2::SetValue(int i, double value)
+inline void vtkSMP2ContourFilter::SetValue(int i, double value)
 {this->ContourValues->SetValue(i,value);}
 
 // Description:
 // Get the ith contour value.
-inline double vtkSMPContourFilter2::GetValue(int i)
+inline double vtkSMP2ContourFilter::GetValue(int i)
 {return this->ContourValues->GetValue(i);}
 
 // Description:
 // Get a pointer to an array of contour values. There will be
 // GetNumberOfContours() values in the list.
-inline double *vtkSMPContourFilter2::GetValues()
+inline double *vtkSMP2ContourFilter::GetValues()
 {return this->ContourValues->GetValues();}
 
 // Description:
 // Fill a supplied list with contour values. There will be
 // GetNumberOfContours() values in the list. Make sure you allocate
 // enough memory to hold the list.
-inline void vtkSMPContourFilter2::GetValues(double *contourValues)
+inline void vtkSMP2ContourFilter::GetValues(double *contourValues)
 {this->ContourValues->GetValues(contourValues);}
 
 // Description:
 // Set the number of contours to place into the list. You only really
 // need to use this method to reduce list size. The method SetValue()
 // will automatically increase list size as needed.
-inline void vtkSMPContourFilter2::SetNumberOfContours(int number)
+inline void vtkSMP2ContourFilter::SetNumberOfContours(int number)
 {this->ContourValues->SetNumberOfContours(number);}
 
 // Description:
 // Get the number of contours in the list of contour values.
-inline int vtkSMPContourFilter2::GetNumberOfContours()
+inline int vtkSMP2ContourFilter::GetNumberOfContours()
 {return this->ContourValues->GetNumberOfContours();}
 
 // Description:
 // Generate numContours equally spaced contour values between specified
 // range. Contour values will include min/max range values.
-inline void vtkSMPContourFilter2::GenerateValues(int numContours, double range[2])
+inline void vtkSMP2ContourFilter::GenerateValues(int numContours, double range[2])
 {this->ContourValues->GenerateValues(numContours, range);}
 
 // Description:
 // Generate numContours equally spaced contour values between specified
 // range. Contour values will include min/max range values.
-inline void vtkSMPContourFilter2::GenerateValues(int numContours, double
+inline void vtkSMP2ContourFilter::GenerateValues(int numContours, double
                                              rangeStart, double rangeEnd)
 {this->ContourValues->GenerateValues(numContours, rangeStart, rangeEnd);}
 

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkSMPContourFilter2.cxx
+  Module:    vtkSMP2ContourFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkSMPContourFilter2.h"
+#include "vtkSMP2ContourFilter.h"
 
 #include "vtkCell.h"
 #include "vtkCellArray.h"
@@ -47,15 +47,14 @@
 #include "vtkSMP.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkSMPMinMaxTree.h"
-#include "vtkBenchTimer.h"
 
-vtkStandardNewMacro(vtkSMPContourFilter2);
-vtkCxxSetObjectMacro(vtkSMPContourFilter2,ScalarTree,vtkScalarTree);
+vtkStandardNewMacro(vtkSMP2ContourFilter);
+vtkCxxSetObjectMacro(vtkSMP2ContourFilter,ScalarTree,vtkScalarTree);
 
 /* ================================================================================
   Generic contouring: Functors for parallel execution without ScalarTree
  ================================================================================ */
-class ThreadsFunctor2 : public vtkFunctorInitialisable<vtkIdType>
+class ThreadsFunctor2 : public vtkFunctorInitialisable
 {
   ThreadsFunctor2( const ThreadsFunctor2& );
   void operator =( const ThreadsFunctor2& );
@@ -63,14 +62,14 @@ class ThreadsFunctor2 : public vtkFunctorInitialisable<vtkIdType>
 protected:
   ThreadsFunctor2()
     {
-    Locator = vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>::New();
-    newPts = vtkSMP::vtkThreadLocal<vtkPoints>::New();
-    newVerts = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    newLines = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    newPolys = vtkSMP::vtkThreadLocal<vtkCellArray>::New();
-    Cells = vtkSMP::vtkThreadLocal<vtkGenericCell>::New();
-    CellsScalars = vtkSMP::vtkThreadLocal<vtkDataArray>::New();
-    PolyOutputs = vtkSMP::vtkThreadLocal<vtkPolyData>::New();
+    Locator = vtkThreadLocal<vtkIncrementalPointLocator>::New();
+    newPts = vtkThreadLocal<vtkPoints>::New();
+    newVerts = vtkThreadLocal<vtkCellArray>::New();
+    newLines = vtkThreadLocal<vtkCellArray>::New();
+    newPolys = vtkThreadLocal<vtkCellArray>::New();
+    Cells = vtkThreadLocal<vtkGenericCell>::New();
+    CellsScalars = vtkThreadLocal<vtkDataArray>::New();
+    PolyOutputs = vtkThreadLocal<vtkPolyData>::New();
     }
 
   ~ThreadsFunctor2()
@@ -85,10 +84,10 @@ protected:
     PolyOutputs->Delete();
     }
 
-  vtkSMP::vtkThreadLocal<vtkDataObject>* outputs;
-  vtkSMP::vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
-  vtkSMP::vtkThreadLocal<vtkGenericCell>* Cells;
-  vtkSMP::vtkThreadLocal<vtkDataArray>* CellsScalars;
+  vtkThreadLocal<vtkDataObject>* outputs;
+  vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
+  vtkThreadLocal<vtkGenericCell>* Cells;
+  vtkThreadLocal<vtkDataArray>* CellsScalars;
 
   vtkDataArray* inScalars;
   vtkDataSet* input;
@@ -105,13 +104,13 @@ protected:
 
 public:
   // for convenience sake, do not make accessors
-  vtkSMP::vtkThreadLocal<vtkPolyData>* PolyOutputs;
-  vtkSMP::vtkThreadLocal<vtkPoints>* newPts;
-  vtkSMP::vtkThreadLocal<vtkCellArray>* newVerts;
-  vtkSMP::vtkThreadLocal<vtkCellArray>* newLines;
-  vtkSMP::vtkThreadLocal<vtkCellArray>* newPolys;
+  vtkThreadLocal<vtkPolyData>* PolyOutputs;
+  vtkThreadLocal<vtkPoints>* newPts;
+  vtkThreadLocal<vtkCellArray>* newVerts;
+  vtkThreadLocal<vtkCellArray>* newLines;
+  vtkThreadLocal<vtkCellArray>* newPolys;
 
-  vtkTypeMacro(ThreadsFunctor2,vtkFunctorInitialisable<vtkIdType>);
+  vtkTypeMacro(ThreadsFunctor2,vtkFunctorInitialisable);
   static ThreadsFunctor2* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {
@@ -123,7 +122,7 @@ public:
   void SetData( vtkDataSet* _input, vtkIncrementalPointLocator* _locator,
                   vtkIdType& _size, double* _values, int _number,
                   vtkDataArray* _scalars, int _compute,
-                vtkSMP::vtkThreadLocal<vtkDataObject>* _outputs)
+                vtkThreadLocal<vtkDataObject>* _outputs)
     {
     vtkCutter::GetCellTypeDimensions(cellTypeDimensions);
 
@@ -260,7 +259,7 @@ vtkStandardNewMacro(AcceleratedFunctor2);
 
 // Construct object with initial range (0,1) and single contour value
 // of 0.0.
-vtkSMPContourFilter2::vtkSMPContourFilter2()
+vtkSMP2ContourFilter::vtkSMP2ContourFilter()
 {
   this->ContourValues = vtkContourValues::New();
 
@@ -286,7 +285,7 @@ vtkSMPContourFilter2::vtkSMPContourFilter2()
   this->GetInformation()->Set(vtkAlgorithm::PRESERVES_BOUNDS(), 1);
 }
 
-vtkSMPContourFilter2::~vtkSMPContourFilter2()
+vtkSMP2ContourFilter::~vtkSMP2ContourFilter()
 {
   this->ContourValues->Delete();
   if ( this->Locator )
@@ -307,7 +306,7 @@ vtkSMPContourFilter2::~vtkSMPContourFilter2()
 
 // Overload standard modified time function. If contour values are modified,
 // then this object is modified as well.
-unsigned long vtkSMPContourFilter2::GetMTime()
+unsigned long vtkSMP2ContourFilter::GetMTime()
 {
   unsigned long mTime=this->Superclass::GetMTime();
   unsigned long time;
@@ -326,7 +325,7 @@ unsigned long vtkSMPContourFilter2::GetMTime()
   return mTime;
 }
 
-int vtkSMPContourFilter2::RequestUpdateExtent(vtkInformation* request,
+int vtkSMP2ContourFilter::RequestUpdateExtent(vtkInformation* request,
                                           vtkInformationVector** inputVector,
                                           vtkInformationVector* outputVector)
 {
@@ -439,11 +438,11 @@ int vtkSMPContourFilter2::RequestUpdateExtent(vtkInformation* request,
 
 // General contouring filter.  Handles arbitrary input.
 //
-int vtkSMPContourFilter2::RequestData(
+int vtkSMP2ContourFilter::RequestData(
     vtkInformation* vtkNotUsed(request),
     vtkInformationVector** inputVector,
     vtkInformationVector* vtkNotUsed(outputVector),
-    vtkSMP::vtkThreadLocal<vtkDataObject>** outputs)
+    vtkThreadLocal<vtkDataObject>** outputs)
 {
   // get the input
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
@@ -532,8 +531,6 @@ int vtkSMPContourFilter2::RequestData(
     vtkSMPMinMaxTree* parallelTree = vtkSMPMinMaxTree::SafeDownCast(this->ScalarTree);
     if ( !this->UseScalarTree || parallelTree )
       {
-      vtkBenchTimer* timer = vtkBenchTimer::New();
-      timer->start_bench_timer();
       // Init (thread local init is drown into first ForEach)
       input->GetCellType( 0 ); // Build cell representation so that Threads can access them safely
       ThreadsFunctor2* my_contour;
@@ -543,10 +540,8 @@ int vtkSMPContourFilter2::RequestData(
         my_contour = ThreadsFunctor2::New();
       my_contour->SetData( input, this->Locator, estimatedSize, values,
                            numContours, inScalars, this->ComputeScalars, outputs[0] );
-      timer->end_bench_timer();
 
       // Exec
-      timer->start_bench_timer();
       if ( this->UseScalarTree )
         {
         AcceleratedFunctor2* TreeContour = static_cast<AcceleratedFunctor2*>(my_contour);
@@ -555,25 +550,23 @@ int vtkSMPContourFilter2::RequestData(
           {
           TreeContour->ScalarValue = values[i];
           parallelTree->InitTraversal( values[i] );
-          vtkSMP::Traverse( parallelTree, TreeContour );
+          vtkSMPTraverseOp( parallelTree, TreeContour );
           }
         }
       else
         {
         for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
           {
-          vtkSMP::ForEach( 0, numCells, my_contour );
+          vtkSMPForEachOp( 0, numCells, my_contour );
           }
         }
-      timer->end_bench_timer();
       // No more merge in V2 but we finalize each output
       // Easier in sequential
-      timer->start_bench_timer();
-      vtkSMP::vtkThreadLocal<vtkPolyData>::iterator itOutput;
-      vtkSMP::vtkThreadLocal<vtkPoints>::iterator newPts;
-      vtkSMP::vtkThreadLocal<vtkCellArray>::iterator newVerts;
-      vtkSMP::vtkThreadLocal<vtkCellArray>::iterator newLines;
-      vtkSMP::vtkThreadLocal<vtkCellArray>::iterator newPolys;
+      vtkThreadLocal<vtkPolyData>::iterator itOutput;
+      vtkThreadLocal<vtkPoints>::iterator newPts;
+      vtkThreadLocal<vtkCellArray>::iterator newVerts;
+      vtkThreadLocal<vtkCellArray>::iterator newLines;
+      vtkThreadLocal<vtkCellArray>::iterator newPolys;
       for ( itOutput = my_contour->PolyOutputs->Begin(),
             newPts = my_contour->newPts->Begin(),
             newVerts = my_contour->newVerts->Begin(),
@@ -605,7 +598,6 @@ int vtkSMPContourFilter2::RequestData(
           }
         (*itOutput)->Squeeze();
         }
-      timer->end_bench_timer();
 
       my_contour->Delete();
       } //if using scalar tree
@@ -623,7 +615,7 @@ int vtkSMPContourFilter2::RequestData(
 
 // Specify a spatial locator for merging points. By default,
 // an instance of vtkMergePoints is used.
-void vtkSMPContourFilter2::SetLocator(vtkIncrementalPointLocator *locator)
+void vtkSMP2ContourFilter::SetLocator(vtkIncrementalPointLocator *locator)
 {
   if ( this->Locator == locator )
     {
@@ -642,7 +634,7 @@ void vtkSMPContourFilter2::SetLocator(vtkIncrementalPointLocator *locator)
   this->Modified();
 }
 
-void vtkSMPContourFilter2::CreateDefaultLocator()
+void vtkSMP2ContourFilter::CreateDefaultLocator()
 {
   if ( this->Locator == NULL )
     {
@@ -652,20 +644,20 @@ void vtkSMPContourFilter2::CreateDefaultLocator()
     }
 }
 
-void vtkSMPContourFilter2::SetArrayComponent( int comp )
+void vtkSMP2ContourFilter::SetArrayComponent( int comp )
 {
   this->SynchronizedTemplates2D->SetArrayComponent( comp );
   this->SynchronizedTemplates3D->SetArrayComponent( comp );
   this->RectilinearSynchronizedTemplates->SetArrayComponent( comp );
 }
 
-int vtkSMPContourFilter2::GetArrayComponent()
+int vtkSMP2ContourFilter::GetArrayComponent()
 {
   return( this->SynchronizedTemplates2D->GetArrayComponent() );
 }
 
 //----------------------------------------------------------------------------
-int vtkSMPContourFilter2::ProcessRequest(vtkInformation* request,
+int vtkSMP2ContourFilter::ProcessRequest(vtkInformation* request,
                                      vtkInformationVector** inputVector,
                                      vtkInformationVector* outputVector)
 {
@@ -755,13 +747,13 @@ int vtkSMPContourFilter2::ProcessRequest(vtkInformation* request,
   return this->Superclass::ProcessRequest(request, inputVector, outputVector);
 }
 
-int vtkSMPContourFilter2::FillInputPortInformation(int, vtkInformation *info)
+int vtkSMP2ContourFilter::FillInputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
   return 1;
 }
 
-void vtkSMPContourFilter2::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSMP2ContourFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
@@ -796,7 +788,7 @@ void vtkSMPContourFilter2::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPContourFilter2::ReportReferences(vtkGarbageCollector* collector)
+void vtkSMP2ContourFilter::ReportReferences(vtkGarbageCollector* collector)
 {
   this->Superclass::ReportReferences(collector);
   // These filters share our input and are therefore involved in a

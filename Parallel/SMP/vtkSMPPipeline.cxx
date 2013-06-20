@@ -13,11 +13,9 @@
 #include "vtkInformationIntegerKey.h"
 #include "vtkInformationExecutivePortKey.h"
 
-#include "vtkBenchTimer.h"
-
 vtkInformationKeyMacro(vtkSMPPipeline, DATA_OBJECT_CONCRETE_TYPE, String);
 
-class ParallelFilterExecutor : public vtkFunctorInitialisable<vtkIdType>
+class ParallelFilterExecutor : public vtkFunctorInitialisable
 {
     ParallelFilterExecutor(const ParallelFilterExecutor&);
     void operator =(const ParallelFilterExecutor&);
@@ -54,7 +52,7 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable<vtkIdType>
     vtkSMPPipeline* Executive;
 
   public:
-    vtkTypeMacro(ParallelFilterExecutor, vtkFunctorInitialisable<vtkIdType>);
+    vtkTypeMacro(ParallelFilterExecutor, vtkFunctorInitialisable);
     static ParallelFilterExecutor* New();
     void PrintSelf(ostream &os, vtkIndent indent)
       {
@@ -304,13 +302,11 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
     iter.TakeReference(input->NewIterator());
     iter->VisitOnlyLeavesOn();
 
-    vtkBenchTimer::Deactivate();
     ParallelFilterExecutor* functor = ParallelFilterExecutor::New();
     functor->PrepareData(iter,inInfoVec,outInfoVec,r,this,compositePort,times,numTimeSteps);
     vtkSMPForEachOp(0,functor->GetInputSize(),functor);
     functor->FinalizeData(iter,compositeOutput);
     functor->Delete();
-    vtkBenchTimer::Activate();
 
     // True when the pipeline is iterating over the current (simple)
     // filter to produce composite output. In this case,
