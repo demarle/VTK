@@ -1,4 +1,144 @@
-RegisterInternal(0, 0);
+/*=========================================================================
+
+  Program:   Visualization Toolkit
+  Module:    vtkObjectBase.cxx
+
+  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+  All rights reserved.
+  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+     PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
+
+#include "vtkObjectBase.h"
+#include "vtkDebugLeaks.h"
+#include "vtkGarbageCollector.h"
+#include "vtkWeakPointerBase.h"
+
+#include <vtksys/ios/sstream>
+
+#define vtkBaseDebugMacro(x)
+
+class vtkObjectBaseToGarbageCollectorFriendship
+{
+public:
+  static int GiveReference(vtkObjectBase* obj)
+    {
+    return vtkGarbageCollector::GiveReference(obj);
+    }
+  static int TakeReference(vtkObjectBase* obj)
+    {
+    return vtkGarbageCollector::TakeReference(obj);
+    }
+};
+
+class vtkObjectBaseToWeakPointerBaseFriendship
+{
+public:
+  static void ClearPointer(vtkWeakPointerBase *p)
+    {
+    p->Object = NULL;
+    }
+};
+
+// avoid dll boundary problems
+#ifdef _WIN32
+void* vtkObjectBase::operator new(size_t nSize)
+{
+  void* p=malloc(nSize);
+  return p;
+}
+
+void vtkObjectBase::operator delete( void *p )
+{
+  free(p);
+}
+#endif
+
+// ------------------------------------vtkObjectBase----------------------
+// This operator allows all subclasses of vtkObjectBase to be printed via <<.
+// It in turn invokes the Print method, which in turn will invoke the
+// PrintSelf method that all objects should define, if they have anything
+// interesting to print out.
+ostream& operator<<(ostream& os, vtkObjectBase& o)
+{
+  o.Print(os);
+  return os;
+}
+
+// Create an object with Debug turned off and modified time initialized
+// to zero.
+vtkObjectBase::vtkObjectBase()
+{
+  this->ReferenceCount = 1;
+  this->WeakPointers = 0;
+#ifdef VTK_DEBUG_LEAKS
+  vtkDebugLeaks::ConstructingObject(this);
+#endif
+}
+
+vtkObjectBase::~vtkObjectBase()
+{
+#ifdef VTK_DEBUG_LEAKS
+  vtkDebugLeaks::DestructingObject(this);
+#endif
+
+  // warn user if reference counting is on and the object is being referenced
+  // by another object
+  if ( this->ReferenceCount > 0)
+    {
+    vtkGenericWarningMacro(<< "Trying to delete object with non-zero reference count.");
+    }
+}
+
+//----------------------------------------------------------------------------
+#ifdef VTK_WORKAROUND_WINDOWS_MANGLE
+# undef GetClassName
+// Define possible mangled names.
+const char* vtkObjectBase::GetClassNameA() const
+{
+  return this->GetClassNameInternal();
+}
+const char* vtkObjectBase::GetClassNameW() const
+{
+  return this->GetClassNameInternal();
+}
+#endif
+const char* vtkObjectBase::GetClassName() const
+{
+  return this->GetClassNameInternal();
+}
+
+int vtkObjectBase::IsTypeOf(const char *name)
+{
+  if ( !strcmp("vtkObjectBase",name) )
+    {
+    return 1;
+    }
+  return 0;
+}
+
+int vtkObjectBase::IsA(const char *type)
+{
+  return this->vtkObjectBase::IsTypeOf(type);
+}
+
+// Delete a vtk object. This method should always be used to delete an object
+// when the new operator was used to create it. Using the C++ delete method
+// will not work with reference counting.
+void vtkObjectBase::Delete()
+{
+  this->UnRegister(static_cast<vtkObjectBase *>(NULL));
+}
+
+void vtkObjectBase::FastDelete()
+{
+  // Remove the reference without doing a collection check even if
+  // this object normally participates in garbage collection.
+  this->UnRegisterInternal(0, 0);
 }
 
 void vtkObjectBase::Print(ostream& os)
