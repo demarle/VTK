@@ -54,12 +54,12 @@ int vtkSMPAlgorithm::ProcessRequest(
     return this->Superclass::ProcessRequest(request, inputVector, outputVector);
     }
   int numPorts = this->GetNumberOfOutputPorts();
-  vtkSMP::vtkThreadLocal<vtkDataObject>** outputs =
-        new vtkSMP::vtkThreadLocal<vtkDataObject>*[numPorts];
+  vtkThreadLocal<vtkDataObject>** outputs =
+        new vtkThreadLocal<vtkDataObject>*[numPorts];
   int i;
   for (i = 0; i < numPorts; ++i)
     {
-    outputs[i] = vtkSMP::vtkThreadLocal<vtkDataObject>::New();
+    outputs[i] = vtkThreadLocal<vtkDataObject>::New();
     vtkInformation* outInfo = outputVector->GetInformationObject(i);
     if (outInfo->Has(vtkSMPPipeline::DATA_OBJECT_CONCRETE_TYPE()))
       {
@@ -75,7 +75,7 @@ int vtkSMPAlgorithm::ProcessRequest(
             outputVector->GetInformationObject(i)->Get(vtkDataObject::DATA_OBJECT()));
       ds->SetNumberOfPieces(1);
       unsigned int pieceNum = 0;
-      for (vtkSMP::vtkThreadLocal<vtkDataObject>::iterator outIter = outputs[i]->Begin();
+      for (vtkThreadLocal<vtkDataObject>::iterator outIter = outputs[i]->Begin();
            outIter != outputs[i]->End(); ++outIter)
         {
         ds->SetPiece(pieceNum++, *outIter);
@@ -97,7 +97,7 @@ int vtkSMPAlgorithm::RequestData(
   vtkInformation* request,
   vtkInformationVector** vtkNotUsed( inputVector ),
   vtkInformationVector* outputVector,
-  vtkSMP::vtkThreadLocal<vtkDataObject>** vtkNotUsed( outputData ))
+  vtkThreadLocal<vtkDataObject>** vtkNotUsed( outputData ))
 {
   // the default implimentation is to do what the old pipeline did find what
   // output is requesting the data, and pass that into ExecuteData

@@ -470,7 +470,7 @@ vtkDataObject* vtkCompositeDataPipeline::ExecuteSimpleAlgorithmForBlock(
   request->Set(REQUEST_DATA_OBJECT());
   this->SuppressResetPipelineInformation = 1;
   this->Superclass::ExecuteDataObject(
-    request, this->GetInputInformation(),this->GetOutputInformation());
+    request, inInfoVec, outInfoVec);
   this->SuppressResetPipelineInformation = 0;
   request->Remove(REQUEST_DATA_OBJECT());
 
@@ -490,7 +490,7 @@ vtkDataObject* vtkCompositeDataPipeline::ExecuteSimpleAlgorithmForBlock(
   int storedNumPieces = -1;
   for(int m=0; m < this->Algorithm->GetNumberOfOutputPorts(); ++m)
     {
-    vtkInformation* info = this->GetOutputInformation(m);
+    vtkInformation* info = outInfoVec->GetOutputInformation(m);
     // Update the whole thing
     if (info->Has(
                   vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
@@ -530,7 +530,7 @@ vtkDataObject* vtkCompositeDataPipeline::ExecuteSimpleAlgorithmForBlock(
 
   for(int m=0; m < this->Algorithm->GetNumberOfOutputPorts(); ++m)
     {
-    vtkInformation* info = this->GetOutputInformation(m);
+    vtkInformation* info = outInfoVec->GetOutputInformation(m);
     if (storedPiece!=-1)
       {
       info->Set(
@@ -984,7 +984,7 @@ int vtkCompositeDataPipeline::CheckCompositeData(
   // Otherwise, create a simple output
   else
     {
-    return this->Superclass::CheckDataObject(port, outInfoVec);
+    return this->CheckDataObject(port, outInfoVec);
     }
 }
 

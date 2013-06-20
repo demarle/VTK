@@ -25,12 +25,13 @@
 #ifndef __vtkSMPAlgorithm_h
 #define __vtkSMPAlgorithm_h
 
+#include "vtkParallelSMPModule.h" // For export macro
 #include "vtkAlgorithm.h"
 
 class vtkDataObject;
-namespace vtkSMP{ template<class T> class vtkThreadLocal; }
+template<class T> class vtkThreadLocal;
 
-class VTK_SMP_EXPORT vtkSMPAlgorithm : public vtkAlgorithm
+class VTKPARALLELSMP_EXPORT vtkSMPAlgorithm : public vtkAlgorithm
 {
 public:
   vtkTypeMacro(vtkSMPAlgorithm, vtkAlgorithm);
@@ -53,7 +54,7 @@ protected:
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
                           vtkInformationVector* outputVector,
-                          vtkSMP::vtkThreadLocal<vtkDataObject>** outputData);
+                          vtkThreadLocal<vtkDataObject>** outputData);
 
   // Description:
   // This method is the old style execute method

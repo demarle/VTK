@@ -34,13 +34,14 @@
 #ifndef __vtkSMPPolyDataAlgorithm_h
 #define __vtkSMPPolyDataAlgorithm_h
 
+#include "vtkParallelSMPModule.h" // For export macro
 #include "vtkSMPAlgorithm.h"
 #include "vtkPolyData.h" // makes things a bit easier
 
 class vtkDataSet;
 class vtkPolyData;
 
-class VTK_SMP_EXPORT vtkSMPPolyDataAlgorithm : public vtkSMPAlgorithm
+class VTKPARALLELSMP_EXPORT vtkSMPPolyDataAlgorithm : public vtkSMPAlgorithm
 {
 public:
   static vtkSMPPolyDataAlgorithm *New();

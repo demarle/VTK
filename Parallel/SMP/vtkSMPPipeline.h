@@ -1,9 +1,10 @@
 #ifndef VTKSMPPIPELINE_H
 #define VTKSMPPIPELINE_H
 
+#include "vtkParallelSMPModule.h" // For export macro
 #include "vtkCompositeDataPipeline.h"
 
-class VTK_SMP_EXPORT vtkSMPPipeline : public vtkCompositeDataPipeline
+class VTKPARALLELSMP_EXPORT vtkSMPPipeline : public vtkCompositeDataPipeline
 {
   vtkSMPPipeline(const vtkSMPPipeline&);
   void operator =(const vtkSMPPipeline&);

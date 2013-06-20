@@ -32,6 +32,7 @@
 #ifndef __vtkSMPPointSetAlgorithm_h
 #define __vtkSMPPointSetAlgorithm_h
 
+#include "vtkParallelSMPModule.h" // For export macro
 #include "vtkSMPAlgorithm.h"
 
 class vtkPointSet;
@@ -39,7 +40,7 @@ class vtkPolyData;
 class vtkStructuredGrid;
 class vtkUnstructuredGrid;
 
-class VTK_SMP_EXPORT vtkSMPPointSetAlgorithm : public vtkSMPAlgorithm
+class VTKPARALLELSMP_EXPORT vtkSMPPointSetAlgorithm : public vtkSMPAlgorithm
 {
 public:
   static vtkSMPPointSetAlgorithm *New();

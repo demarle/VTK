@@ -45,9 +45,9 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable<vtkIdType>
     mutable vtkstd::vector<vtkDataObject*> outObjs;
     vtkInformationVector** inInfoVec;
     vtkInformationVector* outInfoVec;
-    vtkSMP::vtkThreadLocal<vtkInformationVector> **inLocalInfo, *outLocalInfo;
+    vtkThreadLocal<vtkInformationVector> **inLocalInfo, *outLocalInfo;
     vtkInformation* request;
-    vtkSMP::vtkThreadLocal<vtkInformation>* requests;
+    vtkThreadLocal<vtkInformation>* requests;
 
     int compositePort, numTimeSteps;
     double* times;
@@ -128,18 +128,18 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable<vtkIdType>
       this->outInfoVec = vtkInformationVector::New();
       this->outInfoVec->Copy(_outInfoVec, 1);
 
-      this->inLocalInfo = new vtkSMP::vtkThreadLocal<vtkInformationVector>*[numPorts];
+      this->inLocalInfo = new vtkThreadLocal<vtkInformationVector>*[numPorts];
       for (vtkIdType i = 0; i < numPorts; ++i)
         {
         this->inInfoVec[i] = vtkInformationVector::New();
         this->inInfoVec[i]->Copy(_inInfoVec[i], 1);
-        this->inLocalInfo[i] = vtkSMP::vtkThreadLocal<vtkInformationVector>::New();
+        this->inLocalInfo[i] = vtkThreadLocal<vtkInformationVector>::New();
         }
 
-      this->outLocalInfo = vtkSMP::vtkThreadLocal<vtkInformationVector>::New();
+      this->outLocalInfo = vtkThreadLocal<vtkInformationVector>::New();
 
       this->request = _request;
-      this->requests = vtkSMP::vtkThreadLocal<vtkInformation>::New();
+      this->requests = vtkThreadLocal<vtkInformation>::New();
 
       this->inObjs.resize(0);
       for (iter->InitTraversal(); !iter->IsDoneWithTraversal(); iter->GoToNextItem())
@@ -307,7 +307,7 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
     vtkBenchTimer::Deactivate();
     ParallelFilterExecutor* functor = ParallelFilterExecutor::New();
     functor->PrepareData(iter,inInfoVec,outInfoVec,r,this,compositePort,times,numTimeSteps);
-    vtkSMP::ForEach(0,functor->GetInputSize(),functor);
+    vtkSMPForEachOp(0,functor->GetInputSize(),functor);
     functor->FinalizeData(iter,compositeOutput);
     functor->Delete();
     vtkBenchTimer::Activate();
