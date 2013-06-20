@@ -1,0 +1,6 @@
+vtk_add_test_mpi(DistributedData.cxx VTK_DATA_ROOT)
+vtk_add_test_mpi(DistributedDataRenderPass.cxx VTK_DATA_ROOT)
+vtk_add_test_mpi(TransmitImageData.cxx VTK_DATA_ROOT)
+vtk_add_test_mpi(TransmitImageDataRenderPass.cxx VTK_DATA_ROOT)
+vtk_add_test_mpi(TransmitRectilinearGrid.cxx VTK_DATA_ROOT)
+vtk_add_test_mpi(TransmitStructuredGrid.cxx VTK_DATA_ROOT)

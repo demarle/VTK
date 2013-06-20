@@ -1,0 +1,8 @@
+if(VTK_DATA_ROOT)
+  vtk_add_test_tcl(extractRectGrid)
+  vtk_add_test_tcl(extractUGrid)
+  vtk_add_test_tcl(extractVectors)
+endif()
+vtk_add_test_tcl(ExtractEdgesQuadraticCells)
+vtk_add_test_tcl(ExtractTensors)
+vtk_add_test_tcl(extractPolyData)
