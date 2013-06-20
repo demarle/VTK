@@ -1,4 +1,2 @@
-qtcreator*
-VTKData
-VTKLargeData
-VTK/CMakeLists.txt.user*
+# Do not add ExternalData module staging files
+.ExternalData*
