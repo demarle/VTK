@@ -1,2 +1,5 @@
 # Do not add ExternalData module staging files
 .ExternalData*
+# Mathias’ local files
+qtcreator*
+VTK*
