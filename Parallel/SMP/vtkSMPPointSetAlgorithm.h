@@ -31,7 +31,7 @@
 #define __vtkSMPPointSetAlgorithm_h
 
 #include "vtkParallelSMPModule.h" // For export macro
-#include "vtkAlgorithm.h"
+#include "vtkSMPAlgorithm.h"
 
 class vtkPointSet;
 class vtkPolyData;

@@ -29,7 +29,7 @@
 #define __vtkSMPPolyDataAlgorithm_h
 
 #include "vtkParallelSMPModule.h" // For export macro
-#include "vtkAlgorithm.h"
+#include "vtkSMPAlgorithm.h"
 #include "vtkPolyData.h" // makes things a bit easier
 
 class vtkDataSet;
