@@ -1,6 +1,9 @@
+#include "vtkSMPImplementation.h"
 #include "vtkSMP.h"
-#include "vtkCommand.h"
 #include "vtkFunctor.h"
+#include "vtkFunctorInitializable.h"
+#include "vtkParallelTree.h"
+#include "vtkTask.h"
 #include <kaapic.h>
 #include <cmath>
 

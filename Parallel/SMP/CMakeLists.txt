@@ -60,4 +60,4 @@ set(Module_SRCS
 )
 
 vtk_module_library(vtkParallelSMP ${Module_SRCS})
-target_link_libraries(vtkParallelSMP gomp tbb)
+target_link_libraries(vtkParallelSMP ${VTK_SMP_IMPLEMENTATION_LIBRARIES})
