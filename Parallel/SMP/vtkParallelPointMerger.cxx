@@ -13,8 +13,7 @@ extern vtkIdType** TreatedTable;
 int MustTreatBucket( vtkIdType idx )
   {
   if ( !TreatedTable ) return 0;
-  vtkIdType one = 1;
-  return !__sync_fetch_and_add(&(TreatedTable[idx]), &one);
+  return !__sync_fetch_and_add(&(TreatedTable[idx]), 1);
   }
 
 //------------------------------------------------------------------------------
