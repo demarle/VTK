@@ -115,10 +115,10 @@ struct TaskBodyCPU<TaskWork<Functor> > {
 };
 
 template<>
-struct TaskBodyCPU<TaskWork<vtkFunctorInitialisable> > {
-  void operator() ( ka::pointer_rw<Work<vtkFunctorInitialisable> > work )
+struct TaskBodyCPU<TaskWork<vtkFunctorInitializable> > {
+  void operator() ( ka::pointer_rw<Work<vtkFunctorInitializable> > work )
     {
-    const vtkFunctorInitialisable* functor = work->getFunctor();
+    const vtkFunctorInitializable* functor = work->getFunctor();
     if ( functor->ShouldInitialize() )
       functor->Init();
     while( work->doWork() );
@@ -226,7 +226,7 @@ static void thief_entrypoint( void* args, kaapi_thread_t* thread )
   {
   work_t* const work = (work_t*)(args);
 
-  vtkFunctorInitialisable* iop = vtkFunctorInitialisable::SafeDownCast( work->op );
+  vtkFunctorInitializable* iop = vtkFunctorInitializable::SafeDownCast( work->op );
   if ( iop && iop->ShouldInitialize( ) )
     iop->Init( );
 
@@ -302,7 +302,7 @@ inline void doFor( int32_t b, int32_t e, int32_t tid, const vtkFunctor* o )
     (*o)( k );
     }
   }
-inline void doForInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitialisable* o )
+inline void doForInit( int32_t b, int32_t e, int32_t tid, const vtkFunctorInitializable* o )
   {
   if (o->ShouldInitialize())
     o->Init();
@@ -336,7 +336,7 @@ void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctor* op, in
   kaapic_foreach_attr_destroy(&attr);
 }
 
-void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctorInitialisable* op, int grain )
+void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain )
 {
   vtkIdType n = last - first;
   int g = grain ? grain : sqrt(n);

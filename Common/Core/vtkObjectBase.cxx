@@ -198,7 +198,8 @@ void vtkObjectBase::RegisterInternal(vtkObjectBase*, int check)
   if(!(check &&
        vtkObjectBaseToGarbageCollectorFriendship::TakeReference(this)))
     {
-    ++this->ReferenceCount;
+    vtkIdType one = 1;
+    __sync_add_and_fetch(&(this->ReferenceCount), &one);
     }
 }
 
@@ -214,7 +215,8 @@ void vtkObjectBase::UnRegisterInternal(vtkObjectBase*, int check)
     }
 
   // Decrement the reference count, delete object if count goes to zero.
-  if(--this->ReferenceCount <= 0)
+  vtkIdType minusOne = -1;
+  if(__sync_add_and_fetch(&(this->ReferenceCount), &minusOne) <= 0)
     {
     // Clear all weak pointers to the object before deleting it.
     if (this->WeakPointers)
