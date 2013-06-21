@@ -153,7 +153,7 @@ protected:
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
                           vtkInformationVector* outputVector,
-                          vtkSMP::vtkThreadLocal<vtkDataObject>** output);
+                          vtkThreadLocal<vtkDataObject>** output);
   virtual int RequestUpdateExtent(vtkInformation*,
                                   vtkInformationVector**,
                                   vtkInformationVector*);
