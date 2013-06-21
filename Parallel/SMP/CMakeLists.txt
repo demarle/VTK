@@ -34,10 +34,6 @@ set(SMP_Core
   vtkFunctorInitializable.cxx
   vtkSMP.cxx
   #vtkThreadLocal.cxx
-  vtkSMPAlgorithm.cxx
-  vtkSMPPointSetAlgorithm.cxx
-  vtkSMPPolyDataAlgorithm.cxx
-  vtkSMPPipeline.cxx
 )
 
 #end user SMP accelerated vtk facilities (mostly filters)
@@ -49,8 +45,6 @@ set(SMP_Filters
   #vtkSMPTransformFilter.cxx
   vtkSMPWarpVector.cxx
   vtkSMPZCurve.cxx
-  vtkSMPClipDataSet.cxx
-  vtkSMP2ContourFilter.cxx
 )
 
 set(Module_SRCS
