@@ -281,7 +281,6 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
 
     vtkSmartPointer<vtkCompositeDataIterator> iter;
     iter.TakeReference(input->NewIterator());
-    iter->VisitOnlyLeavesOn();
 
     ParallelFilterExecutor* functor = ParallelFilterExecutor::New();
     functor->PrepareData(iter,inInfoVec,outInfoVec,r,this,compositePort);
