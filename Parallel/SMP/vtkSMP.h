@@ -29,6 +29,8 @@ void VTKPARALLELSMP_EXPORT vtkSMPForEachOp(
   vtkIdType first, vtkIdType last, const vtkFunctorInitializable* f, int grain = 0
   );
 
+#define vtkSMPStaticForEachOp vtkSMPForEachOp
+
 template<class T>
 void VTKPARALLELSMP_EXPORT vtkSMPParallelOp(
   const vtkTask* function,
