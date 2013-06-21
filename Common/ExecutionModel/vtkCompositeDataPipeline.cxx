@@ -490,7 +490,7 @@ vtkDataObject* vtkCompositeDataPipeline::ExecuteSimpleAlgorithmForBlock(
   int storedNumPieces = -1;
   for(int m=0; m < this->Algorithm->GetNumberOfOutputPorts(); ++m)
     {
-    vtkInformation* info = outInfoVec->GetOutputInformation(m);
+    vtkInformation* info = outInfoVec->GetInformationObject(m);
     // Update the whole thing
     if (info->Has(
                   vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()))
@@ -530,7 +530,7 @@ vtkDataObject* vtkCompositeDataPipeline::ExecuteSimpleAlgorithmForBlock(
 
   for(int m=0; m < this->Algorithm->GetNumberOfOutputPorts(); ++m)
     {
-    vtkInformation* info = outInfoVec->GetOutputInformation(m);
+    vtkInformation* info = outInfoVec->GetInformationObject(m);
     if (storedPiece!=-1)
       {
       info->Set(
