@@ -101,11 +101,6 @@ protected:
                                   vtkInformationVector**,
                                   vtkInformationVector*);
 
-  // Description:
-  // This method is the old style execute method
-  virtual void ExecuteData(vtkDataObject *output);
-  virtual void Execute();
-
   // see algorithm for more info
   virtual int FillOutputPortInformation(int port, vtkInformation* info);
   virtual int FillInputPortInformation(int port, vtkInformation* info);

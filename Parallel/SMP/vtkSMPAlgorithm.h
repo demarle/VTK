@@ -57,11 +57,6 @@ protected:
                           vtkThreadLocal<vtkDataObject>** outputData);
 
   // Description:
-  // This method is the old style execute method
-  virtual void ExecuteData(vtkDataObject *output);
-  virtual void Execute();
-
-  // Description:
   // Create a default executive.
   // If the DefaultExecutivePrototype is set and is a subclass
   // of vtkSMPPipeline, a copy of it is created

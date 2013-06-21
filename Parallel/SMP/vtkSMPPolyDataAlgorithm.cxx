@@ -146,28 +146,6 @@ int vtkSMPPolyDataAlgorithm::RequestUpdateExtent(
 }
 
 //----------------------------------------------------------------------------
-// Assume that any source that implements ExecuteData 
-// can handle an empty extent.
-void vtkSMPPolyDataAlgorithm::ExecuteData(vtkDataObject *output)
-{
-  // I want to find out if the requested extent is empty.
-  if (output && this->UpdateExtentIsEmpty(output))
-    {
-    output->Initialize();
-    return;
-    }
-  
-  this->Execute();
-}
-
-//----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::Execute()
-{
-  vtkErrorMacro(<< "Definition of Execute() method should be in subclass and you should really use the ExecuteData(vtkInformation *request,...) signature instead");
-}
-
-
-//----------------------------------------------------------------------------
 void vtkSMPPolyDataAlgorithm::SetInput(vtkDataObject* input)
 {
   this->SetInput(0, input);
