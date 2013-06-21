@@ -54,7 +54,7 @@ vtkCxxSetObjectMacro(vtkSMP2ContourFilter,ScalarTree,vtkScalarTree);
 /* ================================================================================
   Generic contouring: Functors for parallel execution without ScalarTree
  ================================================================================ */
-class ThreadsFunctor2 : public vtkFunctorInitialisable
+class ThreadsFunctor2 : public vtkFunctorInitializable
 {
   ThreadsFunctor2( const ThreadsFunctor2& );
   void operator =( const ThreadsFunctor2& );
@@ -110,7 +110,7 @@ public:
   vtkThreadLocal<vtkCellArray>* newLines;
   vtkThreadLocal<vtkCellArray>* newPolys;
 
-  vtkTypeMacro(ThreadsFunctor2,vtkFunctorInitialisable);
+  vtkTypeMacro(ThreadsFunctor2,vtkFunctorInitializable);
   static ThreadsFunctor2* New();
   void PrintSelf(ostream &os, vtkIndent indent)
   {

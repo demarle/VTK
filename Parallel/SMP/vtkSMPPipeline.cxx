@@ -15,7 +15,7 @@
 
 vtkInformationKeyMacro(vtkSMPPipeline, DATA_OBJECT_CONCRETE_TYPE, String);
 
-class ParallelFilterExecutor : public vtkFunctorInitialisable
+class ParallelFilterExecutor : public vtkFunctorInitializable
 {
     ParallelFilterExecutor(const ParallelFilterExecutor&);
     void operator =(const ParallelFilterExecutor&);
@@ -52,7 +52,7 @@ class ParallelFilterExecutor : public vtkFunctorInitialisable
     vtkSMPPipeline* Executive;
 
   public:
-    vtkTypeMacro(ParallelFilterExecutor, vtkFunctorInitialisable);
+    vtkTypeMacro(ParallelFilterExecutor, vtkFunctorInitializable);
     static ParallelFilterExecutor* New();
     void PrintSelf(ostream &os, vtkIndent indent)
       {

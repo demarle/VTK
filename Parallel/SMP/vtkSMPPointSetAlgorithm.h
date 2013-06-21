@@ -16,17 +16,15 @@
 // .SECTION Description
 // vtkSMPPointSetAlgorithm is a convenience class to make writing algorithms
 // easier. It is also designed to help transition old algorithms to the new
-// pipeline architecture. Ther are some assumptions and defaults made by this
+// pipeline architecture. There are some assumptions and defaults made by this
 // class you should be aware of. This class defaults such that your filter
 // will have one input port and one output port. If that is not the case
 // simply change it with SetNumberOfInputPorts etc. See this classes
 // contstructor for the default. This class also provides a FillInputPortInfo
 // method that by default says that all inputs will be PointSet. If that
-// isn't the case then please override this method in your subclass. This
-// class breaks out the downstream requests into seperate functions such as
-// RequestDataObject RequestData and ExecuteInformation. The default 
-// implementation of RequestDataObject will create an output data of the 
-// same type as the input. 
+// isn't the case then please override this method in your subclass.
+// You should implement the subclass's algorithm into
+// RequestData( request, inputVec, outputVec).
 
 
 #ifndef __vtkSMPPointSetAlgorithm_h
@@ -65,27 +63,22 @@ public:
   vtkUnstructuredGrid *GetUnstructuredGridOutput();
 
   // Description:
-  // Set an input of this algorithm. You should not override these
-  // methods because they are not the only way to connect a pipeline.
-  // Note that these methods support old-style pipeline connections.
-  // When writing new code you should use the more general
-  // vtkAlgorithm::SetInputConnection().  These methods transform the
-  // input index to the input port index, not an index of a connection
-  // within a single port.
-  void SetInput(vtkDataObject*);
-  void SetInput(int, vtkDataObject*);
-  void SetInput(vtkPointSet*);
-  void SetInput(int, vtkPointSet*);
+  // Assign a data object as input. Note that this method does not
+  // establish a pipeline connection. Use SetInputConnection() to
+  // setup a pipeline connection.
+  void SetInputData(vtkDataObject*);
+  void SetInputData(int, vtkDataObject*);
+  void SetInputData(vtkPointSet*);
+  void SetInputData(int, vtkPointSet*);
 
   // Description:
-  // Add an input of this algorithm.  Note that these methods support
-  // old-style pipeline connections.  When writing new code you should
-  // use the more general vtkAlgorithm::AddInputConnection().  See
-  // SetInput() for details.
-  void AddInput(vtkDataObject *);
-  void AddInput(vtkPointSet*);
-  void AddInput(int, vtkPointSet*);
-  void AddInput(int, vtkDataObject*);
+  // Assign a data object as input. Note that this method does not
+  // establish a pipeline connection. Use AddInputConnection() to
+  // setup a pipeline connection.
+  void AddInputData(vtkDataObject *);
+  void AddInputData(vtkPointSet*);
+  void AddInputData(int, vtkPointSet*);
+  void AddInputData(int, vtkDataObject*);
 
   // this method is not recommended for use, but lots of old style filters
   // use it
@@ -93,34 +86,41 @@ public:
 
   // Description:
   // see vtkAlgorithm for details
-  virtual int ProcessRequest(vtkInformation* request, 
+  virtual int ProcessRequest(vtkInformation* request,
                              vtkInformationVector** inputVector,
                              vtkInformationVector* outputVector);
 
 protected:
   vtkSMPPointSetAlgorithm();
   ~vtkSMPPointSetAlgorithm() {};
-  
+
   // Description:
   // This is called by the superclass.
   // This is the method you should override.
-  virtual int RequestDataObject(vtkInformation* request, 
-                                vtkInformationVector** inputVector, 
+  virtual int RequestDataObject(vtkInformation* request,
+                                vtkInformationVector** inputVector,
                                 vtkInformationVector* outputVector);
-  
+
   // Description:
   // This is called by the superclass.
   // This is the method you should override.
-  virtual int ExecuteInformation(vtkInformation*, 
-                                 vtkInformationVector**, 
+  virtual int ExecuteInformation(vtkInformation*,
+                                 vtkInformationVector**,
                                  vtkInformationVector*) {return 1;};
-  
+
+  // Description:
+  // This is called by the superclass.
+  // This is the method you should override.
+  virtual int RequestData(vtkInformation*,
+                          vtkInformationVector**,
+                          vtkInformationVector*) {return 1;};
+
   // Description:
   // This is called by the superclass.
   // This is the method you should override.
   virtual int ComputeInputUpdateExtent(vtkInformation*,
                                        vtkInformationVector**,
-                                       vtkInformationVector*) 
+                                       vtkInformationVector*)
     {
       return 1;
     };

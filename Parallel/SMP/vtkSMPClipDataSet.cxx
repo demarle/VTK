@@ -64,7 +64,7 @@ public:
     }
 };
 
-class DoClip : public vtkFunctorInitialisable
+class DoClip : public vtkFunctorInitializable
 {
   DoClip(const DoClip&);
   void operator =(const DoClip&);
@@ -122,7 +122,7 @@ public:
   vtkThreadLocal<vtkUnsignedCharArray>* types[2];
   vtkThreadLocal<vtkIdTypeArray>* locs[2];
 
-  vtkTypeMacro(DoClip,vtkFunctorInitialisable);
+  vtkTypeMacro(DoClip,vtkFunctorInitializable);
   static DoClip* New();
   void PrintSelf(ostream &os, vtkIndent indent)
     {
