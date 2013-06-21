@@ -20,7 +20,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkTrivialProducer.h"
 
 vtkStandardNewMacro(vtkSMPPolyDataAlgorithm);
 
@@ -146,37 +145,26 @@ int vtkSMPPolyDataAlgorithm::RequestUpdateExtent(
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::SetInput(vtkDataObject* input)
+void vtkSMPPolyDataAlgorithm::SetInputData(vtkDataObject* input)
 {
-  this->SetInput(0, input);
+  this->SetInputData(0, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::SetInput(int index, vtkDataObject* input)
+void vtkSMPPolyDataAlgorithm::SetInputData(int index, vtkDataObject* input)
 {
-  if(input)
-    {
-    this->SetInputConnection(index, input->GetProducerPort());
-    }
-  else
-    {
-    // Setting a NULL input removes the connection.
-    this->SetInputConnection(index, 0);
-    }
+  this->SetInputDataInternal(index, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::AddInput(vtkDataObject* input)
+void vtkSMPPolyDataAlgorithm::AddInputData(vtkDataObject* input)
 {
-  this->AddInput(0, input);
+  this->AddInputData(0, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::AddInput(int index, vtkDataObject* input)
+void vtkSMPPolyDataAlgorithm::AddInputData(int index, vtkDataObject* input)
 {
-  if(input)
-    {
-    this->AddInputConnection(index, input->GetProducerPort());
-    }
+  this->AddInputDataInternal(index, input);
 }
 
