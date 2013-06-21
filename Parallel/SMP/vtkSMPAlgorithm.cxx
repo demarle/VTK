@@ -99,48 +99,7 @@ int vtkSMPAlgorithm::RequestData(
   vtkInformationVector* outputVector,
   vtkThreadLocal<vtkDataObject>** vtkNotUsed( outputData ))
 {
-  // the default implimentation is to do what the old pipeline did find what
-  // output is requesting the data, and pass that into ExecuteData
-
-  // which output port did the request come from
-  int outputPort =
-    request->Get(vtkDemandDrivenPipeline::FROM_OUTPUT_PORT());
-
-  // if output port is negative then that means this filter is calling the
-  // update directly, in that case just assume port 0
-  if (outputPort == -1)
-      {
-      outputPort = 0;
-      }
-
-  // get the data object
-  vtkInformation *outInfo =
-    outputVector->GetInformationObject(outputPort);
-  // call ExecuteData
-  this->ExecuteData( outInfo->Get(vtkDataObject::DATA_OBJECT()) );
-
   return 1;
-}
-
-//----------------------------------------------------------------------------
-// Assume that any source that implements ExecuteData
-// can handle an empty extent.
-void vtkSMPAlgorithm::ExecuteData(vtkDataObject *output)
-{
-  // I want to find out if the requested extent is empty.
-  if (output && this->UpdateExtentIsEmpty(output))
-    {
-    output->Initialize();
-    return;
-    }
-
-  this->Execute();
-}
-
-//----------------------------------------------------------------------------
-void vtkSMPAlgorithm::Execute()
-{
-  vtkErrorMacro(<< "Definition of Execute() method should be in subclass and you should really use the RequestData(vtkInformation *request,...) signature instead");
 }
 
 //----------------------------------------------------------------------------

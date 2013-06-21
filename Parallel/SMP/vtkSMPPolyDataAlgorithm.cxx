@@ -20,7 +20,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkTrivialProducer.h"
 
 vtkStandardNewMacro(vtkSMPPolyDataAlgorithm);
 
@@ -146,59 +145,26 @@ int vtkSMPPolyDataAlgorithm::RequestUpdateExtent(
 }
 
 //----------------------------------------------------------------------------
-// Assume that any source that implements ExecuteData 
-// can handle an empty extent.
-void vtkSMPPolyDataAlgorithm::ExecuteData(vtkDataObject *output)
+void vtkSMPPolyDataAlgorithm::SetInputData(vtkDataObject* input)
 {
-  // I want to find out if the requested extent is empty.
-  if (output && this->UpdateExtentIsEmpty(output))
-    {
-    output->Initialize();
-    return;
-    }
-  
-  this->Execute();
+  this->SetInputData(0, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::Execute()
+void vtkSMPPolyDataAlgorithm::SetInputData(int index, vtkDataObject* input)
 {
-  vtkErrorMacro(<< "Definition of Execute() method should be in subclass and you should really use the ExecuteData(vtkInformation *request,...) signature instead");
-}
-
-
-//----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::SetInput(vtkDataObject* input)
-{
-  this->SetInput(0, input);
+  this->SetInputDataInternal(index, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::SetInput(int index, vtkDataObject* input)
+void vtkSMPPolyDataAlgorithm::AddInputData(vtkDataObject* input)
 {
-  if(input)
-    {
-    this->SetInputConnection(index, input->GetProducerPort());
-    }
-  else
-    {
-    // Setting a NULL input removes the connection.
-    this->SetInputConnection(index, 0);
-    }
+  this->AddInputData(0, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::AddInput(vtkDataObject* input)
+void vtkSMPPolyDataAlgorithm::AddInputData(int index, vtkDataObject* input)
 {
-  this->AddInput(0, input);
-}
-
-//----------------------------------------------------------------------------
-void vtkSMPPolyDataAlgorithm::AddInput(int index, vtkDataObject* input)
-{
-  if(input)
-    {
-    this->AddInputConnection(index, input->GetProducerPort());
-    }
+  this->AddInputDataInternal(index, input);
 }
 

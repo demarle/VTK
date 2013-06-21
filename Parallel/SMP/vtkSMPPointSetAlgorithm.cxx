@@ -48,7 +48,7 @@ vtkPointSet* vtkSMPPointSetAlgorithm::GetOutput(int port)
 
 //----------------------------------------------------------------------------
 // Get the output as vtkPolyData.
-vtkPolyData *vtkSMPPointSetAlgorithm::GetPolyDataOutput() 
+vtkPolyData *vtkSMPPointSetAlgorithm::GetPolyDataOutput()
 {
   return vtkPolyData::SafeDownCast(this->GetOutput());
 }
@@ -68,62 +68,51 @@ vtkUnstructuredGrid *vtkSMPPointSetAlgorithm::GetUnstructuredGridOutput()
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPointSetAlgorithm::SetInput(vtkDataObject* input)
+void vtkSMPPointSetAlgorithm::SetInputData(vtkDataObject* input)
 {
-  this->SetInput(0, input);
+  this->SetInputData(0, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPointSetAlgorithm::SetInput(int index, vtkDataObject* input)
+void vtkSMPPointSetAlgorithm::SetInputData(int index, vtkDataObject* input)
 {
-  if(input)
-    {
-    this->SetInputConnection(index, input->GetProducerPort());
-    }
-  else
-    {
-    // Setting a NULL input removes the connection.
-    this->SetInputConnection(index, 0);
-    }
+  this->SetInputDataInternal(index, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPointSetAlgorithm::SetInput(vtkPointSet* input)
+void vtkSMPPointSetAlgorithm::SetInputData(vtkPointSet* input)
 {
-  this->SetInput(0, static_cast<vtkDataObject*>(input));
+  this->SetInputData(0, static_cast<vtkDataObject*>(input));
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPointSetAlgorithm::SetInput(int index, vtkPointSet* input)
+void vtkSMPPointSetAlgorithm::SetInputData(int index, vtkPointSet* input)
 {
-  this->SetInput(index, static_cast<vtkDataObject*>(input));
+  this->SetInputData(index, static_cast<vtkDataObject*>(input));
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPointSetAlgorithm::AddInput(vtkDataObject* input)
+void vtkSMPPointSetAlgorithm::AddInputData(vtkDataObject* input)
 {
-  this->AddInput(0, input);
+  this->AddInputData(0, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPointSetAlgorithm::AddInput(int index, vtkDataObject* input)
+void vtkSMPPointSetAlgorithm::AddInputData(int index, vtkDataObject* input)
 {
-  if(input)
-    {
-    this->AddInputConnection(index, input->GetProducerPort());
-    }
+  this->AddInputDataInternal(index, input);
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPointSetAlgorithm::AddInput(vtkPointSet* input)
+void vtkSMPPointSetAlgorithm::AddInputData(vtkPointSet* input)
 {
-  this->AddInput(0, static_cast<vtkDataObject*>(input));
+  this->AddInputData(0, static_cast<vtkDataObject*>(input));
 }
 
 //----------------------------------------------------------------------------
-void vtkSMPPointSetAlgorithm::AddInput(int index, vtkPointSet* input)
+void vtkSMPPointSetAlgorithm::AddInputData(int index, vtkPointSet* input)
 {
-  this->AddInput(index, static_cast<vtkDataObject*>(input));
+  this->AddInputData(index, static_cast<vtkDataObject*>(input));
 }
 
 //----------------------------------------------------------------------------
@@ -134,8 +123,8 @@ vtkDataObject* vtkSMPPointSetAlgorithm::GetInput()
 
 //----------------------------------------------------------------------------
 int vtkSMPPointSetAlgorithm::ProcessRequest(
-  vtkInformation* request, 
-  vtkInformationVector** inputVector, 
+  vtkInformation* request,
+  vtkInformationVector** inputVector,
   vtkInformationVector* outputVector)
 {
   // create the output
@@ -160,8 +149,8 @@ int vtkSMPPointSetAlgorithm::ProcessRequest(
 
 //----------------------------------------------------------------------------
 int vtkSMPPointSetAlgorithm::RequestDataObject(
-  vtkInformation*, 
-  vtkInformationVector** inputVector , 
+  vtkInformation*,
+  vtkInformationVector** inputVector ,
   vtkInformationVector* outputVector)
 {
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
@@ -171,7 +160,7 @@ int vtkSMPPointSetAlgorithm::RequestDataObject(
     }
   vtkPointSet *input = vtkPointSet::SafeDownCast(
     inInfo->Get(vtkDataObject::DATA_OBJECT()));
-  
+
   if (input)
     {
     // for each output
@@ -180,11 +169,11 @@ int vtkSMPPointSetAlgorithm::RequestDataObject(
       vtkInformation* info = outputVector->GetInformationObject(i);
       vtkPointSet *output = vtkPointSet::SafeDownCast(
         info->Get(vtkDataObject::DATA_OBJECT()));
-      
-      if (!output || !output->IsA(input->GetClassName())) 
+
+      if (!output || !output->IsA(input->GetClassName()))
         {
         output = input->NewInstance();
-        output->SetPipelineInformation(info);
+        info->Set(vtkDataObject::DATA_OBJECT(), output);
         output->Delete();
         }
       }
