@@ -3,14 +3,15 @@
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObject.h"
+#include "vtkThreadLocal.h" // makes things easy
 
 class vtkSMPMergePoints;
 class vtkPointData;
 class vtkPoints;
 class vtkCellArray;
 class vtkCellData;
-template<class T> class vtkThreadLocal;
 class vtkTask;
+class vtkIdList;
 
 class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
 {
@@ -35,7 +36,7 @@ class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
         vtkstd::vector<vtkIdType>::iterator offset5,
         vtkstd::vector<vtkIdType>::iterator offset6,
         vtkstd::vector<vtkIdType>::iterator offset7,
-        vtkstd::vector<vtkIdType>::iterator offset8)
+        vtkstd::vector<vtkIdType>::iterator offset8);
 
   public:
     vtkTypeMacro(vtkMergeDataSets,vtkObject);
