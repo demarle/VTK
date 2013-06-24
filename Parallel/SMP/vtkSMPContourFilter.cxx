@@ -1,5 +1,6 @@
 #include "vtkSMPContourFilter.h"
 #include "vtkObjectFactory.h"
+#include "vtkMergeDataSets.h"
 
 #include "vtkCell.h"
 #include "vtkCellArray.h"
@@ -489,28 +490,32 @@ int vtkSMPContourFilter::RequestData(
         }
       }
     // Merge
+    vtkMergeDataSets* mergeOp = vtkMergeDataSets::New();
+    mergeOp->MasterThreadPopulatedOutputOn();
     if ( parallelLocator )
       {
       vtkThreadLocal<vtkSMPMergePoints>* SMPLocator = vtkThreadLocal<vtkSMPMergePoints>::New();
       my_contour->Locator->FillDerivedThreadLocal(SMPLocator);
-      vtkSMPMergePointsOp( parallelLocator, SMPLocator,
-                           outPd, my_contour->outPd,
-                           newVerts, my_contour->newVerts,
-                           newLines, my_contour->newLines,
-                           newPolys, my_contour->newPolys,
-                           0, 0, outCd, my_contour->outCd, 1 );
+      mergeOp->MergePolyData(
+          parallelLocator, SMPLocator,
+          outPd, my_contour->outPd,
+          newVerts, my_contour->newVerts,
+          newLines, my_contour->newLines,
+          newPolys, my_contour->newPolys,
+          0, 0, outCd, my_contour->outCd);
       SMPLocator->Delete();
       }
     else
       {
-      vtkSMPMergePointsOp( newPts, my_contour->newPts, input->GetBounds(),
-                           outPd, my_contour->outPd,
-                           newVerts, my_contour->newVerts,
-                           newLines, my_contour->newLines,
-                           newPolys, my_contour->newPolys,
-                           0, 0, outCd, my_contour->outCd, 1 );
+      mergeOp->MergePolyData(
+          newPts, my_contour->newPts, input->GetBounds(),
+          outPd, my_contour->outPd,
+          newVerts, my_contour->newVerts,
+          newLines, my_contour->newLines,
+          newPolys, my_contour->newPolys,
+          0, 0, outCd, my_contour->outCd);
       }
-
+    mergeOp->Delete();
     my_contour->Delete();
     } //if using scalar tree
   else

@@ -33,6 +33,7 @@ set(SMP_Core
   vtkFunctor.cxx #requirement of ForEachOp
   vtkFunctorInitializable.cxx
   vtkSMP.cxx
+  vtkMergeDataSets.cxx
   #vtkThreadLocal.cxx
   vtkSMPAlgorithm.cxx
   vtkSMPPointSetAlgorithm.cxx
@@ -46,7 +47,6 @@ set(SMP_Filters
   vtkSMPMergePoints.cxx
   vtkSMPMinMaxTree.cxx
   vtkSMPTransform.cxx
-  #vtkSMPTransformFilter.cxx
   vtkSMPWarpVector.cxx
   vtkSMPZCurve.cxx
   vtkSMPClipDataSet.cxx
