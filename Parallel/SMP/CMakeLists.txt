@@ -46,7 +46,6 @@ set(SMP_Filters
   vtkSMPMergePoints.cxx
   vtkSMPMinMaxTree.cxx
   vtkSMPTransform.cxx
-  #vtkSMPTransformFilter.cxx
   vtkSMPWarpVector.cxx
   vtkSMPZCurve.cxx
   vtkSMPClipDataSet.cxx
