@@ -151,9 +151,14 @@ void vtkSMPMinMaxTree::PrintSelf(ostream &os, vtkIndent indent)
 
 void vtkSMPMinMaxTree::BuildTree()
   {
-  vtkIdType numCells;
-  int offset, prod;
-  vtkIdType numNodes, numLeafs;
+  vtkIdType numCells, cellId, i, j, numScalars;
+  int level, offset, parentOffset, prod;
+  vtkIdType numNodes, node, numLeafs, leaf, numParentLeafs;
+  vtkCell *cell;
+  vtkIdList *cellPts;
+  vtkScalarRange<double> *tree, *parent;
+  double *s;
+  vtkDoubleArray *cellScalars;
 
   // Check input...see whether we have to rebuild
   //
@@ -179,6 +184,8 @@ void vtkSMPMinMaxTree::BuildTree()
     }
 
   this->Initialize();
+  cellScalars = vtkDoubleArray::New();
+  cellScalars->Allocate(100);
 
   // Compute the number of levels in the tree
   //
@@ -194,13 +201,78 @@ void vtkSMPMinMaxTree::BuildTree()
   vtkScalarRange<double> *TTree;
   this->TreeSize = offset + numLeafs;
   this->Tree = TTree = new vtkScalarRange<double>[this->TreeSize];
-
+/*
   InitializeFunctor* InitTree = InitializeFunctor::New();
   InitTree->InitializeData( this );
   vtkSMPForEachOp( offset, numNodes, InitTree );
   InitTree->Delete();
+*/
+  for ( i=0; i < this->TreeSize; i++ )
+    {
+    TTree[i].min = VTK_DOUBLE_MAX;
+    TTree[i].max = -VTK_DOUBLE_MAX;
+    }
+
+  // Loop over all cells getting range of scalar data and place into leafs
+  //
+  for ( cellId=0, node=0; node < numLeafs; node++ )
+    {
+    tree = TTree + offset + node;
+    for ( i=0; i < this->BranchingFactor && cellId < numCells; i++, cellId++ )
+      {
+      cell = this->DataSet->GetCell(cellId);
+      cellPts = cell->GetPointIds();
+      numScalars = cellPts->GetNumberOfIds();
+      cellScalars->SetNumberOfTuples(numScalars);
+      this->Scalars->GetTuples(cellPts, cellScalars);
+      s = cellScalars->GetPointer(0);
+
+      for ( j=0; j < numScalars; j++ )
+        {
+        if ( s[j] < tree->min )
+          {
+          tree->min = s[j];
+          }
+        if ( s[j] > tree->max )
+          {
+          tree->max = s[j];
+          }
+        }
+      }
+    }
+
+  // Now build top levels of tree in bottom-up fashion
+  //
+  for ( level=this->Level; level > 0; level-- )
+    {
+    parentOffset = offset - prod/this->BranchingFactor;
+    prod /= this->BranchingFactor;
+    numParentLeafs = static_cast<int>(
+      ceil(static_cast<double>(numLeafs)/this->BranchingFactor));
+
+    for ( leaf=0, node=0; node < numParentLeafs; node++ )
+      {
+      parent = TTree + parentOffset + node;
+      for ( i=0; i < this->BranchingFactor && leaf < numLeafs; i++, leaf++ )
+        {
+        tree = TTree + offset + leaf;
+        if ( tree->min < parent->min )
+          {
+          parent->min = tree->min;
+          }
+        if ( tree->max > parent->max )
+          {
+          parent->max = tree->max;
+          }
+        }
+      }
+
+    numLeafs = numParentLeafs;
+    offset = parentOffset;
+    }
 
   this->BuildTime.Modified();
+  cellScalars->Delete();
   }
 
 void vtkSMPMinMaxTree::InitTraversal(double scalarValue)
