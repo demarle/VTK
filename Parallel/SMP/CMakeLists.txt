@@ -33,6 +33,7 @@ set(SMP_Core
   vtkFunctor.cxx #requirement of ForEachOp
   vtkFunctorInitializable.cxx
   vtkSMP.cxx
+  vtkMergeDataSets.cxx
   #vtkThreadLocal.cxx
   vtkSMPAlgorithm.cxx
   vtkSMPPointSetAlgorithm.cxx

@@ -59,29 +59,4 @@ void VTKPARALLELSMP_EXPORT vtkSMPParallelOp(
 
 void VTKPARALLELSMP_EXPORT vtkSMPTraverseOp( const vtkParallelTree* Tree, vtkFunctor* func );
 
-void VTKPARALLELSMP_EXPORT vtkSMPMergePointsOp(
-  vtkPoints* outPoints,
-  vtkThreadLocal<vtkPoints>* inPoints,
-  const double bounds[6],
-  vtkPointData* outPtsData, vtkThreadLocal<vtkPointData>* inPtsData,
-  vtkCellArray* outVerts, vtkThreadLocal<vtkCellArray>* inVerts,
-  vtkCellArray* outLines, vtkThreadLocal<vtkCellArray>* inLines,
-  vtkCellArray* outPolys, vtkThreadLocal<vtkCellArray>* inPolys,
-  vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
-  vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData,
-  int SkipThreads
-  );
-
-void VTKPARALLELSMP_EXPORT vtkSMPMergePointsOp(
-  vtkSMPMergePoints* outPoints,
-  vtkThreadLocal<vtkSMPMergePoints>* inPoints,
-  vtkPointData* outPtsData, vtkThreadLocal<vtkPointData>* inPtsData,
-  vtkCellArray* outVerts, vtkThreadLocal<vtkCellArray>* inVerts,
-  vtkCellArray* outLines, vtkThreadLocal<vtkCellArray>* inLines,
-  vtkCellArray* outPolys, vtkThreadLocal<vtkCellArray>* inPolys,
-  vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
-  vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData,
-  int SkipThreads
-  );
-
 #endif //__vtkSMP_h__

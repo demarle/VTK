@@ -1,5 +1,6 @@
 #include "vtkSMPClipDataSet.h"
 #include "vtkSMP.h"
+#include "vtkMergeDataSets.h"
 
 #include "vtkCallbackCommand.h"
 #include "vtkCellArray.h"
@@ -13,7 +14,7 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkIntArray.h"
-#include "vtkMergePoints.h"
+#include "vtkSMPMergePoints.h"
 #include "vtkObjectFactory.h"
 #include "vtkPlane.h"
 #include "vtkPointData.h"
@@ -488,18 +489,21 @@ int vtkSMPClipDataSet::RequestData(
   vtkSMPForEachOp(0,numCells,functor);
 
   //TODO: Get rid of comments and get correct results (i.e: write a Merge operator for vtkUnstructuredGrid)
-//  vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast(this->Locator);
-//  if (parallelLocator)
-//    {
-//    vtkThreadLocal<vtkSMPMergePoints>* partialMeshes;
-//    functor->locator->FillDerivedThreadLocal(partialMeshes);
-//    vtkSMPMergeUnstructuredGridOp(parallelLocator, partialMeshes, outPD, functor->outPD, conn[0], functor->conn[0], 0, 0, 0, 0, 0, 0, outCD[0], functor->outCD[0], 1);
-//    partialMeshes->Delete();
-//    }
-//  else
-//    {
-//    vtkSMPMergeUnstructuredGridOp(newPoints, functor->newPoints, input->GetBounds(), outPD, functor->outPD, conn[0], functor->conn[0], 0, 0, 0, 0, 0, 0, outCD[0], functor->outCD[0], 1);
-//    }
+  vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast(this->Locator);
+  vtkMergeDataSets* mergeOp = vtkMergeDataSets::New();
+  mergeOp->MasterThreadPopulatedOutputOn();
+  if (parallelLocator)
+    {
+    vtkThreadLocal<vtkSMPMergePoints>* partialMeshes;
+    functor->locator->FillDerivedThreadLocal(partialMeshes);
+//    mergeOp->MergeUnstructuredGrid(parallelLocator, partialMeshes, outPD, functor->outPD, conn[0], functor->conn[0], 0, 0, 0, 0, 0, 0, outCD[0], functor->outCD[0], 1);
+    partialMeshes->Delete();
+    }
+  else
+    {
+//    mergeOp->MergeUnstructuredGrid(newPoints, functor->newPoints, input->GetBounds(), outPD, functor->outPD, conn[0], functor->conn[0], 0, 0, 0, 0, 0, 0, outCD[0], functor->outCD[0], 1);
+    }
+  mergeOp->Delete();
   functor->Delete();
 
   if ( this->ClipFunction )
