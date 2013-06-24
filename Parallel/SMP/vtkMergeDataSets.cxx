@@ -84,8 +84,7 @@ void vtkMergeDataSets::MergePolyData(
 
   vtkParallelCellMerger* TheCellMerge = vtkParallelCellMerger::New();
   TheCellMerge->self = Functor;
-  vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>
-    (
+  this->Parallel(
      TheCellMerge,
      Functor->Maps->Begin(),
      Functor->InCd->Begin(),
@@ -100,8 +99,7 @@ void vtkMergeDataSets::MergePolyData(
      Functor->polyOffset->GetCellsOffset(),
      Functor->polyOffset->GetTuplesOffset(),
      Functor->stripOffset->GetCellsOffset(),
-     Functor->stripOffset->GetTuplesOffset(),
-     this->MasterThreadPopulatedOutput );
+     Functor->stripOffset->GetTuplesOffset());
   TheCellMerge->Delete();
 
   // Correcting size of arrays
@@ -147,13 +145,12 @@ void vtkMergeDataSets::MergePolyData(
 
   vtkParallelPointMerger* TheMerge = vtkParallelPointMerger::New();
   TheMerge->SetUsefullData(DummyFunctor,TreatedTable);
-  vtkSMPParallelOp<vtkSMPMergePoints>( TheMerge, DummyFunctor->Locators->Begin(), this->MasterThreadPopulatedOutput);
+  this->Parallel(TheMerge, DummyFunctor->Locators->Begin());
   TheMerge->Delete();
 
   vtkParallelCellMerger* TheCellMerge = vtkParallelCellMerger::New();
   TheCellMerge->self = DummyFunctor;
-  vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>
-    (
+  this->Parallel(
      TheCellMerge,
      DummyFunctor->Maps->Begin(),
      DummyFunctor->InCd->Begin(),
@@ -168,8 +165,7 @@ void vtkMergeDataSets::MergePolyData(
      DummyFunctor->polyOffset->GetCellsOffset(),
      DummyFunctor->polyOffset->GetTuplesOffset(),
      DummyFunctor->stripOffset->GetCellsOffset(),
-     DummyFunctor->stripOffset->GetTuplesOffset(),
-     this->MasterThreadPopulatedOutput );
+     DummyFunctor->stripOffset->GetTuplesOffset());
   TheCellMerge->Delete();
 
   // Correcting size of arrays

@@ -10,11 +10,32 @@ class vtkPoints;
 class vtkCellArray;
 class vtkCellData;
 template<class T> class vtkThreadLocal;
+class vtkTask;
 
 class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
 {
     vtkMergeDataSets(const vtkMergeDataSets&);
     void operator=(const vtkMergeDataSets&);
+
+    void Parallel(
+        const vtkTask* function,
+        vtkThreadLocal<vtkSMPMergePoints>::iterator data);
+    void Parallel(
+        const vtkTask* function,
+        vtkThreadLocal<vtkIdList>::iterator data1,
+        vtkThreadLocal<vtkCellData>::iterator data2,
+        vtkThreadLocal<vtkCellArray>::iterator data3,
+        vtkThreadLocal<vtkCellArray>::iterator data4,
+        vtkThreadLocal<vtkCellArray>::iterator data5,
+        vtkThreadLocal<vtkCellArray>::iterator data6,
+        vtkstd::vector<vtkIdType>::iterator offset1,
+        vtkstd::vector<vtkIdType>::iterator offset2,
+        vtkstd::vector<vtkIdType>::iterator offset3,
+        vtkstd::vector<vtkIdType>::iterator offset4,
+        vtkstd::vector<vtkIdType>::iterator offset5,
+        vtkstd::vector<vtkIdType>::iterator offset6,
+        vtkstd::vector<vtkIdType>::iterator offset7,
+        vtkstd::vector<vtkIdType>::iterator offset8)
 
   public:
     vtkTypeMacro(vtkMergeDataSets,vtkObject);
