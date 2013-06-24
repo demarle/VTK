@@ -8,17 +8,18 @@ class vtkSMPMergePoints;
 class vtkPointData;
 class vtkPoints;
 class vtkCellArray;
-template<class T> class vtkThreadLocal<T>;
+class vtkCellData;
+template<class T> class vtkThreadLocal;
 
 class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
 {
     vtkMergeDataSets(const vtkMergeDataSets&);
-    void operator=(const vtkFunctor&);
+    void operator=(const vtkMergeDataSets&);
 
   public:
     vtkTypeMacro(vtkMergeDataSets,vtkObject);
     void PrintSelf(ostream& os, vtkIndent indent);
-    static vtkMergeDataSets* New;
+    static vtkMergeDataSets* New();
 
     vtkSetMacro(MasterThreadPopulatedOutput,int);
     vtkBooleanMacro(MasterThreadPopulatedOutput,int);

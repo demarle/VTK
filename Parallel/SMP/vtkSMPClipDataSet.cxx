@@ -1,6 +1,7 @@
 #include "vtkSMPClipDataSet.h"
 #include "vtkSMP.h"
 #include "vtkMergeDataSets.h"
+#include "vtkThreadLocal.h"
 
 #include "vtkCallbackCommand.h"
 #include "vtkCellArray.h"

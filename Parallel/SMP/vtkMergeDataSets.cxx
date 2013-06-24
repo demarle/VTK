@@ -3,11 +3,20 @@
 #include "vtkPoints.h"
 #include "vtkPointData.h"
 #include "vtkCellArray.h"
+#include "vtkCellData.h"
 #include "vtkThreadLocal.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkObjectFactory.h"
 
+#include "vtkParallelPointMerger.h"
+#include "vtkParallelCellMerger.h"
+#include "vtkDummyMergeFunctor.h"
+#include "vtkOffsetManager.h"
+#include "vtkLockPointMerger.h"
+
 vtkStandardNewMacro(vtkMergeDataSets);
+
+typedef vtkIdType *vtkIdTypePtr;
 
 vtkMergeDataSets::vtkMergeDataSets()
   {
@@ -21,7 +30,7 @@ vtkMergeDataSets::~vtkMergeDataSets()
     delete this->TreatedTable;
   }
 
-void PrintSelf(ostream& os, vtkIndent indent)
+void vtkMergeDataSets::PrintSelf(ostream& os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os,indent);
   os << indent << "Has master thread populated the output: ";
@@ -137,7 +146,7 @@ void vtkMergeDataSets::MergePolyData(
                                  inCellsData, outCellsData );
 
   vtkParallelPointMerger* TheMerge = vtkParallelPointMerger::New();
-  TheMerge->self = DummyFunctor;
+  TheMerge->SetUsefullData(DummyFunctor,TreatedTable);
   vtkSMPParallelOp<vtkSMPMergePoints>( TheMerge, DummyFunctor->Locators->Begin(), this->MasterThreadPopulatedOutput);
   TheMerge->Delete();
 
@@ -160,7 +169,7 @@ void vtkMergeDataSets::MergePolyData(
      DummyFunctor->polyOffset->GetTuplesOffset(),
      DummyFunctor->stripOffset->GetCellsOffset(),
      DummyFunctor->stripOffset->GetTuplesOffset(),
-     this->MasteThreadPopulatedOutput );
+     this->MasterThreadPopulatedOutput );
   TheCellMerge->Delete();
 
   // Correcting size of arrays
