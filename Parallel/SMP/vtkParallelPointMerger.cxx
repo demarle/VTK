@@ -4,7 +4,6 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
-#include "vtkSMP.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkTask.h"
 

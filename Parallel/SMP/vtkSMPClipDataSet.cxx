@@ -1,5 +1,7 @@
 #include "vtkSMPClipDataSet.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkFunctor.h"
+#include "vtkFunctorInitializable.h"
 #include "vtkMergeDataSets.h"
 #include "vtkThreadLocal.h"
 
@@ -420,7 +422,7 @@ int vtkSMPClipDataSet::RequestData(
     GenerateClipValueExecutor* generateClipScalarFunctor =
         GenerateClipValueExecutor::New();
     generateClipScalarFunctor->SetData(tmpScalars,input,this->ClipFunction);
-    vtkSMPForEachOp(0,numPts,generateClipScalarFunctor);
+    vtkParallelOperators::ForEach(0,numPts,generateClipScalarFunctor);
     generateClipScalarFunctor->Delete();
     clipScalars = tmpScalars;
     }
@@ -487,7 +489,7 @@ int vtkSMPClipDataSet::RequestData(
                    this->UseValueAsOffset || !this->ClipFunction ? this->Value : 0.0,
                    this->InsideOut, numOutputs, newPoints, outPD, this->Locator,
                    conn, outCD, types, locs);
-  vtkSMPForEachOp(0,numCells,functor);
+  vtkParallelOperators::ForEach(0,numCells,functor);
 
   //TODO: Get rid of comments and get correct results (i.e: write a Merge operator for vtkUnstructuredGrid)
   vtkSMPMergePoints* parallelLocator = vtkSMPMergePoints::SafeDownCast(this->Locator);

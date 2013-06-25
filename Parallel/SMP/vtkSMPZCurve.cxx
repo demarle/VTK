@@ -14,7 +14,8 @@
 #include "vtkPointData.h"
 #include "vtkPointSet.h"
 #include "vtkPolyData.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkFunctor.h"
 #include "vtkUnstructuredGrid.h"
 
 class MyOctreeLocator : public vtkOctreePointLocator
@@ -161,7 +162,7 @@ int vtkSMPZCurve::RequestData(
 
   PointsFunctor* pf = PointsFunctor::New();
   pf->Initialize( locator, input->GetPointData(), output->GetPointData() );
-  vtkSMPForEachOp( 0, input->GetNumberOfPoints(), pf );
+  vtkParallelOperators::ForEach( 0, input->GetNumberOfPoints(), pf );
   output->SetPoints( pf->GetNewPoints() );
 
   vtkIdList* oldToNew = pf->GetOldToNew();

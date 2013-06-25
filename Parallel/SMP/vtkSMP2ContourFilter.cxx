@@ -44,7 +44,9 @@
 
 #include <math.h>
 
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkThreadLocal.h"
+#include "vtkFunctorInitializable.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkSMPMinMaxTree.h"
 
@@ -550,14 +552,14 @@ int vtkSMP2ContourFilter::RequestData(
           {
           TreeContour->ScalarValue = values[i];
           parallelTree->InitTraversal( values[i] );
-          vtkSMPTraverseOp( parallelTree, TreeContour );
+          vtkParallelOperators::Traverse( parallelTree, TreeContour );
           }
         }
       else
         {
         for ( my_contour->dimensionality = 1; my_contour->dimensionality <= 3; ++(my_contour->dimensionality) )
           {
-          vtkSMPForEachOp( 0, numCells, my_contour );
+          vtkParallelOperators::ForEach( 0, numCells, my_contour );
           }
         }
       // No more merge in V2 but we finalize each output

@@ -1,5 +1,5 @@
 #include "vtkMergeDataSets.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
 #include "vtkPoints.h"
 #include "vtkPointData.h"
 #include "vtkCellArray.h"
@@ -65,7 +65,7 @@ void vtkMergeDataSets::MergePolyData(
   Functor->outputLocator = outputLocator;
 
   vtkIdType PointsAlreadyPresent = outPoints->GetNumberOfPoints();
-  if ( PointsAlreadyPresent ) vtkSMPForEachOp( 0, PointsAlreadyPresent, Functor );
+  if ( PointsAlreadyPresent ) vtkParallelOperators::ForEach( 0, PointsAlreadyPresent, Functor );
 
   Functor->InitializeNeeds( 0, inPoints, outputLocator,
                             inVerts, outVerts,
@@ -79,7 +79,7 @@ void vtkMergeDataSets::MergePolyData(
   vtkLockPointMerger* TheMerge = vtkLockPointMerger::New();
   TheMerge->Functor = Functor;
   TheMerge->NumberOfPointsFirstThread = NumberOfInPointsThread0;
-  vtkSMPForEachOp( StartPoint, Functor->GetNumberOfPoints(), TheMerge );
+  vtkParallelOperators::ForEach( StartPoint, Functor->GetNumberOfPoints(), TheMerge );
   TheMerge->Delete();
 
   vtkParallelCellMerger* TheCellMerge = vtkParallelCellMerger::New();

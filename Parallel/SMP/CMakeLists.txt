@@ -32,7 +32,7 @@ set(SMP_Core
   #vtkParallelTree.cxx #required by TraverseOp
   vtkFunctor.cxx #requirement of ForEachOp
   vtkFunctorInitializable.cxx
-  vtkSMP.cxx
+  vtkParallelOperators.cxx
   vtkMergeDataSets.cxx
   #vtkThreadLocal.cxx
   vtkSMPAlgorithm.cxx

@@ -1,5 +1,5 @@
 #include "vtkSMPImplementation.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
 #include "vtkFunctor.h"
 #include "vtkFunctorInitializable.h"
 #include "vtkParallelTree.h"
@@ -327,7 +327,7 @@ int vtkSMPInternalGetTid()
   return kaapi_get_self_kid();
 }
 
-void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
+void vtkParallelOperators::ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
 {
   vtkIdType n = last - first;
   int g = grain ? grain : sqrt(n);
@@ -340,7 +340,7 @@ void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctor* op, in
   kaapic_foreach_attr_destroy(&attr);
 }
 
-void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain )
+void vtkParallelOperators::ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain )
 {
   vtkIdType n = last - first;
   int g = grain ? grain : sqrt(n);
@@ -407,7 +407,7 @@ void vtkMergeDataSets::Parallel(
 //    kaapi_end_parallel( KAAPI_SCHEDFLAG_DEFAULT );
 }
 
-void vtkSMPTraverseOp( const vtkParallelTree *Tree, vtkFunctor* func )
+void vtkParallelOperators::Traverse( const vtkParallelTree *Tree, vtkFunctor* func )
 {
   work_t work;
   kaapi_workqueue_index_t i, nil;
