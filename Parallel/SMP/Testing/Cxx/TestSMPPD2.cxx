@@ -8,7 +8,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRTAnalyticSource.h"
-#include "vtkSMP.h"
 #include "vtkSMPContourFilter.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkSMPMinMaxTree.h"
