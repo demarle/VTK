@@ -2,6 +2,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkDataSet.h"
 #include "vtkParallelOperators.h"
+#include "vtkThreadLocal.h"
 #include "vtkFunctor.h"
 #include "vtkIdList.h"
 #include "vtkGenericCell.h"

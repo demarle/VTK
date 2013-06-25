@@ -1,6 +1,7 @@
 #include "vtkSMPPipeline.h"
 #include "vtkParallelOperators.h"
 #include "vtkFunctorInitializable.h"
+#include "vtkThreadLocal.h"
 
 #include "vtkAlgorithm.h"
 #include "vtkSmartPointer.h"

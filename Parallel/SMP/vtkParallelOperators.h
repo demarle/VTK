@@ -6,7 +6,7 @@
 #include <vector>
 
 class vtkFunctor;
-class vtkFunctorIntializable;
+class vtkFunctorInitializable;
 class vtkParallelTree;
 
 class VTKPARALLELSMP_EXPORT vtkParallelOperators : public vtkObject
@@ -24,32 +24,32 @@ class VTKPARALLELSMP_EXPORT vtkParallelOperators : public vtkObject
     void PrintSelf(ostream& os, vtkIndent indent);
 
     // ForEach template : parallel loop over an iterator
-    void ForEach(
+    static void ForEach(
       vtkIdType first, vtkIdType last,
       const vtkFunctor* op, int grain = 0
     );
 
-    void ForEach(
+    static void ForEach(
       vtkIdType first, vtkIdType last,
       const vtkFunctorInitializable* f, int grain = 0
     );
  
     // Same as ForEach but with a guaranteed static partitioning
-    void StaticForEach(
+    static void StaticForEach(
         vtkIdType first, vtkIdType last,
         const vtkFunctor* op, int grain = 0)
       {
       ForEach(first,last,op,grain);
       } 
 
-    void StaticForEach(
+    static void StaticForEach(
         vtkIdType first, vtkIdType last,
         const vtkFunctorInitializable* op, int grain = 0)
       {
       ForEach(first,last,op,grain);
       } 
 
-    void Traverse(const vtkParallelTree* Tree, vtkFunctor* func);
+    static void Traverse(const vtkParallelTree* Tree, vtkFunctor* func);
 };
 
 #endif //__vtkParallelOperators_h__

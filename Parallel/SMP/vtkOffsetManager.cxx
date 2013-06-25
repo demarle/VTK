@@ -2,7 +2,6 @@
 
 #include "vtkCellArray.h"
 #include "vtkObjectFactory.h"
-#include "vtkSMP.h"
 
 extern int vtkSMPInternalGetNumberOfThreads();
 extern int vtkSMPInternalGetTid();

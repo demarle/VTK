@@ -45,6 +45,7 @@
 #include <math.h>
 
 #include "vtkParallelOperators.h"
+#include "vtkThreadLocal.h"
 #include "vtkFunctorInitializable.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkSMPMinMaxTree.h"

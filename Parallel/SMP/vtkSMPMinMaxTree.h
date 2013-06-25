@@ -4,7 +4,6 @@
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkParallelTree.h"
 #include "vtkSimpleScalarTree.h"
-#include "vtkSMP.h"
 
 class vtkGenericCell;
 class vtkFunctor;

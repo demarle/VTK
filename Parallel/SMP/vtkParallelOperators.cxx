@@ -1,4 +1,5 @@
 #include "vtkParallelOperators.h"
+#include "vtkObjectFactory.h"
 
 vtkStandardNewMacro(vtkParallelOperators);
 
