@@ -1,5 +1,6 @@
 #include "vtkSMPPipeline.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkFunctorInitializable.h"
 
 #include "vtkAlgorithm.h"
 #include "vtkSmartPointer.h"
@@ -284,7 +285,7 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
 
     ParallelFilterExecutor* functor = ParallelFilterExecutor::New();
     functor->PrepareData(iter,inInfoVec,outInfoVec,r,this,compositePort);
-    vtkSMPForEachOp(0,functor->GetInputSize(),functor);
+    vtkParallelOperators::ForEach(0,functor->GetInputSize(),functor);
     functor->FinalizeData(iter,compositeOutput);
     functor->Delete();
 

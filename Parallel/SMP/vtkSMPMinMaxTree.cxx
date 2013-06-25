@@ -1,7 +1,8 @@
 #include "vtkSMPMinMaxTree.h"
 #include "vtkObjectFactory.h"
 #include "vtkDataSet.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkFunctor.h"
 #include "vtkIdList.h"
 #include "vtkGenericCell.h"
 #include "vtkDataArray.h"
@@ -204,7 +205,7 @@ void vtkSMPMinMaxTree::BuildTree()
 /*
   InitializeFunctor* InitTree = InitializeFunctor::New();
   InitTree->InitializeData( this );
-  vtkSMPForEachOp( offset, numNodes, InitTree );
+  vtkParallelOperators::ForEach( offset, numNodes, InitTree );
   InitTree->Delete();
 */
   for ( i=0; i < this->TreeSize; i++ )

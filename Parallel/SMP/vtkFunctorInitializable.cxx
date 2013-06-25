@@ -1,6 +1,9 @@
 #include "vtkFunctorInitializable.h"
 #include "vtkSMP.h"
 
+extern int vtkSMPInternalGetNumberOfThreads();
+extern int vtkSMPInternalGetTid();
+
 //======================================================================================
 vtkFunctorInitializable::vtkFunctorInitializable() :
     vtkFunctor(), IsInitialized(vtkSMPInternalGetNumberOfThreads(), 0)

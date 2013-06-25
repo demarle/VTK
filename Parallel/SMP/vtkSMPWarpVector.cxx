@@ -26,7 +26,8 @@
 #include "vtkBitArrayIterator.h"
 #include "vtkArrayIteratorTemplate.h"
 
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkFunctor.h"
 
 #define vtkDataArrayIteratorTemplateMacro(call)                                 \
   vtkArrayIteratorTemplateMacroCase(VTK_DOUBLE, double, call);              \
@@ -107,7 +108,7 @@ void vtkSMPWarpVectorExecute2(vtkSMPWarpVector *self,
   op->inVecIter = inVecIter;
   op->scaleFactor = (T1)self->GetScaleFactor();
 
-  vtkSMPForEachOp( 0, size, op);
+  vtkParallelOperators::ForEach( 0, size, op);
 
   op->Delete();
 }

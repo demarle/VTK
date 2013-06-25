@@ -1,4 +1,4 @@
-#include "vtkSMP.h"
+#include "vtkParallelOperator.h"
 #include "vtkFunctor.h"
 #include "vtkFunctorInitializable.h"
 #include "vtkParallelTree.h"
@@ -26,13 +26,13 @@ int vtkSMPInternalGetNumberOfThreads()
   return 1;
 }
 
-void vtkSMPForEachOp( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
+void vtkParallelOperators::ForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
 {
   for ( ; first < last; ++first )
     (*op)( first );
 }
 
-void vtkSMPForEachOp( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* f, int grain )
+void vtkParallelOperators::ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* f, int grain )
 {
   if ( f->ShouldInitialize() )
     f->Init( );
@@ -40,7 +40,7 @@ void vtkSMPForEachOp( vtkIdType first, vtkIdType last, const vtkFunctorInitializ
     (*f)( first );
 }
 
-void vtkSMPTraverseOp( const vtkParallelTree* Tree, vtkFunctor* func )
+void vtkParallelOperators::Traverse( const vtkParallelTree* Tree, vtkFunctor* func )
 {
   int lvl;
   vtkIdType bf;

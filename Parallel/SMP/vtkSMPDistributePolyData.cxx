@@ -2,7 +2,8 @@
 
 #include "vtkObjectFactory.h"
 #include "vtkPoints.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkFunctor.h"
 #include "vtkPolyData.h"
 #include "vtkPointData.h"
 #include "vtkCellArray.h"
@@ -282,7 +283,7 @@ int vtkSMPDistributePolyData::RequestData(vtkInformation *vtkNotUsed(request), v
   //
   PointDistribute* distributePoints = PointDistribute::New();
   distributePoints->Setup( inPts, newPts, pd, outPD );
-  vtkSMPStaticForEachOp( 0, numPts, distributePoints );
+  vtkParallelOperators::StaticForEach( 0, numPts, distributePoints );
   distributePoints->Delete();
 
   // Update ourselves and release memory
@@ -317,7 +318,7 @@ int vtkSMPDistributePolyData::RequestData(vtkInformation *vtkNotUsed(request), v
 
   CellDistribute* distributeCells = CellDistribute::New();
   distributeCells->Setup( inVerts, inLines, inPolys, inStrips, newVerts, newLines, newPolys, newStrips, cd, outCD, input );
-  vtkSMPStaticForEachOp( 0, input->GetNumberOfCells(), distributeCells );
+  vtkParallelOperators::StaticForEach( 0, input->GetNumberOfCells(), distributeCells );
   distributeCells->Delete();
 
   // Let’s bring MaxId to their real values

@@ -1,5 +1,5 @@
 #include "vtkSMPImplementation.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
 #include "vtkFunctor.h"
 #include "vtkFunctorInitializable.h"
 #include "vtkParallelTree.h"
@@ -134,7 +134,7 @@ int vtkSMPInternalGetTid()
   return performInit.getTID();
 }
 
-void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
+void vtkParallelOperators::ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
 {
   vtkIdType n = last - first;
   if (!n) return;
@@ -142,7 +142,7 @@ void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctor* op, in
   tbb::parallel_for( tbb::blocked_range<vtkIdType>( first, last, g ), FuncCall( op ) );
 }
 
-void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain )
+void vtkParallelOperators::ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain )
 {
   vtkIdType n = last - first;
   if (!n) return;
@@ -200,7 +200,7 @@ void vtkMergeDataSets::Parallel(
   tbb::task::spawn_root_and_wait(list);
   }
 
-void vtkSMPTraverseOp(const vtkParallelTree *Tree, vtkFunctor *func)
+void vtkParallelOperators::Traverse(const vtkParallelTree *Tree, vtkFunctor *func)
 {
   int level;
   vtkIdType bf;
