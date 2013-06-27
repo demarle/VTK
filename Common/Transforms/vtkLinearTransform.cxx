@@ -191,7 +191,7 @@ void vtkLinearTransform::TransformPoints(vtkPoints *inPts,
 
     vtkLinearTransformPoint(matrix,point,point);
 
-    outPts->InsertNextPoint(point);
+    outPts->SetPoint(i,point);
     }
 }
 
@@ -218,7 +218,7 @@ void vtkLinearTransform::TransformNormals(vtkDataArray *inNms,
     vtkLinearTransformVector(matrix,norm,norm);
     vtkMath::Normalize(norm);
 
-    outNms->InsertNextTuple(norm);
+    outNms->SetTuple(i,norm);
     }
 }
 
@@ -239,7 +239,7 @@ void vtkLinearTransform::TransformVectors(vtkDataArray *inNms,
 
     vtkLinearTransformVector(matrix,vec,vec);
 
-    outNms->InsertNextTuple(vec);
+    outNms->SetTuple(i,vec);
     }
 }
 
