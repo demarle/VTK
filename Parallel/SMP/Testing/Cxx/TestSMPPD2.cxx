@@ -57,14 +57,14 @@ void setupTest(vtkDataSetReader* reader, vtkContourFilter* isosurface, bool sequ
   isosurface->GenerateValues(11,0.0,1.0);
   isosurface->UseScalarTreeOn();
   cerr << "First " << transform->GetClassName() << " execution" << endl;
-  t0 = timer->GetCPUTime();
+  t0 = timer->GetUniversalTime();
   transform->Update();
-  t1 = timer->GetCPUTime();
+  t1 = timer->GetUniversalTime();
   cerr << t1-t0 << endl;
   cerr << "First " << isosurface->GetClassName() << " execution" << endl;
-  t0 = timer->GetCPUTime();
+  t0 = timer->GetUniversalTime();
   isosurface->Update();
-  t1 = timer->GetCPUTime();
+  t1 = timer->GetUniversalTime();
   cerr << t1-t0 << endl;
 
   cerr << "Average time for " << REPS << " other executions" << endl;
@@ -72,9 +72,9 @@ void setupTest(vtkDataSetReader* reader, vtkContourFilter* isosurface, bool sequ
   for (int i = 0; i < REPS; ++i)
     {
     transform->Modified();
-    t0 = timer->GetCPUTime();
+    t0 = timer->GetUniversalTime();
     transform->Update();
-    t1 = timer->GetCPUTime();
+    t1 = timer->GetUniversalTime();
     t += t1-t0;
     }
   cerr << "Transform: " << (t)/REPS << endl;
@@ -82,9 +82,9 @@ void setupTest(vtkDataSetReader* reader, vtkContourFilter* isosurface, bool sequ
   for (int i = 0; i < REPS; ++i)
     {
     isosurface->Modified();
-    t0 = timer->GetCPUTime();
+    t0 = timer->GetUniversalTime();
     isosurface->Update();
-    t1 = timer->GetCPUTime();
+    t1 = timer->GetUniversalTime();
     t += t1-t0;
     }
   cerr << "Isosurface: " << (t)/REPS << endl;
@@ -105,9 +105,9 @@ int TestSMPPD2( int argc, char * argv [] )
 
   cerr << "Reading " << aa->GetFileName() << endl;
   timer = vtkTimerLog::New();
-  t0 = timer->GetCPUTime();
+  t0 = timer->GetUniversalTime();
   aa->Update();
-  t1 = timer->GetCPUTime();
+  t1 = timer->GetUniversalTime();
   cerr << t1-t0 << endl;
   timer->Delete();
 
@@ -128,37 +128,30 @@ int TestSMPPD2( int argc, char * argv [] )
   setupTest(aa,isosurface2,false);
   aa->Delete();
 
-/*
+  /* === Watching outputs === */
+
+  double b[6];
+  isosurface1->GetOutput()->GetBounds(b);
+
   vtkDataSetMapper* map1 = vtkDataSetMapper::New();
-  map1->SetInputConnection( cf->GetOutputPort() );
-  cf->Delete();
+  map1->SetInputConnection( isosurface1->GetOutputPort() );
   vtkActor* actor1 = vtkActor::New();
   actor1->SetMapper( map1 );
   map1->Delete();
 
   vtkDataSetMapper* map2 = vtkDataSetMapper::New();
-  map2->SetInputConnection( transform->GetOutputPort() );
-  transform->Delete();
+  map2->SetInputConnection( isosurface2->GetOutputPort() );
   vtkActor* actor2 = vtkActor::New();
   actor2->SetMapper( map2 );
   map2->Delete();
   actor2->AddPosition( (b[1]-b[0])*1.1, 0., 0. );
 
-  vtkDataSetMapper* map3 = vtkDataSetMapper::New();
-  map3->SetInputConnection( isosurface->GetOutputPort() );
-  vtkActor* actor3 = vtkActor::New();
-  actor3->SetMapper( map3 );
-  map3->Delete();
-  actor3->AddPosition( (b[1]-b[0])*2.1, 0., 0. );
-
   vtkRenderer* viewport = vtkRenderer::New();
   viewport->SetBackground( .5, .5, .5 );
   viewport->AddActor( actor1 );
   viewport->AddActor( actor2 );
-  viewport->AddActor( actor3 );
   actor1->Delete();
   actor2->Delete();
-  actor3->Delete();
 
   vtkRenderWindow* window = vtkRenderWindow::New();
   window->AddRenderer( viewport );
@@ -173,7 +166,7 @@ int TestSMPPD2( int argc, char * argv [] )
   iren->Start();
 
   iren->Delete();
-*/
+
   isosurface1->Delete();
   isosurface2->Delete();
 
