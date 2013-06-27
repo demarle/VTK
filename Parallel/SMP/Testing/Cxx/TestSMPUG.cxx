@@ -77,13 +77,13 @@ int TestSMPUG( int argc, char * argv [] )
     }
 
 #define REPS 25
-  t0 = timer->GetCPUTime();
+  t0 = timer->GetUniversalTime();
   for (int i = 0; i < REPS; ++i)
     {
     transform->Modified();
     transform->Update();
     }
-  t1 = timer->GetCPUTime();
+  t1 = timer->GetUniversalTime();
   cerr << (t1-t0)/REPS << endl;
 
   /* === Testing contour filter === */
@@ -117,9 +117,9 @@ int TestSMPUG( int argc, char * argv [] )
   for (int i = 0; i < REPS; ++i)
     {
     isosurface->Modified();
-    t0 = timer->GetCPUTime();
+    t0 = timer->GetUniversalTime();
     isosurface->Update();
-    t1 = timer->GetCPUTime();
+    t1 = timer->GetUniversalTime();
     t += t1-t0;
     }
   cerr << (t)/REPS << endl;
