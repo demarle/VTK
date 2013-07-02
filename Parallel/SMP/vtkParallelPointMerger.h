@@ -9,16 +9,21 @@ class vtkSMPMergePoints;
 
 struct VTKPARALLELSMP_EXPORT vtkParallelPointMerger : public vtkTask
 {
-  vtkDummyMergeFunctor* self;
 
   vtkTypeMacro(vtkParallelPointMerger,vtkTask);
   static vtkParallelPointMerger* New();
   void PrintSelf(ostream &os, vtkIndent indent);
   void Execute( vtkSMPMergePoints* locator ) const;
 
+  void SetUsefullData(vtkDummyMergeFunctor* f, vtkIdType** t);
+
 protected:
-  vtkParallelPointMerger() { }
-  ~vtkParallelPointMerger() { }
+  vtkParallelPointMerger();
+  ~vtkParallelPointMerger();
+
+  int MustTreatBucket( vtkIdType idx ) const;
+  vtkIdType** TreatedTable;
+  vtkDummyMergeFunctor* self;
 
 private:
   vtkParallelPointMerger(const vtkParallelPointMerger&);

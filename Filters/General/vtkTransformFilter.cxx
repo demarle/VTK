@@ -159,19 +159,19 @@ int vtkTransformFilter::RequestData(
   numCells = input->GetNumberOfCells();
 
   newPts = vtkPoints::New();
-  newPts->Allocate(numPts);
+  newPts->SetNumberOfPoints(numPts);
   if ( inVectors )
     {
     newVectors = vtkFloatArray::New();
     newVectors->SetNumberOfComponents(3);
-    newVectors->Allocate(3*numPts);
+    newVectors->SetNumberOfTuples(numPts);
     newVectors->SetName(inVectors->GetName());
     }
   if ( inNormals )
     {
     newNormals = vtkFloatArray::New();
     newNormals->SetNumberOfComponents(3);
-    newNormals->Allocate(3*numPts);
+    newNormals->SetNumberOfTuples(numPts);
     newNormals->SetName(inNormals->GetName());
     }
 
@@ -201,7 +201,7 @@ int vtkTransformFilter::RequestData(
       {
       newCellVectors = vtkFloatArray::New();
       newCellVectors->SetNumberOfComponents(3);
-      newCellVectors->Allocate(3*numCells);
+      newCellVectors->SetNumberOfTuples(numCells);
       newCellVectors->SetName( inCellVectors->GetName() );
       lt->TransformVectors(inCellVectors,newCellVectors);
       }
@@ -209,7 +209,7 @@ int vtkTransformFilter::RequestData(
       {
       newCellNormals = vtkFloatArray::New();
       newCellNormals->SetNumberOfComponents(3);
-      newCellNormals->Allocate(3*numCells);
+      newCellNormals->SetNumberOfTuples(numCells);
       newCellNormals->SetName( inCellNormals->GetName() );
       lt->TransformNormals(inCellNormals,newCellNormals);
       }

@@ -1,8 +1,9 @@
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
 #include "vtkFunctor.h"
 #include "vtkFunctorInitializable.h"
 #include "vtkParallelTree.h"
 #include "vtkTask.h"
+#include "vtkMergeDataSets.h"
 
 void sequential_traverse( vtkIdType index, int lvl, vtkIdType BranchingFactor, const vtkParallelTree* Tree, vtkFunctor* func )
   {
@@ -25,13 +26,13 @@ int vtkSMPInternalGetNumberOfThreads()
   return 1;
 }
 
-void vtkSMPForEachOp( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
+void vtkParallelOperators::ForEach( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
 {
   for ( ; first < last; ++first )
     (*op)( first );
 }
 
-void vtkSMPForEachOp( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* f, int grain )
+void vtkParallelOperators::ForEach( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* f, int grain )
 {
   if ( f->ShouldInitialize() )
     f->Init( );
@@ -39,7 +40,7 @@ void vtkSMPForEachOp( vtkIdType first, vtkIdType last, const vtkFunctorInitializ
     (*f)( first );
 }
 
-void vtkSMPTraverseOp( const vtkParallelTree* Tree, vtkFunctor* func )
+void vtkParallelOperators::Traverse( const vtkParallelTree* Tree, vtkFunctor* func )
 {
   int lvl;
   vtkIdType bf;
@@ -47,19 +48,15 @@ void vtkSMPTraverseOp( const vtkParallelTree* Tree, vtkFunctor* func )
   sequential_traverse( 0, 0, bf, Tree, func );
 }
 
-template<>
-void vtkSMPParallelOp<vtkSMPMergePoints> ( const vtkTask* function,
-                                           vtkThreadLocal<vtkSMPMergePoints>::iterator data,
-                                           vtkIdType skipThreads )
+void vtkMergeDataSets::Parallel(
+    const vtkTask* function,
+    vtkThreadLocal<vtkSMPMergePoints>::iterator data)
 {
-  int num_thread = 0;
-  if ( skipThreads <= num_thread )
-    function->Execute( *(data+num_thread) );
+  if ( !this->MasterThreadPopulatedOutput )
+    function->Execute( data[0] );
 }
 
-template<>
-void vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>
-  (
+void vtkMergeDataSets::Parallel(
    const vtkTask* function,
    vtkThreadLocal<vtkIdList>::iterator data1,
    vtkThreadLocal<vtkCellData>::iterator data2,
@@ -74,23 +71,21 @@ void vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCel
    vtkstd::vector<vtkIdType>::iterator offset5,
    vtkstd::vector<vtkIdType>::iterator offset6,
    vtkstd::vector<vtkIdType>::iterator offset7,
-   vtkstd::vector<vtkIdType>::iterator offset8,
-   vtkIdType skipThreads )
+   vtkstd::vector<vtkIdType>::iterator offset8)
 {
-  int num_thread = 0;
-  if ( skipThreads <= num_thread )
-    function->Execute( *(data1+num_thread),
-                       *(data2+num_thread),
-                       *(data3+num_thread),
-                       *(data4+num_thread),
-                       *(data5+num_thread),
-                       *(data6+num_thread),
-                       *(offset1+num_thread),
-                       *(offset2+num_thread),
-                       *(offset3+num_thread),
-                       *(offset4+num_thread),
-                       *(offset5+num_thread),
-                       *(offset6+num_thread),
-                       *(offset7+num_thread),
-                       *(offset8+num_thread) );
+  if ( !this->MasterThreadPopulatedOutput )
+    function->Execute( data1[0],
+                       data2[0],
+                       data3[0],
+                       data4[0],
+                       data5[0],
+                       data6[0],
+                       offset1[0],
+                       offset2[0],
+                       offset3[0],
+                       offset4[0],
+                       offset5[0],
+                       offset6[0],
+                       offset7[0],
+                       offset8[0] );
 }

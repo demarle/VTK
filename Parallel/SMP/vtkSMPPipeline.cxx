@@ -1,5 +1,7 @@
 #include "vtkSMPPipeline.h"
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkFunctorInitializable.h"
+#include "vtkThreadLocal.h"
 
 #include "vtkAlgorithm.h"
 #include "vtkSmartPointer.h"
@@ -47,8 +49,7 @@ class ParallelFilterExecutor : public vtkFunctorInitializable
     vtkInformation* request;
     vtkThreadLocal<vtkInformation>* requests;
 
-    int compositePort, numTimeSteps;
-    double* times;
+    int compositePort;
     vtkSMPPipeline* Executive;
 
   public:
@@ -87,11 +88,6 @@ class ParallelFilterExecutor : public vtkFunctorInitializable
           }
         vtkInformation* inInfo = this->inLocalInfo[this->compositePort]->GetLocal()->GetInformationObject(0);
         vtkInformation* outInfo = this->outLocalInfo->GetLocal()->GetInformationObject(0);
-        // if it is a temporal input, set the time for each piece
-        if (times)
-          {
-          outInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEPS(), times, numTimeSteps);
-          }
 
         // Note that since VisitOnlyLeaves is ON on the iterator,
         // this method is called only for leaves, hence, we are assured that
@@ -114,11 +110,9 @@ class ParallelFilterExecutor : public vtkFunctorInitializable
 
     void PrepareData(vtkCompositeDataIterator* iter, vtkInformationVector** _inInfoVec,
                      vtkInformationVector* _outInfoVec, vtkInformation* _request,
-                     vtkSMPPipeline* self, int _compositePort, double* _times, int _n)
+                     vtkSMPPipeline* self, int _compositePort)
       {
       this->compositePort = _compositePort;
-      this->times = _times;
-      this->numTimeSteps = _n;
       this->Executive = self;
 
       vtkIdType numPorts = self->GetNumberOfInputPorts();
@@ -192,19 +186,20 @@ int vtkSMPPipeline::ExecuteData(vtkInformation *request, vtkInformationVector **
 
   int compositePort;
   bool composite = this->ShouldIterateOverInput(compositePort);
-  bool temporal =
-    this->ShouldIterateTemporalData(request, inInfoVec, outInfoVec);
-  if (temporal || composite)
+  if (composite)
     {
-    if (this->Algorithm->IsA("vtkSMPAlgorithm"))
+    if (this->GetNumberOfOutputPorts())
       {
-      vtkDebugMacro(<< "vtkSMPAlgorithm will produce a composite data output from each input bloc")
-      this->Superclass::ExecuteSimpleAlgorithm(request, inInfoVec, outInfoVec, compositePort);
-      }
-    else
-      {
-      vtkDebugMacro(<< "Iterates over each input bloc in parallel")
-      this->ExecuteSimpleAlgorithm(request, inInfoVec, outInfoVec, compositePort);
+      if (this->Algorithm->IsA("vtkSMPAlgorithm"))
+        {
+        vtkDebugMacro(<< "vtkSMPAlgorithm will produce a composite data output from each input bloc")
+        this->Superclass::ExecuteSimpleAlgorithm(request, inInfoVec, outInfoVec, compositePort);
+        }
+      else
+        {
+        vtkDebugMacro(<< "Iterates over each input bloc in parallel")
+        this->ExecuteSimpleAlgorithm(request, inInfoVec, outInfoVec, compositePort);
+        }
       }
     }
   else
@@ -240,7 +235,6 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
   // if we have no composite inputs then we are looping over time on a source
   if (compositePort==-1)
     {
-    this->ExecuteSimpleAlgorithmTime(request, inInfoVec, outInfoVec);
     return;
     }
 
@@ -256,17 +250,6 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
   vtkSmartPointer<vtkCompositeDataSet> compositeOutput =
     vtkCompositeDataSet::SafeDownCast(
       outInfo->Get(vtkDataObject::DATA_OBJECT()));
-
-  // do we have a request for multiple time steps?
-  int numTimeSteps = 0;
-  double *times = 0;
-  numTimeSteps = outInfo->Length(UPDATE_TIME_STEPS());
-  if (numTimeSteps)
-    {
-    times = new double [numTimeSteps];
-    memcpy(times,outInfo->Get(UPDATE_TIME_STEPS()),
-           sizeof(double)*numTimeSteps);
-    }
 
   if (input && compositeOutput)
     {
@@ -300,11 +283,10 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
 
     vtkSmartPointer<vtkCompositeDataIterator> iter;
     iter.TakeReference(input->NewIterator());
-    iter->VisitOnlyLeavesOn();
 
     ParallelFilterExecutor* functor = ParallelFilterExecutor::New();
-    functor->PrepareData(iter,inInfoVec,outInfoVec,r,this,compositePort,times,numTimeSteps);
-    vtkSMPForEachOp(0,functor->GetInputSize(),functor);
+    functor->PrepareData(iter,inInfoVec,outInfoVec,r,this,compositePort);
+    vtkParallelOperators::ForEach(0,functor->GetInputSize(),functor);
     functor->FinalizeData(iter,compositeOutput);
     functor->Delete();
 
@@ -317,13 +299,6 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
     // MAXIMUM_NUMBER_OF_PIECES to -1 anyway (and handle
     // piece requests properly).
     this->PopInformation(inInfo);
-    if (times)
-      {
-      outInfo->Set(UPDATE_TIME_STEPS(), times, numTimeSteps);
-      compositeOutput->GetInformation()->Set(
-        vtkDataObject::DATA_TIME_STEPS(), times, numTimeSteps);
-      delete [] times;
-      }
     r->Set(REQUEST_INFORMATION());
     this->CopyDefaultInformation(r, vtkExecutive::RequestDownstream,
                                  this->GetInputInformation(),
@@ -338,7 +313,7 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
     vtkDataObject* curOutput = outInfo->Get(vtkDataObject::DATA_OBJECT());
     if (curOutput != compositeOutput.GetPointer())
       {
-      compositeOutput->SetPipelineInformation(outInfo);
+      outInfo->Set(vtkDataObject::DATA_OBJECT(), compositeOutput);
       }
     }
   this->ExecuteDataEnd(request,inInfoVec,outInfoVec);

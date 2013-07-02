@@ -1,6 +1,10 @@
-#include "vtkSMP.h"
-#include "vtkCommand.h"
+#include "vtkSMPImplementation.h"
+#include "vtkParallelOperators.h"
 #include "vtkFunctor.h"
+#include "vtkFunctorInitializable.h"
+#include "vtkParallelTree.h"
+#include "vtkTask.h"
+#include "vtkMergeDataSets.h"
 #include <kaapic.h>
 #include <cmath>
 
@@ -323,7 +327,7 @@ int vtkSMPInternalGetTid()
   return kaapi_get_self_kid();
 }
 
-void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
+void vtkParallelOperators::ForEach ( vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain )
 {
   vtkIdType n = last - first;
   int g = grain ? grain : sqrt(n);
@@ -336,7 +340,7 @@ void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctor* op, in
   kaapic_foreach_attr_destroy(&attr);
 }
 
-void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain )
+void vtkParallelOperators::ForEach ( vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain )
 {
   vtkIdType n = last - first;
   int g = grain ? grain : sqrt(n);
@@ -349,11 +353,11 @@ void vtkSMPForEachOp ( vtkIdType first, vtkIdType last, const vtkFunctorInitiali
   kaapic_foreach_attr_destroy(&attr);
 }
 
-template<>
-void vtkSMPParallelOp<vtkSMPMergePoints> ( const vtkTask* function,
-                                           vtkThreadLocal<vtkSMPMergePoints>::iterator data1,
-                                           vtkIdType skipThreads )
+void vtkMergeDataSets::Parallel(
+    const vtkTask* function,
+    vtkThreadLocal<vtkSMPMergePoints>::iterator data1)
 {
+  int skipThreads = this->MasterThreadPopulatedOutput;
   for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
     {
     ++data1;
@@ -368,26 +372,24 @@ void vtkSMPParallelOp<vtkSMPMergePoints> ( const vtkTask* function,
 //    kaapi_end_parallel( KAAPI_SCHEDFLAG_DEFAULT );
 }
 
-template<>
-void vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>
-  (
-   const vtkTask* function,
-   vtkThreadLocal<vtkIdList>::iterator data1,
-   vtkThreadLocal<vtkCellData>::iterator data2,
-   vtkThreadLocal<vtkCellArray>::iterator data3,
-   vtkThreadLocal<vtkCellArray>::iterator data4,
-   vtkThreadLocal<vtkCellArray>::iterator data5,
-   vtkThreadLocal<vtkCellArray>::iterator data6,
-   vtkstd::vector<vtkIdType>::iterator offset1,
-   vtkstd::vector<vtkIdType>::iterator offset2,
-   vtkstd::vector<vtkIdType>::iterator offset3,
-   vtkstd::vector<vtkIdType>::iterator offset4,
-   vtkstd::vector<vtkIdType>::iterator offset5,
-   vtkstd::vector<vtkIdType>::iterator offset6,
-   vtkstd::vector<vtkIdType>::iterator offset7,
-   vtkstd::vector<vtkIdType>::iterator offset8,
-   vtkIdType skipThreads )
+void vtkMergeDataSets::Parallel(
+    const vtkTask* function,
+    vtkThreadLocal<vtkIdList>::iterator data1,
+    vtkThreadLocal<vtkCellData>::iterator data2,
+    vtkThreadLocal<vtkCellArray>::iterator data3,
+    vtkThreadLocal<vtkCellArray>::iterator data4,
+    vtkThreadLocal<vtkCellArray>::iterator data5,
+    vtkThreadLocal<vtkCellArray>::iterator data6,
+    vtkstd::vector<vtkIdType>::iterator offset1,
+    vtkstd::vector<vtkIdType>::iterator offset2,
+    vtkstd::vector<vtkIdType>::iterator offset3,
+    vtkstd::vector<vtkIdType>::iterator offset4,
+    vtkstd::vector<vtkIdType>::iterator offset5,
+    vtkstd::vector<vtkIdType>::iterator offset6,
+    vtkstd::vector<vtkIdType>::iterator offset7,
+    vtkstd::vector<vtkIdType>::iterator offset8)
 {
+  int skipThreads = this->MasterThreadPopulatedOutput;
   for ( vtkIdType tid = 0; tid < skipThreads; ++tid )
     {
     ++data1; ++data2; ++data3; ++data4; ++data5; ++data6;
@@ -405,7 +407,7 @@ void vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCel
 //    kaapi_end_parallel( KAAPI_SCHEDFLAG_DEFAULT );
 }
 
-void vtkSMPTraverseOp( const vtkParallelTree *Tree, vtkFunctor* func )
+void vtkParallelOperators::Traverse( const vtkParallelTree *Tree, vtkFunctor* func )
 {
   work_t work;
   kaapi_workqueue_index_t i, nil;

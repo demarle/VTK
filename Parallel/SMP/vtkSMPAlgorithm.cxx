@@ -13,8 +13,8 @@
 
 =========================================================================*/
 #include "vtkSMPAlgorithm.h"
-#include "vtkSMP.h"
 #include "vtkSMPPipeline.h"
+#include "vtkThreadLocal.h"
 
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"

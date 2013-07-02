@@ -7,7 +7,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRTAnalyticSource.h"
-#include "vtkSMP.h"
 #include "vtkSMPContourFilter.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkSMPMinMaxTree.h"
@@ -22,23 +21,23 @@
 #include <cstdlib>
 
 #define REPS 1
-#define SMP_R 500
+#define SMP_R 100
 
 void test(vtkContourFilter *isosurface)
 {
   vtkTimerLog *timer = vtkTimerLog::New();
   isosurface->SetInputArrayToProcess(0,0,0, vtkDataObject::FIELD_ASSOCIATION_POINTS, "Elevation");
   isosurface->GenerateValues( 150, 0.0, 1.0 );
-  isosurface->UseScalarTreeOn();
+  isosurface->UseScalarTreeOff();
   cerr << "update " << isosurface->GetClassName() << endl;
   double t, t0,t1;
   t = 0;
   for (int i = 0; i < REPS; ++i)
     {
     isosurface->Modified();
-    t0 = timer->GetCPUTime();
+    t0 = timer->GetUniversalTime();
     isosurface->Update();
-    t1 = timer->GetCPUTime();
+    t1 = timer->GetUniversalTime();
     t += t1-t0;
     }
   cerr << (t)/REPS << endl;
@@ -111,13 +110,13 @@ int TestSMPPD( int argc, char * argv [] )
     t->Delete();
     }
 
-  t0 = timer->GetCPUTime();
+  t0 = timer->GetUniversalTime();
   for (int i = 0; i < REPS; ++i)
     {
     transform->Modified();
     transform->Update();
     }
-  t1 = timer->GetCPUTime();
+  t1 = timer->GetUniversalTime();
   cerr << (t1-t0)/REPS << endl;
 
   /* === Testing contour filter === */

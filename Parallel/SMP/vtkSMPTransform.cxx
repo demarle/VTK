@@ -6,7 +6,8 @@
 #include "vtkPoints.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
+#include "vtkFunctor.h"
 
 #include <stdlib.h>
 
@@ -747,7 +748,7 @@ void vtkSMPTransform::TransformPointsNormalsVectors(vtkPoints *inPts,
     mymodificator->matrixInvTr = matrix;
     }
 
-  vtkSMPForEachOp( 0, n, mymodificator );
+  vtkParallelOperators::ForEach( 0, n, mymodificator );
 
   mymodificator->Delete();
 }
@@ -792,7 +793,7 @@ void vtkSMPTransform::TransformPoints(vtkPoints *inPts,
   mypointsmodificator->outPts = outPts;
   mypointsmodificator->matrix = this->Matrix->Element;
 
-  vtkSMPForEachOp( 0, n, mypointsmodificator );
+  vtkParallelOperators::ForEach( 0, n, mypointsmodificator );
 
   mypointsmodificator->Delete();
 }
@@ -845,7 +846,7 @@ void vtkSMPTransform::TransformNormals(vtkDataArray *inNms,
   mynormalsmodificator->outNms = outNms;
   mynormalsmodificator->matrix = matrix;
 
-  vtkSMPForEachOp( 0, n, mynormalsmodificator );
+  vtkParallelOperators::ForEach( 0, n, mynormalsmodificator );
 
   mynormalsmodificator->Delete();
 }
@@ -890,7 +891,7 @@ void vtkSMPTransform::TransformVectors(vtkDataArray *inNms,
   myvectorsmodificator->outVcs = outNms;
   myvectorsmodificator->matrix = this->Matrix->Element;
 
-  vtkSMPForEachOp( 0, n, myvectorsmodificator );
+  vtkParallelOperators::ForEach( 0, n, myvectorsmodificator );
 
   myvectorsmodificator->Delete();
 }

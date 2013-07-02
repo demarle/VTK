@@ -1,8 +1,9 @@
-#include "vtkSMP.h"
+#include "vtkParallelOperators.h"
 #include "vtkFunctor.h"
 #include "vtkFunctorInitializable.h"
 #include "vtkParallelTree.h"
 #include "vtkTask.h"
+#include "vtkMergeDataSets.h"
 
 #include <omp.h>
 
@@ -37,7 +38,7 @@ int vtkSMPInternalGetNumberOfThreads()
   return numThreads;
 }
 
-void vtkSMPForEachOp(vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain)
+void vtkParallelOperators::ForEach(vtkIdType first, vtkIdType last, const vtkFunctor* op, int grain)
 {
 #pragma omp default(none)
 #pragma omp parallel for
@@ -45,7 +46,7 @@ void vtkSMPForEachOp(vtkIdType first, vtkIdType last, const vtkFunctor* op, int 
     (*op)( i );
 }
 
-void vtkSMPForEachOp(vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain)
+void vtkParallelOperators::ForEach(vtkIdType first, vtkIdType last, const vtkFunctorInitializable* op, int grain)
 {
 #pragma omp parallel
   {
@@ -58,11 +59,11 @@ void vtkSMPForEachOp(vtkIdType first, vtkIdType last, const vtkFunctorInitializa
     (*op)( i );
 }
 
-template<>
-void vtkSMPParallelOp<vtkSMPMergePoints> ( const vtkTask* function,
-                                           vtkThreadLocal<vtkSMPMergePoints>::iterator data,
-                                           vtkIdType skipThreads )
+void vtkMergeDataSets::Parallel(
+    const vtkTask* function,
+    vtkThreadLocal<vtkSMPMergePoints>::iterator data)
 {
+  int skipThreads = this->MasterThreadPopulatedOutput;
 #pragma omp parallel shared(skipThreads, data)
   {
   int num_thread = omp_get_thread_num();
@@ -71,9 +72,7 @@ void vtkSMPParallelOp<vtkSMPMergePoints> ( const vtkTask* function,
   }
 }
 
-template<>
-void vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCellArray, vtkCellArray>
-  (
+void vtkMergeDataSets::Parallel(
    const vtkTask* function,
    vtkThreadLocal<vtkIdList>::iterator data1,
    vtkThreadLocal<vtkCellData>::iterator data2,
@@ -88,9 +87,9 @@ void vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCel
    vtkstd::vector<vtkIdType>::iterator offset5,
    vtkstd::vector<vtkIdType>::iterator offset6,
    vtkstd::vector<vtkIdType>::iterator offset7,
-   vtkstd::vector<vtkIdType>::iterator offset8,
-   vtkIdType skipThreads )
+   vtkstd::vector<vtkIdType>::iterator offset8)
 {
+  int skipThreads = this->MasterThreadPopulatedOutput;
 #pragma omp parallel shared(skipThreads, data1, data2, data3, data4, data5, data6, offset1, offset2, offset3, offset4, offset5, offset6, offset7, offset8 )
   {
   int num_thread = omp_get_thread_num();
@@ -112,7 +111,7 @@ void vtkSMPParallelOp<vtkIdList, vtkCellData, vtkCellArray, vtkCellArray, vtkCel
   }
 }
 
-void vtkSMPTraverseOp( const vtkParallelTree* Tree, vtkFunctor* func )
+void vtkParallelOperators::Traverse( const vtkParallelTree* Tree, vtkFunctor* func )
 {
   int lvl;
   vtkIdType bf;
