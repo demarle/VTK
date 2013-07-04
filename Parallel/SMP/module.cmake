@@ -6,7 +6,7 @@ vtk_module(vtkParallelSMP
     vtkFiltersCore
     vtkFiltersGeneral
     vtkParallelCore
-  EXCLUDE_FROM_WRAPPING
+  EXCLUDE_FROM_WRAP_HIERARCHY
   TEST_DEPENDS
     vtkTestingRendering
     vtkRenderingOpenGL

@@ -27,6 +27,8 @@ set(SMP_Internals
   ${VTK_SMP_IMPLEMENTATION_TYPE}/vtkSMPImplementation.cxx
 )
 
+set_source_files_properties(${SMP_Internals} WRAP_EXCLUDE)
+
 #components that developers use to make SMP filters from
 set(SMP_Core
   #vtkParallelTree.cxx #required by TraverseOp
@@ -37,6 +39,8 @@ set(SMP_Core
   #vtkThreadLocal.cxx
 )
 
+set_source_files_properties(${SMP_Core} WRAP_EXCLUDE)
+
 #end user SMP accelerated vtk facilities (mostly filters)
 set(SMP_Filters
   vtkSMPContourFilter.cxx
@@ -46,6 +50,8 @@ set(SMP_Filters
   vtkSMPWarpVector.cxx
   vtkSMPZCurve.cxx
 )
+
+set_source_files_properties(vtkSMPMinMaxTree WRAP_EXCLUDE)
 
 set(Module_SRCS
   ${SMP_Internals}
