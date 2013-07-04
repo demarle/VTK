@@ -5,7 +5,8 @@
 //vtkTask is something like a heavy weight vtkFunctor
 
 #include "vtkParallelSMPModule.h" // For export macro
-#include "vtkObject.h"
+#include "vtkObjectBase.h"
+#include "vtkObject.h" // TODO multiple includes
 
 class vtkCellArray;
 class vtkCellData;
@@ -15,9 +16,6 @@ class vtkSMPMergePoints;
 //======================================================================================
 class VTKPARALLELSMP_EXPORT vtkTask : public vtkObjectBase
 {
-  vtkTask(const vtkTask&);
-  void operator =(const vtkTask&);
-
 public:
   vtkTypeMacro(vtkTask, vtkObjectBase);
   void PrintSelf(ostream &os, vtkIndent indent);
@@ -45,6 +43,10 @@ public:
 protected:
   vtkTask();
   ~vtkTask();
+
+private:
+  vtkTask(const vtkTask&); // Not implemented
+  void operator=(const vtkTask&); // Not implemented
 };
 
 #endif // __vtkTask_h__

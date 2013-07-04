@@ -8,8 +8,9 @@ class vtkCellData;
 class vtkCellArray;
 class vtkDummyMergeFunctor;
 
-struct VTKPARALLELSMP_EXPORT vtkParallelCellMerger : public vtkTask
+class VTKPARALLELSMP_EXPORT vtkParallelCellMerger : public vtkTask
 {
+public:
   vtkDummyMergeFunctor* self;
 
   vtkTypeMacro(vtkParallelCellMerger,vtkTask);
@@ -34,8 +35,8 @@ protected:
   vtkParallelCellMerger() {}
   ~vtkParallelCellMerger() {}
 private:
-  vtkParallelCellMerger(const vtkParallelCellMerger&);
-  void operator =(const vtkParallelCellMerger&);
+  vtkParallelCellMerger(const vtkParallelCellMerger&); // Not implemented
+  void operator =(const vtkParallelCellMerger&); // Not implemented
 };
 
 #endif //_vtkParallelCellMerger_h_

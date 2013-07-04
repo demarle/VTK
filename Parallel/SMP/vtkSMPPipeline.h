@@ -6,9 +6,6 @@
 
 class VTKPARALLELSMP_EXPORT vtkSMPPipeline : public vtkCompositeDataPipeline
 {
-  vtkSMPPipeline(const vtkSMPPipeline&);
-  void operator =(const vtkSMPPipeline&);
-
 protected:
   vtkSMPPipeline();
   ~vtkSMPPipeline();
@@ -35,6 +32,10 @@ public:
   // Key defining the concrete type of output data to make sure
   // the vtkSMPAlgorithm will produce the right type of temp data.
   static vtkInformationStringKey* DATA_OBJECT_CONCRETE_TYPE();
+
+private:
+  vtkSMPPipeline(const vtkSMPPipeline&); // Not implemented
+  void operator =(const vtkSMPPipeline&); // Not implemented
 
 };
 

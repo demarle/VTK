@@ -675,7 +675,8 @@ void vtkSMPTransform::InternalTransformDerivative(const double in[3],
 // derivative, while vectors are simply multiplied by the derivative.
 // Note that the derivative of the inverse transform is simply the
 // inverse of the derivative of the forward transform.
-struct AllModificator : public vtkFunctor {
+class AllModificator : public vtkFunctor {
+public:
   vtkTypeMacro(AllModificator,vtkFunctor);
   static AllModificator* New();
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -754,7 +755,8 @@ void vtkSMPTransform::TransformPointsNormalsVectors(vtkPoints *inPts,
 }
 
 //----------------------------------------------------------------------------
-struct PtsModificator : public vtkFunctor {
+class PtsModificator : public vtkFunctor {
+public:
   vtkTypeMacro(PtsModificator,vtkFunctor);
   static PtsModificator* New();
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -799,7 +801,8 @@ void vtkSMPTransform::TransformPoints(vtkPoints *inPts,
 }
 
 //----------------------------------------------------------------------------
-struct NmsModificator : public vtkFunctor {
+class NmsModificator : public vtkFunctor {
+public:
   vtkTypeMacro(NmsModificator,vtkFunctor);
   static NmsModificator* New();
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -852,7 +855,8 @@ void vtkSMPTransform::TransformNormals(vtkDataArray *inNms,
 }
 
 //----------------------------------------------------------------------------
-struct VcsModificator : public vtkFunctor {
+class VcsModificator : public vtkFunctor {
+public:
   vtkTypeMacro(VcsModificator,vtkFunctor);
   static VcsModificator* New();
   void PrintSelf(ostream &os, vtkIndent indent)

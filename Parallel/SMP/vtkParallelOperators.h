@@ -3,7 +3,7 @@
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObject.h"
-#include <vector>
+#include <vector> //TODO remove
 
 class vtkFunctor;
 class vtkFunctorInitializable;
@@ -11,9 +11,6 @@ class vtkParallelTree;
 
 class VTKPARALLELSMP_EXPORT vtkParallelOperators : public vtkObject
 {
-    vtkParallelOperators(const vtkParallelOperators&);
-    void operator=(const vtkParallelOperators&);
-
   protected:
     vtkParallelOperators();
     ~vtkParallelOperators();
@@ -50,6 +47,10 @@ class VTKPARALLELSMP_EXPORT vtkParallelOperators : public vtkObject
       }
 
     static void Traverse(const vtkParallelTree* Tree, vtkFunctor* func);
+  private:
+    vtkParallelOperators(const vtkParallelOperators&); // Not implemented
+    void operator=(const vtkParallelOperators&); // Not implemented
+
 };
 
 #endif //__vtkParallelOperators_h__

@@ -5,14 +5,12 @@
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObject.h"
-#include <vector>
+#include <vector> // TODO: remove if possible
 
 class vtkCellArray;
 
 class VTKPARALLELSMP_EXPORT vtkOffsetManager : public vtkObject
 {
-  vtkOffsetManager( const vtkOffsetManager& );
-  void operator =( const vtkOffsetManager& );
   std::vector<vtkIdType> cells;
   std::vector<vtkIdType> tuples;
   vtkIdType CellsOffset;
@@ -37,6 +35,10 @@ public:
 
   std::vector<vtkIdType>::iterator GetCellsOffset ( ) { return cells.begin(); }
   std::vector<vtkIdType>::iterator GetTuplesOffset ( ) { return tuples.begin(); }
+
+private:
+  vtkOffsetManager(const vtkOffsetManager&); // Not implemented
+  void operator=(const vtkOffsetManager&); // Not implemented
 };
 
 #endif //_vtkOffsetManager_h_

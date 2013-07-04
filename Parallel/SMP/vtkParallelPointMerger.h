@@ -7,9 +7,9 @@
 class vtkDummyMergeFunctor;
 class vtkSMPMergePoints;
 
-struct VTKPARALLELSMP_EXPORT vtkParallelPointMerger : public vtkTask
+class VTKPARALLELSMP_EXPORT vtkParallelPointMerger : public vtkTask
 {
-
+public:
   vtkTypeMacro(vtkParallelPointMerger,vtkTask);
   static vtkParallelPointMerger* New();
   void PrintSelf(ostream &os, vtkIndent indent);
@@ -26,8 +26,8 @@ protected:
   vtkDummyMergeFunctor* self;
 
 private:
-  vtkParallelPointMerger(const vtkParallelPointMerger&);
-  void operator =(const vtkParallelPointMerger&);
+  vtkParallelPointMerger(const vtkParallelPointMerger&); // Not implemented
+  void operator=(const vtkParallelPointMerger&); // Not implemented
 };
 
 #endif //_vtkParallelPointMerger_h_

@@ -3,9 +3,9 @@
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObject.h"
-#include "vtkInstantiator.h"
-#include <vector>
-#include <typeinfo>
+#include "vtkInstantiator.h" //TODO single include
+#include <vector> //TODO hide
+#include <typeinfo> //TODO hide
 
 class vtkCellArray;
 class vtkCellData;
@@ -60,7 +60,7 @@ class VTKPARALLELSMP_EXPORT vtkThreadLocal : public vtkObject
       os << indent.GetNextIndent() << "id " << i << ": (" << *it << ")" << endl;
       if ( *it ) (*it)->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
       }
-  }
+   }
 
   T* NewLocal ( T* specificImpl )
   {
@@ -171,6 +171,11 @@ class VTKPARALLELSMP_EXPORT vtkThreadLocal : public vtkObject
  protected:
   std::vector<T*> ThreadLocalStorage;
   std::string SpecificName;
+
+ private:
+   vtkThreadLocal(const vtkThreadLocal&); // Not implemented
+   void operator=(const vtkThreadLocal&); // Not implemented
+
 };
 
 #endif //__vtkThreadLocal_h__

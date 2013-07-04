@@ -10,8 +10,9 @@ class vtkPoints;
 class vtkPointData;
 class vtkDummyMergeFunctor;
 
-struct VTKPARALLELSMP_EXPORT vtkLockPointMerger : public vtkFunctor
+class VTKPARALLELSMP_EXPORT vtkLockPointMerger : public vtkFunctor
 {
+public:
   vtkDummyMergeFunctor* Functor;
   vtkIdType NumberOfPointsFirstThread;
 
@@ -25,8 +26,8 @@ protected:
   vtkLockPointMerger() {}
   ~vtkLockPointMerger() {}
 private:
-  vtkLockPointMerger(const vtkLockPointMerger&);
-  void operator =(const vtkLockPointMerger&);
+  vtkLockPointMerger(const vtkLockPointMerger&); // Not implemented
+  void operator=(const vtkLockPointMerger&); // Not implemented
 };
 
 #endif //_vtkLockPointMerger_h_

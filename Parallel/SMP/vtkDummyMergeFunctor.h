@@ -5,7 +5,7 @@
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkFunctor.h"
-#include "vtkThreadLocal.h"
+#include "vtkThreadLocal.h"//TODO: Can this be removed somehow?
 
 class vtkCellData;
 class vtkCellArray;
@@ -17,8 +17,8 @@ class vtkSMPMergePoints;
 
 class VTKPARALLELSMP_EXPORT vtkDummyMergeFunctor : public vtkFunctor
 {
-  vtkDummyMergeFunctor ( const vtkDummyMergeFunctor& );
-  void operator =( const vtkDummyMergeFunctor& );
+  vtkDummyMergeFunctor ( const vtkDummyMergeFunctor& ); //Not implemented
+  void operator =( const vtkDummyMergeFunctor& ); //Not implemented
 
 protected:
   vtkIdType NumberOfCells;

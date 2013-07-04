@@ -15,9 +15,6 @@ class vtkIdList;
 
 class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
 {
-    vtkMergeDataSets(const vtkMergeDataSets&);
-    void operator=(const vtkMergeDataSets&);
-
     void Parallel(
         const vtkTask* function,
         vtkThreadLocal<vtkSMPMergePoints>::iterator data);
@@ -72,6 +69,10 @@ class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
 
     int MasterThreadPopulatedOutput;
     vtkIdType** TreatedTable;
+
+  private:
+    vtkMergeDataSets(const vtkMergeDataSets&); // Not implemented
+    void operator=(const vtkMergeDataSets&); // Not implemented
 };
 
 #endif

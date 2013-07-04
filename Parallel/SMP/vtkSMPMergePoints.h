@@ -37,6 +37,10 @@ public:
   void PrintSizeOfThis();
 
   void FreeSearchStructure();
+
+private:
+  vtkSMPMergePoints(const vtkSMPMergePoints&); // Not implemented
+  void operator=(const vtkSMPMergePoints&); // Not implemented
 };
 
 #endif // VTKSMPMERGEPOINTS_H

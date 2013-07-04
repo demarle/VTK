@@ -67,8 +67,9 @@ vtkSMPWarpVector::~vtkSMPWarpVector()
 
 //----------------------------------------------------------------------------
 template <class T1, class T2>
-struct vtkSMPWarpVectorOp : public vtkFunctor
+class vtkSMPWarpVectorOp : public vtkFunctor
 {
+public:
   static vtkSMPWarpVectorOp<T1,T2>* New() { return new vtkSMPWarpVectorOp<T1,T2>(); }
 
   vtkArrayIteratorTemplate<T1> *inIter;
