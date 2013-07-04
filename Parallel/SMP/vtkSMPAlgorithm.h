@@ -12,15 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPAlgorithm - Generic filter that has one input..
+// .NAME vtkSMPAlgorithm - !!!!
 // .SECTION Description
-// vtkSMPAlgorithm is a filter superclass that hides much of the
-// pipeline  complexity. It handles breaking the pipeline execution
-// into smaller extents so that the vtkImageData limits are observed. It
-// also provides support for multithreading. If you don't need any of this
-// functionality, consider using vtkSimpleImageToImageAlgorithm instead.
-// .SECTION See also
-// vtkSimpleImageToImageAlgorithm
+// !!!!
 
 #ifndef __vtkSMPAlgorithm_h
 #define __vtkSMPAlgorithm_h

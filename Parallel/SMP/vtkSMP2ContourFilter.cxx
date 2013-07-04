@@ -12,6 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+
 #include "vtkSMP2ContourFilter.h"
 
 #include "vtkCell.h"

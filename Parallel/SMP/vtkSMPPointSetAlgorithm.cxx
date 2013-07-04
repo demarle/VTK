@@ -12,6 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+
 #include "vtkSMPPointSetAlgorithm.h"
 
 #include "vtkCommand.h"

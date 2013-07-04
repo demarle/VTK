@@ -12,18 +12,11 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPPolyDataAlgorithm - Superclass for algorithms that produce only polydata as output
+// .NAME vtkSMPPolyDataAlgorithm - !!!!
 // .SECTION Description
-
-// vtkSMPPolyDataAlgorithm is a convenience class to make writing algorithms
-// easier. It is also designed to help transition old algorithms to the new
-// pipeline architecture. There are some assumptions and defaults made by this
-// class you should be aware of. This class defaults such that your filter
-// will have one input port and one output port. If that is not the case
-// simply change it with SetNumberOfInputPorts etc. See this class
-// constructor for the default. This class also provides a FillInputPortInfo
-// method that by default says that all inputs will be PolyData. If that
-// isn't the case then please override this method in your subclass.
+// vtkSMPPolyDataAlgorithm !!!!
+// .SECTION See Also
+// vtkPolyDataAlgorithm
 
 #ifndef __vtkSMPPolyDataAlgorithm_h
 #define __vtkSMPPolyDataAlgorithm_h

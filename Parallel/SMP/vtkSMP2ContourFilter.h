@@ -12,34 +12,12 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMP2ContourFilter - generate isosurfaces/isolines from scalar values
+// .NAME vtkSMP2ContourFilter - !!!!
 // .SECTION Description
-// vtkSMP2ContourFilter is a filter that takes as input any dataset and
-// generates on output isosurfaces and/or isolines. The exact form
-// of the output depends upon the dimensionality of the input data.
-// Data consisting of 3D cells will generate isosurfaces, data
-// consisting of 2D cells will generate isolines, and data with 1D
-// or 0D cells will generate isopoints. Combinations of output type
-// are possible if the input dimension is mixed.
-//
-// To use this filter you must specify one or more contour values.
-// You can either use the method SetValue() to specify each contour
-// value, or use GenerateValues() to generate a series of evenly
-// spaced contours. It is also possible to accelerate the operation of
-// this filter (at the cost of extra memory) by using a
-// vtkScalarTree. A scalar tree is used to quickly locate cells that
-// contain a contour surface. This is especially effective if multiple
-// contours are being extracted. If you want to use a scalar tree,
-// invoke the method UseScalarTreeOn().
-
-// .SECTION Caveats
-// For unstructured data or structured grids, normals and gradients
-// are not computed. Use vtkPolyDataNormals to compute the surface
-// normals.
+// vtkSMP2ContourFilter !!!!
 
 // .SECTION See Also
-// vtkMarchingContourFilter vtkMarchingCubes vtkSliceCubes
-// vtkMarchingSquares vtkImageMarchingCubes
+// vtkContourFilter
 
 #ifndef __vtkSMP2ContourFilter_h
 #define __vtkSMP2ContourFilter_h
