@@ -7,6 +7,7 @@
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRTAnalyticSource.h"
+#include "vtkSmartPointer.h"
 #include "vtkSMPContourFilter.h"
 #include "vtkSMPMergePoints.h"
 #include "vtkSMPMinMaxTree.h"
@@ -25,8 +26,9 @@
 
 void test(vtkContourFilter *isosurface)
 {
-  vtkTimerLog *timer = vtkTimerLog::New();
-  isosurface->SetInputArrayToProcess(0,0,0, vtkDataObject::FIELD_ASSOCIATION_POINTS, "Elevation");
+  vtkSmartPointer<vtkTimerLog> timer = vtkSmartPointer<vtkTimerLog>::New();
+  isosurface->SetInputArrayToProcess(0,0,0,
+      vtkDataObject::FIELD_ASSOCIATION_POINTS, "Elevation");
   isosurface->GenerateValues( 150, 0.0, 1.0 );
   isosurface->UseScalarTreeOff();
   cerr << "update " << isosurface->GetClassName() << endl;
@@ -41,12 +43,11 @@ void test(vtkContourFilter *isosurface)
     t += t1-t0;
     }
   cerr << (t)/REPS << endl;
-  timer->Delete();
 }
 
 int TestSMPPD( int argc, char * argv [] )
 {
-  vtkTimerLog *timer = vtkTimerLog::New();
+  vtkSmartPointer<vtkTimerLog> timer = vtkSmartPointer<vtkTimerLog>::New();
   double t0, t1;
 
   int threads = 0;
@@ -56,7 +57,8 @@ int TestSMPPD( int argc, char * argv [] )
     }
   bool sequential = (threads==0);
 
-  vtkRTAnalyticSource* wavelet = vtkRTAnalyticSource::New();
+  vtkSmartPointer<vtkRTAnalyticSource> wavelet =
+      vtkSmartPointer<vtkRTAnalyticSource>::New();
   wavelet->SetWholeExtent(-SMP_R,SMP_R,-SMP_R,SMP_R,-SMP_R,SMP_R);
   wavelet->SetCenter(0,0,0);
   wavelet->SetMaximum(255);
@@ -69,45 +71,45 @@ int TestSMPPD( int argc, char * argv [] )
   wavelet->SetStandardDeviation(0.5);
   wavelet->SetSubsampleRate(1);
 
-  vtkContourFilter *cf = vtkContourFilter::New();
+  vtkSmartPointer<vtkContourFilter> cf =
+    vtkSmartPointer<vtkContourFilter>::New();
   cf->SetInputConnection(wavelet->GetOutputPort());
   cf->SetNumberOfContours(1);
   cf->SetValue(0, 150);
-  wavelet->Delete();
 
   double b[6];
   cf->Update();
   cf->GetOutput()->GetBounds(b);
 
-  vtkElevationFilter *ef = vtkElevationFilter::New();
+  vtkSmartPointer<vtkElevationFilter> ef =
+    vtkSmartPointer<vtkElevationFilter>::New();
   ef->SetInputConnection(cf->GetOutputPort());
   ef->SetLowPoint(b[0], b[2], b[4]);
   ef->SetHighPoint(b[1], b[3], b[5]);
 
-  vtkAssignAttribute* aa = vtkAssignAttribute::New();
+  vtkSmartPointer<vtkAssignAttribute> aa =
+    vtkSmartPointer<vtkAssignAttribute>::New();
   aa->SetInputConnection(ef->GetOutputPort());
   aa->Assign("Elevation", vtkDataSetAttributes::SCALARS, vtkAssignAttribute::POINT_DATA);
-  ef->Delete();
 
-  vtkTransformFilter* transform = vtkTransformFilter::New();
+  vtkSmartPointer<vtkTransformFilter> transform =
+    vtkSmartPointer<vtkTransformFilter>::New();
   transform->SetInputConnection( aa->GetOutputPort() );
-  aa->Delete();
 
   if ( sequential )
     {
-    vtkTransform* t = vtkTransform::New();
+    vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New();
     t->Scale( 1, 2, 3 );
     transform->SetTransform( t );
     cerr << "update " << t->GetClassName() << endl;
-    t->Delete();
     }
   else
     {
-    vtkSMPTransform* t = vtkSMPTransform::New();
+    vtkSmartPointer<vtkSMPTransform> t =
+      vtkSmartPointer<vtkSMPTransform>::New();
     t->Scale( 1, 2, 3 );
     transform->SetTransform( t );
     cerr << "update " << t->GetClassName() << endl;
-    t->Delete();
     }
 
   t0 = timer->GetUniversalTime();
@@ -121,70 +123,62 @@ int TestSMPPD( int argc, char * argv [] )
 
   /* === Testing contour filter === */
 
-  vtkContourFilter* isosurface1 = vtkContourFilter::New();
+  vtkSmartPointer<vtkContourFilter> isosurface1 =
+      vtkSmartPointer<vtkContourFilter>::New();
   isosurface1->SetInputConnection( transform->GetOutputPort() );
 
-  vtkContourFilter* isosurface2 = vtkSMPContourFilter::New();
-  vtkSMPMergePoints* locator = vtkSMPMergePoints::New();
+  vtkSmartPointer<vtkContourFilter> isosurface2 =
+      vtkSmartPointer<vtkSMPContourFilter>::New();
+  vtkSmartPointer<vtkSMPMergePoints> locator =
+      vtkSmartPointer<vtkSMPMergePoints>::New();
   isosurface2->SetLocator( locator );
-  locator->Delete();
-  vtkSMPMinMaxTree* tree = vtkSMPMinMaxTree::New();
+  vtkSmartPointer<vtkSMPMinMaxTree> tree =
+      vtkSmartPointer<vtkSMPMinMaxTree>::New();
   isosurface2->SetScalarTree(tree);
-  tree->Delete();
   isosurface2->SetInputConnection( transform->GetOutputPort() );
 
   test(isosurface1);
   test(isosurface2);
 
 /*
-  vtkDataSetMapper* map1 = vtkDataSetMapper::New();
+  vtkSmartPointer<vtkDataSetMapper> map1 =
+     vtkSmartPointer<vtkDataSetMapper::New();
   map1->SetInputConnection( cf->GetOutputPort() );
-  cf->Delete();
-  vtkActor* actor1 = vtkActor::New();
+  vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
   actor1->SetMapper( map1 );
-  map1->Delete();
 
-  vtkDataSetMapper* map2 = vtkDataSetMapper::New();
+  vtkSmartPointer<vtkDataSetMapper> map2 =
+     vtkSmartPointer<vtkDataSetMapper>::New();
   map2->SetInputConnection( transform->GetOutputPort() );
-  transform->Delete();
-  vtkActor* actor2 = vtkActor::New();
+  vtkSmartPointer<vtkActor> actor2 = vtkSmartPointer<vtkActor>::New();
   actor2->SetMapper( map2 );
-  map2->Delete();
   actor2->AddPosition( (b[1]-b[0])*1.1, 0., 0. );
 
-  vtkDataSetMapper* map3 = vtkDataSetMapper::New();
+  vtkSmartPointer<vtkDataSetMapper> map3 =
+     vtkSmartPointer<vtkDataSetMapper>::New();
   map3->SetInputConnection( isosurface->GetOutputPort() );
-  vtkActor* actor3 = vtkActor::New();
+  vtkSmartPointer<vtkActor> actor3 = vtkSmartPointer<vtkActor>::New();
   actor3->SetMapper( map3 );
-  map3->Delete();
   actor3->AddPosition( (b[1]-b[0])*2.1, 0., 0. );
 
-  vtkRenderer* viewport = vtkRenderer::New();
+  vtkSmartPointer<vtkRenderer> viewport = vtkSmartPointer<vtkRenderer>::New();
   viewport->SetBackground( .5, .5, .5 );
   viewport->AddActor( actor1 );
   viewport->AddActor( actor2 );
   viewport->AddActor( actor3 );
-  actor1->Delete();
-  actor2->Delete();
-  actor3->Delete();
 
-  vtkRenderWindow* window = vtkRenderWindow::New();
+  vtkSmartPointer<vtkRenderWindow> window =
+     vtkSmartPointer<vtkRenderWindow>::New();
   window->AddRenderer( viewport );
-  viewport->Delete();
 
-  vtkRenderWindowInteractor* iren = vtkRenderWindowInteractor::New();
+  vtkSmartPointer<vtkRenderWindowInteractor> iren =
+     vtkSmartPointer<vtkRenderWindowInteractor>::New();
   iren->SetRenderWindow( window );
-  window->Delete();
 
   iren->Initialize();
 
   iren->Start();
-
-  iren->Delete();
 */
-  isosurface1->Delete();
-  isosurface2->Delete();
 
-  timer->Delete();
   return 0;
 }
