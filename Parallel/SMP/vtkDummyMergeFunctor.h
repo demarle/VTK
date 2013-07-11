@@ -14,12 +14,10 @@
 =========================================================================*/
 // .NAME vtkDummyMergeFunctor - !!!!
 // .SECTION Description
-// !!!!
+// Used to initialize locator especially in the case of skip_threads
 
 #ifndef _vtkDummyMergeFunctor_h_
 #define _vtkDummyMergeFunctor_h_
-
-//used to initialize locator especially in the case of skip_threads
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkFunctor.h"
