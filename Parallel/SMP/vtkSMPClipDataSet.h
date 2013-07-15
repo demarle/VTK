@@ -12,9 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPClipDataSet - !!!!
+// .NAME vtkSMPContourFilter - multithreaded vtkContourFilter
 // .SECTION Description
-// !!!!
+// Just like parent, but uses the SMP framework to do work on many threads.
 
 #ifndef __vtkSMPClipDataSet_h
 #define __vtkSMPClipDataSet_h
@@ -27,13 +27,14 @@ class VTKPARALLELSMP_EXPORT vtkSMPClipDataSet : public vtkClipDataSet
 public:
   vtkTypeMacro(vtkSMPClipDataSet,vtkClipDataSet);
   void PrintSelf(ostream& os, vtkIndent indent);
-
   static vtkSMPClipDataSet *New();
 
 protected:
   vtkSMPClipDataSet();
   ~vtkSMPClipDataSet();
 
+  // Description:
+  // Overridden to do the work in many threads.
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
                           vtkInformationVector* outputVector);

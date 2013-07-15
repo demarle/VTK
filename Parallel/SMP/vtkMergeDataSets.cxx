@@ -13,49 +13,59 @@
 
 =========================================================================*/
 
-#include "vtkMergeDataSets.h"
-#include "vtkParallelOperators.h"
-#include "vtkPoints.h"
-#include "vtkPointData.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
-#include "vtkThreadLocal.h"
-#include "vtkSMPMergePoints.h"
-#include "vtkObjectFactory.h"
-
-#include "vtkParallelPointMerger.h"
-#include "vtkParallelCellMerger.h"
 #include "vtkDummyMergeFunctor.h"
-#include "vtkOffsetManager.h"
 #include "vtkLockPointMerger.h"
-
-vtkStandardNewMacro(vtkMergeDataSets);
+#include "vtkMergeDataSets.h"
+#include "vtkObjectFactory.h"
+#include "vtkOffsetManager.h"
+#include "vtkParallelCellMerger.h"
+#include "vtkParallelOperators.h"
+#include "vtkParallelPointMerger.h"
+#include "vtkPoints.h"
+#include "vtkPointData.h"
+#include "vtkSMPMergePoints.h"
+#include "vtkThreadLocal.h"
 
 typedef vtkIdType *vtkIdTypePtr;
 
+//------------------------------------------------------------------------------
+vtkStandardNewMacro(vtkMergeDataSets);
+
+//------------------------------------------------------------------------------
 vtkMergeDataSets::vtkMergeDataSets()
-  {
+{
   this->TreatedTable = 0;
   this->MasterThreadPopulatedOutput = 0;
-  }
+}
 
+//------------------------------------------------------------------------------
 vtkMergeDataSets::~vtkMergeDataSets()
-  {
+{
   if (this->TreatedTable)
+    {
     delete this->TreatedTable;
-  }
+    }
+}
 
+//------------------------------------------------------------------------------
 void vtkMergeDataSets::PrintSelf(ostream& os, vtkIndent indent)
-  {
+{
   this->Superclass::PrintSelf(os,indent);
   os << indent << "Has master thread populated the output: ";
   if (this->MasterThreadPopulatedOutput)
+    {
     os << "yes";
+    }
   else
+    {
     os << "no";
+    }
   os << endl;
-  }
+}
 
+//------------------------------------------------------------------------------
 void vtkMergeDataSets::MergePolyData(
     vtkPoints* outPoints,
     vtkThreadLocal<vtkPoints> *inPoints,
@@ -72,7 +82,7 @@ void vtkMergeDataSets::MergePolyData(
     vtkThreadLocal<vtkCellArray> *inStrips,
     vtkCellData *outCellsData,
     vtkThreadLocal<vtkCellData> *inCellsData)
-  {
+{
   vtkDummyMergeFunctor* Functor = vtkDummyMergeFunctor::New();
   vtkSMPMergePoints* outputLocator = vtkSMPMergePoints::New();
   vtkIdType NumberOfInPointsThread0 = (*(inPoints->Begin( 0 )))->GetNumberOfPoints();
@@ -80,7 +90,10 @@ void vtkMergeDataSets::MergePolyData(
   Functor->outputLocator = outputLocator;
 
   vtkIdType PointsAlreadyPresent = outPoints->GetNumberOfPoints();
-  if ( PointsAlreadyPresent ) vtkParallelOperators::ForEach( 0, PointsAlreadyPresent, Functor );
+  if ( PointsAlreadyPresent )
+    {
+    vtkParallelOperators::ForEach( 0, PointsAlreadyPresent, Functor );
+    }
 
   Functor->InitializeNeeds( 0, inPoints, outputLocator,
                             inVerts, outVerts,
@@ -121,15 +134,28 @@ void vtkMergeDataSets::MergePolyData(
   Functor->outputLocator->FixSizeOfPointArray();
   outPtsData->SetNumberOfTuples( outPoints->GetNumberOfPoints() );
   outCellsData->SetNumberOfTuples( Functor->GetNumberOfCells() );
-  if (outVerts) outVerts->SetNumberOfCells( Functor->vertOffset->GetNumberOfCells() );
-  if (outLines) outLines->SetNumberOfCells( Functor->lineOffset->GetNumberOfCells() );
-  if (outPolys) outPolys->SetNumberOfCells( Functor->polyOffset->GetNumberOfCells() );
-  if (outStrips) outStrips->SetNumberOfCells( Functor->stripOffset->GetNumberOfCells() );
+  if (outVerts)
+    {
+    outVerts->SetNumberOfCells( Functor->vertOffset->GetNumberOfCells() );
+    }
+  if (outLines)
+    {
+    outLines->SetNumberOfCells( Functor->lineOffset->GetNumberOfCells() );
+    }
+  if (outPolys)
+    {
+    outPolys->SetNumberOfCells( Functor->polyOffset->GetNumberOfCells() );
+    }
+  if (outStrips)
+    {
+    outStrips->SetNumberOfCells( Functor->stripOffset->GetNumberOfCells() );
+    }
 
   outputLocator->Delete();
   Functor->Delete();
-  }
+}
 
+//------------------------------------------------------------------------------
 void vtkMergeDataSets::MergePolyData(
     vtkSMPMergePoints *outPoints,
     vtkThreadLocal<vtkSMPMergePoints> *inPoints,
@@ -145,7 +171,7 @@ void vtkMergeDataSets::MergePolyData(
     vtkThreadLocal<vtkCellArray> *inStrips,
     vtkCellData *outCellsData,
     vtkThreadLocal<vtkCellData> *inCellsData)
-  {
+{
   TreatedTable = new vtkIdTypePtr[outPoints->GetNumberOfBuckets()];
   memset( TreatedTable, 0, outPoints->GetNumberOfBuckets() * sizeof(vtkIdTypePtr) );
 
@@ -187,12 +213,24 @@ void vtkMergeDataSets::MergePolyData(
   outPoints->FixSizeOfPointArray();
   outPtsData->SetNumberOfTuples( outPoints->GetPoints()->GetNumberOfPoints() );
   outCellsData->SetNumberOfTuples( DummyFunctor->GetNumberOfCells() );
-  if (outVerts) outVerts->SetNumberOfCells( DummyFunctor->vertOffset->GetNumberOfCells() );
-  if (outLines) outLines->SetNumberOfCells( DummyFunctor->lineOffset->GetNumberOfCells() );
-  if (outPolys) outPolys->SetNumberOfCells( DummyFunctor->polyOffset->GetNumberOfCells() );
-  if (outStrips) outStrips->SetNumberOfCells( DummyFunctor->stripOffset->GetNumberOfCells() );
+  if (outVerts)
+    {
+    outVerts->SetNumberOfCells( DummyFunctor->vertOffset->GetNumberOfCells() );
+    }
+  if (outLines)
+    {
+    outLines->SetNumberOfCells( DummyFunctor->lineOffset->GetNumberOfCells() );
+    }
+  if (outPolys)
+    {
+    outPolys->SetNumberOfCells( DummyFunctor->polyOffset->GetNumberOfCells() );
+    }
+  if (outStrips)
+    {
+    outStrips->SetNumberOfCells( DummyFunctor->stripOffset->GetNumberOfCells() );
+    }
 
   delete [] TreatedTable;
   TreatedTable = 0;
   DummyFunctor->Delete();
-  }
+}

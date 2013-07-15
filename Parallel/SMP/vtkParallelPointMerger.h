@@ -12,9 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkParallelPointMerger - !!!!
+// .NAME vtkParallelPointMerger - ?
 // .SECTION Description
-// !!!!
+// ?
 
 #ifndef _vtkParallelPointMerger_h_
 #define _vtkParallelPointMerger_h_
@@ -31,15 +31,23 @@ public:
   vtkTypeMacro(vtkParallelPointMerger,vtkTask);
   static vtkParallelPointMerger* New();
   void PrintSelf(ostream &os, vtkIndent indent);
+
+  // Description:
+  // ?
   void Execute( vtkSMPMergePoints* locator ) const;
 
+  // Description:
+  // ?
   void SetUsefullData(vtkDummyMergeFunctor* f, vtkIdType** t);
 
 protected:
   vtkParallelPointMerger();
   ~vtkParallelPointMerger();
 
+  // Description:
+  // ?
   int MustTreatBucket( vtkIdType idx ) const;
+
   vtkIdType** TreatedTable;
   vtkDummyMergeFunctor* self;
 

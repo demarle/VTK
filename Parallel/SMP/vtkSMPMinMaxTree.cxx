@@ -26,8 +26,10 @@
 #include "vtkDoubleArray.h"
 #include "vtkGenericCell.h"
 
+//==============================================================================
 class vtkScalarNode {};
 
+//==============================================================================
 template <class TScalar>
 class vtkScalarRange : public vtkScalarNode
 {
@@ -36,35 +38,16 @@ public:
   TScalar max;
 };
 
+//==============================================================================
 class InitializeFunctor : public vtkFunctor
 {
+  //Description:
+  //A functor that each processor gets when vtkSMPMinMaxTree creates the search
+  //tree
+public:
   InitializeFunctor( const InitializeFunctor& );
   void operator =( const InitializeFunctor& );
 
-protected:
-  InitializeFunctor()
-    {
-    this->TLS_Cell = vtkThreadLocal<vtkGenericCell>::New();
-    this->TLS_CellScalars = vtkThreadLocal<vtkDoubleArray>::New();
-    this->Locks = 0;
-    }
-  ~InitializeFunctor()
-    {
-    this->TLS_Cell->Delete();
-    this->TLS_CellScalars->Delete();
-    if ( this->Locks )
-      delete [] this->Locks;
-    }
-
-  vtkScalarRange<double> *Tree;
-  vtkIdType Size, BF, Offset, Max;
-  vtkDataSet* DS;
-  vtkDataArray* Scalars;
-  vtkThreadLocal<vtkGenericCell>* TLS_Cell;
-  vtkThreadLocal<vtkDoubleArray>* TLS_CellScalars;
-  vtkIdType* Locks;
-
-public:
   vtkTypeMacro(InitializeFunctor,vtkFunctor);
   static InitializeFunctor* New();
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -72,6 +55,8 @@ public:
     this->Superclass::PrintSelf(os,indent);
     }
 
+  //Description:
+  //?
   void InitializeData( vtkSMPMinMaxTree* t )
     {
     Tree = static_cast<vtkScalarRange<double>*>(t->Tree);
@@ -85,6 +70,8 @@ public:
     Max = t->TreeSize;
     }
 
+  //Description:
+  //?
   void operator ()( vtkIdType index ) const
     {
     double my_min = VTK_DOUBLE_MAX;
@@ -96,10 +83,14 @@ public:
       {
       vtkGenericCell* cell = this->TLS_Cell->GetLocal( );
       if ( !cell )
+        {
         cell = this->TLS_Cell->NewLocal( );
+        }
       vtkDoubleArray* cellScalars = this->TLS_CellScalars->GetLocal( );
       if ( !cellScalars )
+        {
         cellScalars = this->TLS_CellScalars->NewLocal( );
+        }
       double* s;
       for ( vtkIdType i = 0; i < this->BF && cellId < this->Size; ++i, ++cellId )
         {
@@ -147,25 +138,53 @@ public:
       }
 
     }
+
+protected:
+  InitializeFunctor()
+    {
+    this->TLS_Cell = vtkThreadLocal<vtkGenericCell>::New();
+    this->TLS_CellScalars = vtkThreadLocal<vtkDoubleArray>::New();
+    this->Locks = 0;
+    }
+  ~InitializeFunctor()
+    {
+    this->TLS_Cell->Delete();
+    this->TLS_CellScalars->Delete();
+    if ( this->Locks )
+      delete [] this->Locks;
+    }
+
+  vtkScalarRange<double> *Tree;
+  vtkIdType Size, BF, Offset, Max;
+  vtkDataSet* DS;
+  vtkDataArray* Scalars;
+  vtkThreadLocal<vtkGenericCell>* TLS_Cell;
+  vtkThreadLocal<vtkDoubleArray>* TLS_CellScalars;
+  vtkIdType* Locks;
 };
 
 vtkStandardNewMacro(InitializeFunctor);
 
+//==============================================================================
 vtkStandardNewMacro(vtkSMPMinMaxTree);
 
+//------------------------------------------------------------------------------
 vtkSMPMinMaxTree::vtkSMPMinMaxTree()
   {
   }
 
+//------------------------------------------------------------------------------
 vtkSMPMinMaxTree::~vtkSMPMinMaxTree()
   {
   }
 
+//------------------------------------------------------------------------------
 void vtkSMPMinMaxTree::PrintSelf(ostream &os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os, indent);
   }
 
+//------------------------------------------------------------------------------
 void vtkSMPMinMaxTree::BuildTree()
   {
   vtkIdType numCells, cellId, i, j, numScalars;
@@ -292,6 +311,7 @@ void vtkSMPMinMaxTree::BuildTree()
   cellScalars->Delete();
   }
 
+//------------------------------------------------------------------------------
 void vtkSMPMinMaxTree::InitTraversal(double scalarValue)
   {
   this->BuildTree();
@@ -302,6 +322,7 @@ void vtkSMPMinMaxTree::InitTraversal(double scalarValue)
   this->TreeIndex = this->TreeSize;
   }
 
+//------------------------------------------------------------------------------
 int vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkFunctor* function ) const
   {
   if ( id >= this->TreeSize )
@@ -331,6 +352,7 @@ int vtkSMPMinMaxTree::TraverseNode( vtkIdType id, int lvl, vtkFunctor* function 
     }
   }
 
+//------------------------------------------------------------------------------
 void vtkSMPMinMaxTree::GetTreeSize( int& max_level, vtkIdType& branching_factor ) const
   {
   max_level = this->Level;

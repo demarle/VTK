@@ -12,11 +12,14 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPTransform - !!!!
+// .NAME vtkSMPTransform - multithreaded vtkTransform
 // .SECTION Description
-// !!!!
+// Just like parent, but uses the SMP framework to do work on many threads.
+
 // .SECTION See Also
 // vtkTransform
+
+// TODO: rewrite to get rid of all the code duplication
 
 #ifndef __vtkSMPTransform_h
 #define __vtkSMPTransform_h

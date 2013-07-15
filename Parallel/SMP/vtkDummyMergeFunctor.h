@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkDummyMergeFunctor - !!!!
+// .NAME vtkDummyMergeFunctor - ?
 // .SECTION Description
 // Used to initialize locator especially in the case of skip_threads
 
@@ -33,21 +33,45 @@ class vtkSMPMergePoints;
 
 class VTKPARALLELSMP_EXPORT vtkDummyMergeFunctor : public vtkFunctor
 {
-  vtkDummyMergeFunctor ( const vtkDummyMergeFunctor& ); //Not implemented
-  void operator =( const vtkDummyMergeFunctor& ); //Not implemented
-
-protected:
-  vtkIdType NumberOfCells;
-  vtkIdType NumberOfPoints;
-
-  vtkDummyMergeFunctor ();
-  ~vtkDummyMergeFunctor ();
-
 public:
   vtkTypeMacro(vtkDummyMergeFunctor,vtkFunctor);
   static vtkDummyMergeFunctor* New();
   void PrintSelf(ostream &os, vtkIndent indent);
 
+  //Description:
+  //?
+  void operator ()( vtkIdType pointId ) const;
+
+  //TODO: Convention is that Get must have matching Set, so should
+  //probably rename to Query
+  //Description:
+  //?
+  vtkIdType GetNumberOfCells() const { return NumberOfCells; }
+  vtkIdType GetNumberOfPoints() const { return NumberOfPoints; }
+
+  //Description:
+  //?
+  void InitializeNeeds( vtkThreadLocal<vtkSMPMergePoints>* _locator,
+                        vtkThreadLocal<vtkPoints>* _points,
+                        vtkSMPMergePoints* _outlocator,
+                        vtkThreadLocal<vtkCellArray>* _inverts,
+                        vtkCellArray* _outverts,
+                        vtkThreadLocal<vtkCellArray>* _inlines,
+                        vtkCellArray* _outlines,
+                        vtkThreadLocal<vtkCellArray>* _inpolys,
+                        vtkCellArray* _outpolys,
+                        vtkThreadLocal<vtkCellArray>* _instrips,
+                        vtkCellArray* _outstrips,
+                        vtkThreadLocal<vtkPointData>* _inpd,
+                        vtkPointData* _outpd,
+                        vtkThreadLocal<vtkCellData>* _incd,
+                        vtkCellData* _outcd );
+
+  //TODO: make private
+  vtkDummyMergeFunctor ( const vtkDummyMergeFunctor& ); //Not implemented
+  void operator =( const vtkDummyMergeFunctor& ); //Not implemented
+
+  //TODO: Can be made private?
   vtkThreadLocal<vtkSMPMergePoints>* Locators;
   vtkThreadLocal<vtkPoints>* InPoints;
 
@@ -74,26 +98,12 @@ public:
   vtkOffsetManager* polyOffset;
   vtkOffsetManager* stripOffset;
 
-  void operator ()( vtkIdType pointId ) const;
+protected:
+  vtkDummyMergeFunctor ();
+  ~vtkDummyMergeFunctor ();
 
-  vtkIdType GetNumberOfCells() const { return NumberOfCells; }
-  vtkIdType GetNumberOfPoints() const { return NumberOfPoints; }
-
-  void InitializeNeeds( vtkThreadLocal<vtkSMPMergePoints>* _locator,
-                        vtkThreadLocal<vtkPoints>* _points,
-                        vtkSMPMergePoints* _outlocator,
-                        vtkThreadLocal<vtkCellArray>* _inverts,
-                        vtkCellArray* _outverts,
-                        vtkThreadLocal<vtkCellArray>* _inlines,
-                        vtkCellArray* _outlines,
-                        vtkThreadLocal<vtkCellArray>* _inpolys,
-                        vtkCellArray* _outpolys,
-                        vtkThreadLocal<vtkCellArray>* _instrips,
-                        vtkCellArray* _outstrips,
-                        vtkThreadLocal<vtkPointData>* _inpd,
-                        vtkPointData* _outpd,
-                        vtkThreadLocal<vtkCellData>* _incd,
-                        vtkCellData* _outcd );
+  vtkIdType NumberOfCells;
+  vtkIdType NumberOfPoints;
 };
 
 #endif //_vtkDummyMergeFunctor_h_

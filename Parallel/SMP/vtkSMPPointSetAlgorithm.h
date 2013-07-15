@@ -12,9 +12,12 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPPointSetAlgorithm - !!!!!
+// .NAME vtkSMPPointSetAlgorithm - base class to derive from to create
+// multi-threaded vtkPointSet producing algorithms
 // .SECTION Description
-// !!!!
+// vtkSMPPointSetAlgorithm is a convenience class for algorithms writers who
+// want to produce vtkStructuredGrid, vtkPolyData or vtkUnstructuredGrid
+// data sets and use multi-threaded techniques in the data processing pass.
 // .SECTION See Also
 // vtkPointSetAlgorithm
 

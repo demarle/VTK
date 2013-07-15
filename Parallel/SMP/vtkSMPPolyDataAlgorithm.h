@@ -12,9 +12,13 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPPolyDataAlgorithm - !!!!
+// .NAME vtkSMPPolyDataAlgorithm - base class to derive from to create
+// multi-threaded vtkPolyData producing algorithms.
+// producing filters
 // .SECTION Description
-// vtkSMPPolyDataAlgorithm !!!!
+// vtkSMPPolyDataAlgorithm is a convenience class for algorithms writers who
+// want to produce vtkPolyData and use multi-threaded techniques in the data
+// processing pass.
 // .SECTION See Also
 // vtkPolyDataAlgorithm
 
@@ -47,7 +51,7 @@ public:
                              vtkInformationVector**,
                              vtkInformationVector*);
 
-  // this method is not recommended for use, but lots of old style filters
+  // This method is not recommended for use, but lots of old style filters
   // use it
   vtkDataObject* GetInput();
   vtkDataObject *GetInput(int port);
@@ -71,14 +75,14 @@ protected:
   vtkSMPPolyDataAlgorithm();
   ~vtkSMPPolyDataAlgorithm();
 
-  // convenience method
+  // Description:
+  // Overridden to ...?
   virtual int RequestInformation(vtkInformation* request,
                                  vtkInformationVector** inputVector,
                                  vtkInformationVector* outputVector);
 
   // Description:
-  // This is called by the superclass.
-  // This is the method you should override.
+  // Overridden to ...?
   virtual int RequestUpdateExtent(vtkInformation*,
                                   vtkInformationVector**,
                                   vtkInformationVector*);

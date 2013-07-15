@@ -12,16 +12,17 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkParallelOperators - !!!!
+// .NAME vtkParallelOperators - Core parallel operations used to
+// process data in multi-threaded algorithms
 // .SECTION Description
-// !!!!
+// ?
 
 #ifndef __vtkParallelOperators_h__
 #define __vtkParallelOperators_h__
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObject.h"
-#include <vector> //TODO remove
+#include <vector> //TODO remove stl from API if in Core
 
 class vtkFunctor;
 class vtkFunctorInitializable;
@@ -38,17 +39,21 @@ class VTKPARALLELSMP_EXPORT vtkParallelOperators : public vtkObject
     static vtkParallelOperators* New();
     void PrintSelf(ostream& os, vtkIndent indent);
 
+    // Description:
     // ForEach template : parallel loop over an iterator
     static void ForEach(
       vtkIdType first, vtkIdType last,
       const vtkFunctor* op, int grain = 0
     );
 
+    // Description:
+    // ?
     static void ForEach(
       vtkIdType first, vtkIdType last,
       const vtkFunctorInitializable* f, int grain = 0
     );
 
+    // Description:
     // Same as ForEach but with a guaranteed static partitioning
     static void StaticForEach(
         vtkIdType first, vtkIdType last,
@@ -57,6 +62,8 @@ class VTKPARALLELSMP_EXPORT vtkParallelOperators : public vtkObject
       ForEach(first,last,op,grain);
       }
 
+    // Description:
+    // ?
     static void StaticForEach(
         vtkIdType first, vtkIdType last,
         const vtkFunctorInitializable* op, int grain = 0)
@@ -64,11 +71,13 @@ class VTKPARALLELSMP_EXPORT vtkParallelOperators : public vtkObject
       ForEach(first,last,op,grain);
       }
 
+    // Description:
+    // ?
     static void Traverse(const vtkParallelTree* Tree, vtkFunctor* func);
+
   private:
     vtkParallelOperators(const vtkParallelOperators&); // Not implemented
     void operator=(const vtkParallelOperators&); // Not implemented
-
 };
 
 #endif //__vtkParallelOperators_h__

@@ -33,7 +33,11 @@ protected:
   vtkSMPZCurve();
   ~vtkSMPZCurve();
 
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  // Description:
+  // ?
+  int RequestData(vtkInformation *,
+                  vtkInformationVector **, vtkInformationVector *);
+
 private:
   vtkSMPZCurve(const vtkSMPZCurve&);  // Not implemented.
   void operator=(const vtkSMPZCurve&);  // Not implemented.

@@ -22,22 +22,26 @@
 #include "vtkSMPMergePoints.h"
 #include "vtkTask.h"
 
+//------------------------------------------------------------------------------
 vtkParallelPointMerger::vtkParallelPointMerger()
   {
   TreatedTable = 0;
   }
 
+//------------------------------------------------------------------------------
 vtkParallelPointMerger::~vtkParallelPointMerger()
   {
   TreatedTable = 0;
   }
 
+//------------------------------------------------------------------------------
 int vtkParallelPointMerger::MustTreatBucket( vtkIdType idx ) const
   {
   if ( !TreatedTable ) return 0;
   return !__sync_fetch_and_add(&(TreatedTable[idx]), 1);
   }
 
+//------------------------------------------------------------------------------
 void vtkParallelPointMerger::SetUsefullData( vtkDummyMergeFunctor* f, vtkIdType** t )
   {
   self = f;
@@ -74,8 +78,12 @@ void vtkParallelPointMerger::Execute( vtkSMPMergePoints* locator ) const
         vtkThreadLocal<vtkIdList>::iterator itMaps = self->Maps->Begin( 1 );
         for ( vtkThreadLocal<vtkSMPMergePoints>::iterator itLocator = self->Locators->Begin( 1 );
               itLocator != self->Locators->End(); ++itLocator, ++itPd, ++itMaps )
+          {
           if ( (l = *itLocator) )
+            {
             self->outputLocator->Merge( l, i, self->outputPd, *itPd, *itMaps );
+            }
+          }
         }
       }
     }

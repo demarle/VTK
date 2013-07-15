@@ -12,9 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkParallelCellMerger - !!!!
+// .NAME vtkParallelCellMerger - ?
 // .SECTION Description
-// !!!!
+// ?
 
 #ifndef _vtkParallelCellMerger_h_
 #define _vtkParallelCellMerger_h_
@@ -29,12 +29,12 @@ class vtkDummyMergeFunctor;
 class VTKPARALLELSMP_EXPORT vtkParallelCellMerger : public vtkTask
 {
 public:
-  vtkDummyMergeFunctor* self;
-
   vtkTypeMacro(vtkParallelCellMerger,vtkTask);
   static vtkParallelCellMerger* New();
   void PrintSelf(ostream &os, vtkIndent indent);
 
+  // Description:
+  // ?
   void Execute( vtkIdList* map,
                 vtkCellData* clData,
                 vtkCellArray* verts,
@@ -49,9 +49,14 @@ public:
                 vtkIdType polyTupleOffset,
                 vtkIdType stripCellOffset,
                 vtkIdType stripTupleOffset ) const;
+
+  //TODO: Can be private?
+  vtkDummyMergeFunctor* self;
+
 protected:
   vtkParallelCellMerger() {}
   ~vtkParallelCellMerger() {}
+
 private:
   vtkParallelCellMerger(const vtkParallelCellMerger&); // Not implemented
   void operator =(const vtkParallelCellMerger&); // Not implemented

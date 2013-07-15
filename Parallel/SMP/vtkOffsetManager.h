@@ -12,23 +12,58 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkOffsetManager - !!!!
+// .NAME vtkOffsetManager - ?
 // .SECTION Description
-// !!!!
+// vtkOffsetManager is an internal functor used in mergeoperator
+// used to deal with 4 cell arrays in vtkPolyData.
 
 #ifndef _vtkOffsetManager_h_
 #define _vtkOffsetManager_h_
 
-//internal functor used in mergeoperator used to deal with 4 cell arrays in vtkPolyData
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObject.h"
-#include <vector> // TODO: remove if possible
+#include <vector> // TODO: remove if possible No STL API in Core
 
 class vtkCellArray;
 
 class VTKPARALLELSMP_EXPORT vtkOffsetManager : public vtkObject
 {
+public:
+  vtkTypeMacro(vtkOffsetManager,vtkObject);
+  void PrintSelf(ostream& os, vtkIndent indent);
+  static vtkOffsetManager* New();
+
+  // Description:
+  // ?
+  void InitManageValues ();
+
+  // Description:
+  // ?
+  void ManageNextValue ( vtkCellArray* ca );
+
+  // Description:
+  // ?
+  //TODO: vtk practice is to get/set the same named member
+  vtkIdType GetNumberOfCells() { return CellsOffset; }
+
+  // Description:
+  // ?
+  //TODO: vtk practice is to get/set the same named member
+  vtkIdType GetNumberOfTuples() { return TuplesOffset; }
+
+  // Description:
+  // ?
+  std::vector<vtkIdType>::iterator GetCellsOffset ( )
+  {
+    return cells.begin();
+  }
+  std::vector<vtkIdType>::iterator GetTuplesOffset ( )
+  {
+    return tuples.begin();
+  }
+
+  //TODO: Can be private?
   std::vector<vtkIdType> cells;
   std::vector<vtkIdType> tuples;
   vtkIdType CellsOffset;
@@ -39,20 +74,6 @@ class VTKPARALLELSMP_EXPORT vtkOffsetManager : public vtkObject
 protected:
   vtkOffsetManager();
   ~vtkOffsetManager() { }
-public:
-  vtkTypeMacro(vtkOffsetManager,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
-  static vtkOffsetManager* New();
-
-  void InitManageValues ();
-
-  void ManageNextValue ( vtkCellArray* ca );
-
-  vtkIdType GetNumberOfCells() { return CellsOffset; }
-  vtkIdType GetNumberOfTuples() { return TuplesOffset; }
-
-  std::vector<vtkIdType>::iterator GetCellsOffset ( ) { return cells.begin(); }
-  std::vector<vtkIdType>::iterator GetTuplesOffset ( ) { return tuples.begin(); }
 
 private:
   vtkOffsetManager(const vtkOffsetManager&); // Not implemented

@@ -12,12 +12,15 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMP2ContourFilter - !!!!
+// .NAME vtkSMP2ContourFilter - contour filter that operates on different
+// blocks simultaneously in different threads
 // .SECTION Description
 // vtkSMP2ContourFilter !!!!
 
 // .SECTION See Also
 // vtkContourFilter
+
+//TODO Rename
 
 #ifndef __vtkSMP2ContourFilter_h
 #define __vtkSMP2ContourFilter_h
@@ -117,7 +120,7 @@ public:
   int  GetArrayComponent();
 
   // Description:
-  // see vtkAlgorithm for details
+  // Overridden to do the work in many threads.
   virtual int ProcessRequest(vtkInformation*,
                              vtkInformationVector**,
                              vtkInformationVector*);
@@ -126,15 +129,23 @@ protected:
   vtkSMP2ContourFilter();
   ~vtkSMP2ContourFilter();
 
+  // Description:
+  // Overridden to ?
   virtual void ReportReferences(vtkGarbageCollector*);
 
+  // Description:
+  // Overridden to ?
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
                           vtkInformationVector* outputVector,
                           vtkThreadLocal<vtkDataObject>** output);
+  // Description:
+  // Overridden to ?
   virtual int RequestUpdateExtent(vtkInformation*,
                                   vtkInformationVector**,
                                   vtkInformationVector*);
+  // Description:
+  // Overridden to ?
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
   vtkContourValues *ContourValues;
@@ -154,6 +165,9 @@ private:
   vtkSMP2ContourFilter(const vtkSMP2ContourFilter&);  // Not implemented.
   void operator=(const vtkSMP2ContourFilter&);  // Not implemented.
 };
+
+//TODO: I thing mingw that has issues with this style?
+// These may need to be moved into the declaration.
 
 // Description:
 // Set a particular contour value at contour number i. The index i ranges

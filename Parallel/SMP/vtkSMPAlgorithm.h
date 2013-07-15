@@ -12,7 +12,8 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPAlgorithm - !!!!
+// .NAME vtkSMPAlgorithm - Base class to derive for creating multi-threaded
+// algorithms.
 // .SECTION Description
 // !!!!
 
@@ -31,6 +32,8 @@ public:
   vtkTypeMacro(vtkSMPAlgorithm, vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Description:
+  // Overridden to do the work in many threads.
   virtual int ProcessRequest(vtkInformation* request,
                              vtkInformationVector** inInfo,
                              vtkInformationVector* outInfo);
@@ -40,11 +43,7 @@ protected:
   ~vtkSMPAlgorithm();
 
   // Description:
-  // This is called by the superclass.
-  // This is the method you should override.
-  // Use the inputVector to populate the outputData, the
-  // superclass will be responsible for merging each local
-  // output into the outputVector.
+  // Overridden to ...
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
                           vtkInformationVector* outputVector,
@@ -52,17 +51,11 @@ protected:
 
   // Description:
   // Create a default executive.
-  // If the DefaultExecutivePrototype is set and is a subclass
-  // of vtkSMPPipeline, a copy of it is created
-  // in CreateDefaultExecutive() using NewInstance().
-  // Otherwise, vtkSMPPipeline is created.
+  // Overridden to ...
   virtual vtkExecutive* CreateDefaultExecutive();
+
   // Description:
-  // Set this algorithm's executive.  This algorithm is removed from
-  // any executive to which it has previously been assigned and then
-  // assigned to the given executive.
-  // If the given executive is not a subclass of vtkSMPPipeline,
-  // SetExecutive() is not doing anything.
+  // Overridden to ...
   virtual void SetExecutive(vtkExecutive* executive);
 
 private:

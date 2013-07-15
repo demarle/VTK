@@ -12,9 +12,10 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkFunctor - !!!!
+// .NAME vtkFunctor - Base class to derive from as a means to specify code that each
+// thread runs.
 // .SECTION Description
-// !!!!
+// ?
 
 #ifndef __vtkFunctor_h__
 #define __vtkFunctor_h__
@@ -28,6 +29,8 @@ public:
   vtkTypeMacro(vtkFunctor,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Description:
+  // ?
   virtual void operator () ( vtkIdType ) const = 0;
 
 protected:

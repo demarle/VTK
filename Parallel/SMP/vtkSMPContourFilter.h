@@ -12,9 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPContourFilter - !!!!
+// .NAME vtkSMPContourFilter - multithreaded vtkContourFilter
 // .SECTION Description
-// !!!!
+// Just like parent, but uses the SMP framework to do work on many threads.
 
 #ifndef __vtkSMPContourFilter_h
 #define __vtkSMPContourFilter_h
@@ -27,13 +27,14 @@ class VTKPARALLELSMP_EXPORT vtkSMPContourFilter : public vtkContourFilter
 public:
   vtkTypeMacro(vtkSMPContourFilter,vtkContourFilter);
   void PrintSelf(ostream& os, vtkIndent indent);
-
   static vtkSMPContourFilter *New();
 
 protected:
   vtkSMPContourFilter();
   ~vtkSMPContourFilter();
 
+  // Description:
+  // Overridden to do the work in many threads.
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
                           vtkInformationVector* outputVector);

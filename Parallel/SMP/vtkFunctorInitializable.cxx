@@ -51,9 +51,13 @@ void vtkFunctorInitializable::PrintSelf(ostream &os, vtkIndent indent)
     {
     os << indent.GetNextIndent() << "Id " << i << ": ";
     if ( IsInitialized[i] )
+      {
       os << "true";
+      }
     else
+      {
       os << "false";
+      }
     os << endl;
     }
   }

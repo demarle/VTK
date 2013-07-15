@@ -34,40 +34,12 @@ vtkInformationKeyMacro(vtkSMPPipeline, DATA_OBJECT_CONCRETE_TYPE, String);
 
 class ParallelFilterExecutor : public vtkFunctorInitializable
 {
+  //Description:
+  //?
+  public:
     ParallelFilterExecutor(const ParallelFilterExecutor&);
     void operator =(const ParallelFilterExecutor&);
 
-  protected:
-    ParallelFilterExecutor() : inInfoVec(0), outInfoVec(0), inLocalInfo(0), outLocalInfo(0), request(0), requests(0), Executive(0) {}
-    ~ParallelFilterExecutor()
-      {
-      if (Executive)
-        {
-        for (vtkIdType i=0; i<this->Executive->GetNumberOfInputPorts(); ++i)
-          {
-          inInfoVec[i]->Delete();
-          inLocalInfo[i]->Delete();
-          }
-        delete [] inInfoVec;
-        delete [] inLocalInfo;
-        }
-      if (outLocalInfo) outLocalInfo->Delete();
-      if (outInfoVec) outInfoVec->Delete();
-      if (requests) requests->Delete();
-      }
-
-    mutable vtkstd::vector<vtkDataObject*> inObjs;
-    mutable vtkstd::vector<vtkDataObject*> outObjs;
-    vtkInformationVector** inInfoVec;
-    vtkInformationVector* outInfoVec;
-    vtkThreadLocal<vtkInformationVector> **inLocalInfo, *outLocalInfo;
-    vtkInformation* request;
-    vtkThreadLocal<vtkInformation>* requests;
-
-    int compositePort;
-    vtkSMPPipeline* Executive;
-
-  public:
     vtkTypeMacro(ParallelFilterExecutor, vtkFunctorInitializable);
     static ParallelFilterExecutor* New();
     void PrintSelf(ostream &os, vtkIndent indent)
@@ -75,6 +47,8 @@ class ParallelFilterExecutor : public vtkFunctorInitializable
       this->Superclass::PrintSelf(os,indent);
       }
 
+    //Description:
+    //?
     void Init() const
       {
       vtkIdType numPorts = this->Executive->GetNumberOfInputPorts();
@@ -89,6 +63,8 @@ class ParallelFilterExecutor : public vtkFunctorInitializable
       this->Initialized();
       }
 
+    //Description:
+    //?
     void operator ()(vtkIdType id) const
       {
       vtkDataObject* dobj = this->inObjs[id];
@@ -123,6 +99,8 @@ class ParallelFilterExecutor : public vtkFunctorInitializable
         }
       }
 
+    //Description:
+    //?
     void PrepareData(vtkCompositeDataIterator* iter, vtkInformationVector** _inInfoVec,
                      vtkInformationVector* _outInfoVec, vtkInformation* _request,
                      vtkSMPPipeline* self, int _compositePort)
@@ -158,11 +136,15 @@ class ParallelFilterExecutor : public vtkFunctorInitializable
       this->Init();
       }
 
+    //Description:
+    //?
     size_t GetInputSize()
       {
       return this->inObjs.size();
       }
 
+    //Description:
+    //?
     void FinalizeData(vtkCompositeDataIterator* iter, vtkCompositeDataSet* compositeOutput)
       {
       size_t i = 0;
@@ -176,24 +158,76 @@ class ParallelFilterExecutor : public vtkFunctorInitializable
           }
         }
       }
+
+  protected:
+    ParallelFilterExecutor() :
+      inInfoVec(0), outInfoVec(0), inLocalInfo(0),
+      outLocalInfo(0),
+      request(0), requests(0),
+      Executive(0)
+    {}
+
+    ~ParallelFilterExecutor()
+      {
+      if (Executive)
+        {
+        for (vtkIdType i=0; i<this->Executive->GetNumberOfInputPorts(); ++i)
+          {
+          inInfoVec[i]->Delete();
+          inLocalInfo[i]->Delete();
+          }
+        delete [] inInfoVec;
+        delete [] inLocalInfo;
+        }
+      if (outLocalInfo)
+        {
+        outLocalInfo->Delete();
+        }
+      if (outInfoVec)
+        {
+        outInfoVec->Delete();
+        }
+      if (requests)
+        {
+        requests->Delete();
+        }
+      }
+
+    mutable vtkstd::vector<vtkDataObject*> inObjs;
+    mutable vtkstd::vector<vtkDataObject*> outObjs;
+    vtkInformationVector** inInfoVec;
+    vtkInformationVector* outInfoVec;
+    vtkThreadLocal<vtkInformationVector> **inLocalInfo, *outLocalInfo;
+    vtkInformation* request;
+    vtkThreadLocal<vtkInformation>* requests;
+
+    int compositePort;
+    vtkSMPPipeline* Executive;
+
 };
 
 vtkStandardNewMacro(ParallelFilterExecutor);
+
+//============================================================================
 vtkStandardNewMacro(vtkSMPPipeline);
 
+//----------------------------------------------------------------------------
 vtkSMPPipeline::vtkSMPPipeline() : vtkCompositeDataPipeline()
   {
   }
 
+//----------------------------------------------------------------------------
 vtkSMPPipeline::~vtkSMPPipeline()
   {
   }
 
+//----------------------------------------------------------------------------
 void vtkSMPPipeline::PrintSelf(ostream &os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os,indent);
   }
 
+//----------------------------------------------------------------------------
 int vtkSMPPipeline::ExecuteData(vtkInformation *request, vtkInformationVector **inInfoVec, vtkInformationVector *outInfoVec)
   {
   vtkDebugMacro(<< "ExecuteData");
@@ -226,6 +260,7 @@ int vtkSMPPipeline::ExecuteData(vtkInformation *request, vtkInformationVector **
   return result;
   }
 
+//----------------------------------------------------------------------------
 void vtkSMPPipeline::ExecuteSimpleAlgorithm(
     vtkInformation *request, vtkInformationVector **inInfoVec,
     vtkInformationVector *outInfoVec, int compositePort)
@@ -334,6 +369,7 @@ void vtkSMPPipeline::ExecuteSimpleAlgorithm(
   this->ExecuteDataEnd(request,inInfoVec,outInfoVec);
   }
 
+//----------------------------------------------------------------------------
 int vtkSMPPipeline::CheckDataObject(int port, vtkInformationVector* outInfoVec)
   {
   if (!this->Superclass::CheckDataObject(port, outInfoVec))

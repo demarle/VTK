@@ -46,51 +46,14 @@
 #include "vtkSynchronizedTemplates3D.h"
 #include "vtkUniformGrid.h"
 
-vtkStandardNewMacro(vtkSMPContourFilter);
-
-vtkSMPContourFilter::vtkSMPContourFilter() : vtkContourFilter() { }
-vtkSMPContourFilter::~vtkSMPContourFilter() { }
-
-void vtkSMPContourFilter::PrintSelf(ostream& os, vtkIndent indent)
-  {
-  this->Superclass::PrintSelf(os,indent);
-  }
-
-/* ================================================================================
+//==============================================================================
+/* =============================================================================
   Generic contouring: Functors for parallel execution without ScalarTree
- ================================================================================ */
+ ============================================================================ */
 class ThreadsFunctor : public vtkFunctorInitializable
 {
-  ThreadsFunctor( const ThreadsFunctor& );
-  void operator =( const ThreadsFunctor& );
-
-protected:
-  ThreadsFunctor()
-    {
-    Locator = vtkThreadLocal<vtkIncrementalPointLocator>::New();
-    newPts = vtkThreadLocal<vtkPoints>::New();
-    newVerts = vtkThreadLocal<vtkCellArray>::New();
-    newLines = vtkThreadLocal<vtkCellArray>::New();
-    newPolys = vtkThreadLocal<vtkCellArray>::New();
-    outPd = vtkThreadLocal<vtkPointData>::New();
-    outCd = vtkThreadLocal<vtkCellData>::New();
-    Cells = vtkThreadLocal<vtkGenericCell>::New();
-    CellsScalars = vtkThreadLocal<vtkDataArray>::New();
-    }
-
-  ~ThreadsFunctor()
-    {
-    Locator->Delete();
-    newPts->Delete();
-    newVerts->Delete();
-    newLines->Delete();
-    newPolys->Delete();
-    outPd->Delete();
-    outCd->Delete();
-    Cells->Delete();
-    CellsScalars->Delete();
-    }
-
+// Description:
+//?
 public:
   vtkTypeMacro(ThreadsFunctor,vtkFunctorInitializable);
   static ThreadsFunctor* New();
@@ -99,36 +62,8 @@ public:
     this->Superclass::PrintSelf(os,indent);
   }
 
-  vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
-  vtkThreadLocal<vtkPoints>* newPts;
-  vtkThreadLocal<vtkCellArray>* newVerts;
-  vtkThreadLocal<vtkCellArray>* newLines;
-  vtkThreadLocal<vtkCellArray>* newPolys;
-  vtkThreadLocal<vtkPointData>* outPd;
-  vtkThreadLocal<vtkCellData>* outCd;
-  vtkThreadLocal<vtkGenericCell>* Cells;
-  vtkThreadLocal<vtkDataArray>* CellsScalars;
-
-  vtkDataArray* inScalars;
-  vtkDataSet* input;
-  vtkPointData* inPd;
-  vtkCellData* inCd;
-  vtkIdType estimatedSize;
-  double* values;
-  int numContours;
-  int computeScalars;
-
-  vtkIncrementalPointLocator* refLocator;
-  vtkCellArray* outputVerts;
-  vtkCellArray* outputLines;
-  vtkCellArray* outputPolys;
-  vtkCellData* outputCd;
-  vtkPointData* outputPd;
-
-  unsigned char cellTypeDimensions[VTK_NUMBER_OF_CELL_TYPES];
-
-  int dimensionality;
-
+  //Description:
+  //?
   void SetData( vtkDataSet* _input, vtkPoints* _inPts, vtkCellData* _incd,
                   vtkPointData* _inpd, vtkIncrementalPointLocator* _locator,
                   vtkIdType& _size, double* _values, int _number,
@@ -175,6 +110,8 @@ public:
     Initialized();
     }
 
+  //Description:
+  //?
   void operator ()( vtkIdType cellId ) const
     {
     vtkGenericCell *cell = this->Cells->GetLocal( );
@@ -206,6 +143,8 @@ public:
       }
     }
 
+  //Description:
+  //?
   void Init( ) const
     {
     vtkPoints* pts = this->newPts->NewLocal( );
@@ -238,22 +177,80 @@ public:
 
     Initialized();
     }
+
+  //TODO Make private and mark not implemented ?
+  ThreadsFunctor( const ThreadsFunctor& );
+  void operator =( const ThreadsFunctor& );
+
+  //TODO Make private?
+  vtkThreadLocal<vtkIncrementalPointLocator>* Locator;
+  vtkThreadLocal<vtkPoints>* newPts;
+  vtkThreadLocal<vtkCellArray>* newVerts;
+  vtkThreadLocal<vtkCellArray>* newLines;
+  vtkThreadLocal<vtkCellArray>* newPolys;
+  vtkThreadLocal<vtkPointData>* outPd;
+  vtkThreadLocal<vtkCellData>* outCd;
+  vtkThreadLocal<vtkGenericCell>* Cells;
+  vtkThreadLocal<vtkDataArray>* CellsScalars;
+
+  vtkDataArray* inScalars;
+  vtkDataSet* input;
+  vtkPointData* inPd;
+  vtkCellData* inCd;
+  vtkIdType estimatedSize;
+  double* values;
+  int numContours;
+  int computeScalars;
+
+  vtkIncrementalPointLocator* refLocator;
+  vtkCellArray* outputVerts;
+  vtkCellArray* outputLines;
+  vtkCellArray* outputPolys;
+  vtkCellData* outputCd;
+  vtkPointData* outputPd;
+
+  unsigned char cellTypeDimensions[VTK_NUMBER_OF_CELL_TYPES];
+
+  int dimensionality;
+
+protected:
+  ThreadsFunctor()
+    {
+    Locator = vtkThreadLocal<vtkIncrementalPointLocator>::New();
+    newPts = vtkThreadLocal<vtkPoints>::New();
+    newVerts = vtkThreadLocal<vtkCellArray>::New();
+    newLines = vtkThreadLocal<vtkCellArray>::New();
+    newPolys = vtkThreadLocal<vtkCellArray>::New();
+    outPd = vtkThreadLocal<vtkPointData>::New();
+    outCd = vtkThreadLocal<vtkCellData>::New();
+    Cells = vtkThreadLocal<vtkGenericCell>::New();
+    CellsScalars = vtkThreadLocal<vtkDataArray>::New();
+    }
+
+  ~ThreadsFunctor()
+    {
+    Locator->Delete();
+    newPts->Delete();
+    newVerts->Delete();
+    newLines->Delete();
+    newPolys->Delete();
+    outPd->Delete();
+    outCd->Delete();
+    Cells->Delete();
+    CellsScalars->Delete();
+    }
 };
 
 vtkStandardNewMacro(ThreadsFunctor);
 
-/* ================================================================================
+//==============================================================================
+/* =============================================================================
   Generic contouring: Functors for parallel execution with ScalarTree
- ================================================================================ */
+ ============================================================================ */
 class AcceleratedFunctor : public ThreadsFunctor
 {
-  AcceleratedFunctor( const AcceleratedFunctor& );
-  void operator =( const AcceleratedFunctor& );
-
-protected:
-  AcceleratedFunctor() { }
-  ~AcceleratedFunctor() { }
-
+// Description:
+//?
 public:
   vtkTypeMacro(AcceleratedFunctor,ThreadsFunctor);
   static AcceleratedFunctor* New();
@@ -262,8 +259,8 @@ public:
     this->Superclass::PrintSelf(os,indent);
     }
 
-  double ScalarValue;
-
+  //Description:
+  //?
   void operator ()( vtkIdType id ) const
     {
     vtkGenericCell* cell = this->Cells->GetLocal( );
@@ -279,13 +276,41 @@ public:
                    this->inPd, this->outPd->GetLocal( ),
                    this->inCd, id, this->outCd->GetLocal( ));
     }
+
+  //TODO: Can be made private and marked not implemented?
+  AcceleratedFunctor( const AcceleratedFunctor& );
+  void operator =( const AcceleratedFunctor& );
+
+  //TODO: Can be private?
+  double ScalarValue;
+
+protected:
+  AcceleratedFunctor() { }
+  ~AcceleratedFunctor() { }
+
 };
 
 vtkStandardNewMacro(AcceleratedFunctor);
 
-/* ================================================================================
+//==============================================================================
+/* =============================================================================
  General contouring filter.  Handles arbitrary input.
- ================================================================================ */
+ ============================================================================ */
+vtkStandardNewMacro(vtkSMPContourFilter);
+
+//------------------------------------------------------------------------------
+vtkSMPContourFilter::vtkSMPContourFilter() : vtkContourFilter() { }
+
+//------------------------------------------------------------------------------
+vtkSMPContourFilter::~vtkSMPContourFilter() { }
+
+//------------------------------------------------------------------------------
+void vtkSMPContourFilter::PrintSelf(ostream& os, vtkIndent indent)
+  {
+  this->Superclass::PrintSelf(os,indent);
+  }
+
+//------------------------------------------------------------------------------
 int vtkSMPContourFilter::RequestData(
   vtkInformation* request,
   vtkInformationVector** inputVector,

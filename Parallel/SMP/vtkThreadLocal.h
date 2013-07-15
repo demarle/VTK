@@ -23,8 +23,9 @@
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObject.h"
 #include "vtkInstantiator.h" //TODO single include
-#include <vector> //TODO hide
-#include <typeinfo> //TODO hide
+
+#include <vector> //TODO single include
+#include <typeinfo> //TODO single include
 
 class vtkCellArray;
 class vtkCellData;
@@ -36,7 +37,7 @@ class vtkPoints;
 class vtkSMPMergePoints;
 class vtkTask;
 
-//======================================================================================
+//=============================================================================
 extern int vtkSMPInternalGetNumberOfThreads();
 extern int vtkSMPInternalGetTid();
 
@@ -53,9 +54,12 @@ public:
     os << indent << "Class stored: " << typeid(T).name() << endl;
     os << indent << "Local storage: " << endl;
     size_t i = 0;
-    for ( iterator it = ThreadLocalStorage.begin(); it != ThreadLocalStorage.end(); ++it, ++i )
+    for (iterator it = ThreadLocalStorage.begin();
+         it != ThreadLocalStorage.end();
+         ++it, ++i )
       {
-      os << indent.GetNextIndent() << "id " << i << ": (" << *it << ")" << endl;
+      os << indent.GetNextIndent() << "id " << i << ": (" << *it << ")"
+         << endl;
       if ( *it ) (*it)->PrintSelf(os, indent.GetNextIndent().GetNextIndent());
       }
    }
@@ -101,14 +105,17 @@ public:
     T* item = T::SafeDownCast(obj);
 
     if (item)
-    {
+      {
       this->SetLocal(item);
       item->Delete();
       return item;
-    }
+      }
 
     this->SetLocal(0);
-    if(obj) obj->Delete();
+    if (obj)
+      {
+      obj->Delete();
+      }
 
     return 0;
   }
@@ -167,52 +174,61 @@ public:
 
   // Description:
   // ?
-  template<class Derived>
-    Derived* GetLocal()
-    {
-    return Derived::SafeDownCast(this->ThreadLocalStorage[vtkSMPInternalGetTid()]);
-    }
+  template<class Derived> Derived* GetLocal()
+  {
+    return Derived::SafeDownCast(
+      this->ThreadLocalStorage[vtkSMPInternalGetTid()]);
+  }
 
   // Description:
   // ?
   template<class Derived>
     void FillDerivedThreadLocal( vtkThreadLocal<Derived>* other )
-    {
+  {
     T* elem;
     iterator src = ThreadLocalStorage.begin();
     for ( typename vtkThreadLocal<Derived>::iterator it = other->Begin();
           it != other->End(); ++it, ++src )
       {
-      if ( (elem = *it) ) elem->UnRegister(other);
+      if ( (elem = *it) )
+        {
+        elem->UnRegister(other);
+        }
       Derived* d = (*it) = Derived::SafeDownCast(*src);
-      if ( d ) d->Register(other);
+      if ( d )
+        {
+        d->Register(other);
+        }
       }
     other->SetSpecificClassName(this->SpecificName.c_str());
     }
 
-  protected :
+protected :
   vtkThreadLocal() :
       vtkObject(),
       ThreadLocalStorage(vtkSMPInternalGetNumberOfThreads(), NULL),
       SpecificName("NONE")
-    {
-    }
+  {
+  }
+
   ~vtkThreadLocal()
-    {
+  {
     for ( iterator it = ThreadLocalStorage.begin();
           it != ThreadLocalStorage.end(); ++it )
       {
       if ( *it )
+        {
         (*it)->UnRegister( this );
+        }
       *it = 0;
       }
     ThreadLocalStorage.clear();
-    }
+  }
 
   std::vector<T*> ThreadLocalStorage;
   std::string SpecificName;
 
- private:
+private:
    vtkThreadLocal(const vtkThreadLocal&); // Not implemented
    void operator=(const vtkThreadLocal&); // Not implemented
 

@@ -50,7 +50,9 @@ void vtkLockPointMerger::operator()( vtkIdType id ) const
   double* pt = new double[3];
   (*itPoints)->GetPoint( id, pt );
   if ( this->Functor->outputLocator->SetUniquePoint( pt, NewId ) )
+    {
     this->Functor->outputPd->SetTuple( NewId, id, (*itPd) );
+    }
   (*itMaps)->SetId( id, NewId );
   delete [] pt;
 }

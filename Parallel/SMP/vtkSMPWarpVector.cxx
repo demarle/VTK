@@ -49,6 +49,7 @@
   vtkArrayIteratorTemplateMacroCase(VTK_UNSIGNED_CHAR, unsigned char, call);
 
 
+//----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkSMPWarpVector);
 
 //----------------------------------------------------------------------------
@@ -70,8 +71,13 @@ vtkSMPWarpVector::~vtkSMPWarpVector()
 template <class T1, class T2>
 class vtkSMPWarpVectorOp : public vtkFunctor
 {
+  //Description:
+  //Defines the work that each thread in vtkSMPWarpVector does.
 public:
-  static vtkSMPWarpVectorOp<T1,T2>* New() { return new vtkSMPWarpVectorOp<T1,T2>(); }
+  static vtkSMPWarpVectorOp<T1,T2>* New()
+  {
+    return new vtkSMPWarpVectorOp<T1,T2>();
+  }
 
   vtkArrayIteratorTemplate<T1> *inIter;
   vtkArrayIteratorTemplate<T1> *outIter;
@@ -79,7 +85,7 @@ public:
   T1 scaleFactor;
 
   void  operator()( vtkIdType index ) const
-    {
+  {
     T1* inTuple = inIter->GetTuple(index);
     T1* outTuple = outIter->GetTuple(index);
     T2* inVecTuple = inVecIter->GetTuple(index);
@@ -87,7 +93,7 @@ public:
     outTuple[0] = inTuple[0] + scaleFactor * (T1)(inVecTuple[0]);
     outTuple[1] = inTuple[1] + scaleFactor * (T1)(inVecTuple[1]);
     outTuple[2] = inTuple[2] + scaleFactor * (T1)(inVecTuple[2]);
-    }
+  }
 protected:
   vtkSMPWarpVectorOp() {}
   ~vtkSMPWarpVectorOp() {}

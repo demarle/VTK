@@ -12,15 +12,18 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkTask - !!!!
+// .NAME vtkTask - means to specify code that each thread runs on whole
+// dataset level structures
 // .SECTION Description
-// !!!!
+// Base class for specifying some code that is to be run on each thread.
+// vtkTask is heavier weight than vtkFunctor
+
+// .SEE ALSO
+// vtkFunctor
 
 #ifndef __vtkTask_h__
 #define __vtkTask_h__
 
-//Base class for specifying some code that is to be run on each thread.
-//vtkTask is something like a heavy weight vtkFunctor
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkObjectBase.h"
@@ -38,11 +41,19 @@ public:
   vtkTypeMacro(vtkTask, vtkObjectBase);
   void PrintSelf(ostream &os, vtkIndent indent);
 
+  // Description:
+  // ?
   void Execute( ... ) const
-    {
-    cout << "Shouldn't be invoked." << endl;
-    }
-  virtual void Execute( vtkSMPMergePoints* ) const {}
+  {
+    cout << "vtkTask::Execute() Shouldn't be invoked." << endl;
+  }
+  // Description:
+  // ?
+  virtual void Execute( vtkSMPMergePoints* ) const
+  {
+  }
+  // Description:
+  // ?
   virtual void Execute( vtkIdList* map,
                         vtkCellData* clData,
                         vtkCellArray* verts,
@@ -56,7 +67,9 @@ public:
                         vtkIdType polyCellOffset,
                         vtkIdType polyTupleOffset,
                         vtkIdType stripCellOffset,
-                        vtkIdType stripTupleOffset ) const {}
+                        vtkIdType stripTupleOffset ) const
+  {
+  }
 
 protected:
   vtkTask();

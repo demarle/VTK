@@ -21,43 +21,62 @@
 #include "vtkPointData.h"
 #include "vtkMutexLock.h"
 
+//------------------------------------------------------------------------------
 vtkStandardNewMacro(vtkSMPMergePoints)
 
+//------------------------------------------------------------------------------
 vtkSMPMergePoints::vtkSMPMergePoints() : vtkMergePoints(), LockTable( 0 )
-  {
+{
   this->CreatorLock = 0;
-  }
+}
 
+//------------------------------------------------------------------------------
 vtkSMPMergePoints::~vtkSMPMergePoints()
-  {
+{
   if ( this->CreatorLock )
+    {
     this->CreatorLock->Delete();
-  }
+    }
+}
 
+//------------------------------------------------------------------------------
 void vtkSMPMergePoints::PrintSelf(ostream &os, vtkIndent indent)
-  {
+{
   this->Superclass::PrintSelf(os, indent);
-  }
+}
 
-int vtkSMPMergePoints::InitLockInsertion(vtkPoints *newPts, const double bounds[6], vtkIdType estSize)
-  {
+//------------------------------------------------------------------------------
+int vtkSMPMergePoints::InitLockInsertion(vtkPoints *newPts,
+    const double bounds[6], vtkIdType estSize)
+{
   if ( !this->InitPointInsertion(newPts, bounds, estSize) )
+    {
     return 0;
+    }
   this->LockTable = new vtkMutexLockPtr[this->NumberOfBuckets];
   memset( this->LockTable, 0, this->NumberOfBuckets * sizeof(vtkMutexLockPtr) );
   this->InsertionPointId = newPts->GetNumberOfPoints();
-  if ( !this->CreatorLock ) this->CreatorLock = vtkMutexLock::New();
+  if ( !this->CreatorLock )
+    {
+    this->CreatorLock = vtkMutexLock::New();
+    }
   return 1;
   }
 
+//------------------------------------------------------------------------------
 void vtkSMPMergePoints::FixSizeOfPointArray()
   {
   this->Points->SetNumberOfPoints(this->InsertionPointId);
   }
 
-void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPointData* outPd, vtkPointData* ptData, vtkIdList* idList )
+//------------------------------------------------------------------------------
+void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx,
+    vtkPointData* outPd, vtkPointData* ptData, vtkIdList* idList )
   {
-  if ( !locator->HashTable[idx] ) return;
+  if ( !locator->HashTable[idx] )
+    {
+    return;
+    }
 
   vtkIdType i;
   vtkIdList *bucket, *oldIdToMerge;
@@ -66,11 +85,14 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
   if ( !(bucket = this->HashTable[idx]) )
     {
     this->HashTable[idx] = bucket = vtkIdList::New();
-    bucket->Allocate( this->NumberOfPointsPerBucket/2, this->NumberOfPointsPerBucket/3 );
+    bucket->Allocate( this->NumberOfPointsPerBucket/2,
+        this->NumberOfPointsPerBucket/3 );
     oldIdToMerge = locator->HashTable[idx];
     oldIdToMerge->Register( this );
     if ( this->Points->GetData()->GetDataType() == VTK_FLOAT )
+      {
       floatOldDataArray = static_cast<vtkFloatArray*>( locator->Points->GetData() );
+      }
     }
   else
     {
@@ -78,11 +100,14 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
     oldIdToMerge->Register( this );
     oldIdToMerge->Delete();
 
-    int nbOfIds = bucket->GetNumberOfIds (), nbOfOldIds = locator->HashTable[idx]->GetNumberOfIds();
+    int nbOfIds = bucket->GetNumberOfIds ();
+    int nbOfOldIds = locator->HashTable[idx]->GetNumberOfIds();
     oldIdToMerge->Allocate( nbOfOldIds );
 
-    vtkDataArray *dataArray = this->Points->GetData(), *oldDataArray = locator->Points->GetData();
-    vtkIdType *idArray = bucket->GetPointer(0), *idOldArray = locator->HashTable[idx]->GetPointer(0);
+    vtkDataArray *dataArray = this->Points->GetData();
+    vtkDataArray *oldDataArray = locator->Points->GetData();
+    vtkIdType *idArray = bucket->GetPointer(0);
+    vtkIdType *idOldArray = locator->HashTable[idx]->GetPointer(0);
 
     bool found;
 
@@ -109,7 +134,10 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
             break;
             }
           }
-        if ( !found ) oldIdToMerge->InsertNextId( oldId );
+        if ( !found )
+          {
+          oldIdToMerge->InsertNextId( oldId );
+          }
         }
       }
     else
@@ -132,14 +160,18 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
             break;
             }
           }
-        if ( !found ) oldIdToMerge->InsertNextId( oldId );
+        if ( !found )
+          {
+          oldIdToMerge->InsertNextId( oldId );
+          }
         }
       }
     }
 
   // points have to be added
   vtkIdType NumberOfInsertions = oldIdToMerge->GetNumberOfIds();
-  vtkIdType first_id = __sync_fetch_and_add( &(this->InsertionPointId), NumberOfInsertions );
+  vtkIdType first_id = __sync_fetch_and_add( &(this->InsertionPointId),
+      NumberOfInsertions );
   bucket->Resize( bucket->GetNumberOfIds() + NumberOfInsertions );
   for ( i = 0; i < NumberOfInsertions; ++i )
     {
@@ -160,6 +192,7 @@ void vtkSMPMergePoints::Merge( vtkSMPMergePoints* locator, vtkIdType idx, vtkPoi
   oldIdToMerge->UnRegister( this );
   }
 
+//------------------------------------------------------------------------------
 void vtkSMPMergePoints::FreeSearchStructure()
   {
   vtkIdList *ptIds;
@@ -180,24 +213,33 @@ void vtkSMPMergePoints::FreeSearchStructure()
         }
       }
     delete [] this->HashTable;
-    if ( this->LockTable ) delete [] this->LockTable;
+    if ( this->LockTable )
+      {
+      delete [] this->LockTable;
+      }
     this->LockTable = NULL;
     this->HashTable = NULL;
     }
   }
 
+//------------------------------------------------------------------------------
 vtkIdType vtkSMPMergePoints::GetNumberOfBuckets()
   {
   return this->NumberOfBuckets;
   }
 
+//------------------------------------------------------------------------------
 vtkIdType vtkSMPMergePoints::GetNumberOfIdInBucket( vtkIdType idx )
   {
-  if ( !this->HashTable ) return 0;
+  if ( !this->HashTable )
+    {
+    return 0;
+    }
   vtkIdList* bucket = this->HashTable[idx];
   return bucket ? bucket->GetNumberOfIds() : 0;
   }
 
+//------------------------------------------------------------------------------
 vtkIdType vtkSMPMergePoints::LocateBucketThatPointIsIn(double x, double y, double z)
   {
   vtkIdType ijk0, ijk1, ijk2;
@@ -218,6 +260,7 @@ vtkIdType vtkSMPMergePoints::LocateBucketThatPointIsIn(double x, double y, doubl
   return ijk0 + ijk1*this->Divisions[0] + ijk2*this->Divisions[0]*this->Divisions[1];
   }
 
+//------------------------------------------------------------------------------
 void vtkSMPMergePoints::AddPointIdInBucket(vtkIdType ptId)
   {
   double x[3];
@@ -250,6 +293,7 @@ void vtkSMPMergePoints::AddPointIdInBucket(vtkIdType ptId)
   lock->Unlock();
   }
 
+//------------------------------------------------------------------------------
 int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
   {
   vtkIdType i, idx = LocateBucketThatPointIsIn( x[0], x[1], x[2] );
@@ -262,7 +306,8 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
     if ( !(lock = this->LockTable[idx]) ) // If no other thread created it before
       {
       this->HashTable[idx] = vtkIdList::New();
-      this->HashTable[idx]->Allocate(this->NumberOfPointsPerBucket/2, this->NumberOfPointsPerBucket/3);
+      this->HashTable[idx]->Allocate(this->NumberOfPointsPerBucket/2,
+          this->NumberOfPointsPerBucket/3);
       this->LockTable[idx] = lock = vtkMutexLock::New();;
       }
     CreatorLock->Unlock();
@@ -294,7 +339,10 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
     for (i=0; i < nbOfIds; ++i)
       {
       ptId = idArray[i];
-      if ( ptId > maxId ) break;
+      if ( ptId > maxId )
+        {
+        break;
+        }
       pt = floatArray->GetPointer(0) + 3*ptId;
       if ( f[0] == pt[0] && f[1] == pt[1] && f[2] == pt[2] )
         {
@@ -373,15 +421,21 @@ int vtkSMPMergePoints::SetUniquePoint(const double x[3], vtkIdType &id)
   return 1;
   }
 
+//------------------------------------------------------------------------------
 void vtkSMPMergePoints::PrintSizeOfThis()
   {
   cout << "this: " << sizeof(*this) << endl;
   cout << "doubles et int: " << 9 * sizeof(double) + 3 * sizeof(int) << endl;
-  cout << "number of buckets: " << this->NumberOfBuckets << " (" << sizeof(vtkIdList*) << ")" << endl;
+  cout << "number of buckets: " << this->NumberOfBuckets
+       << " (" << sizeof(vtkIdList*) << ")" << endl;
   cout << "vtkMutexLock: " << sizeof(*(this->CreatorLock)) << endl;
   int numOfEffectiveBuckets = 0;
   for (int i = 0; i < this->NumberOfBuckets; ++i)
+    {
     if (this->HashTable[i])
+      {
       ++numOfEffectiveBuckets;
+      }
+    }
   cout << "number of vtkIdList and vtkMutexLock: " << numOfEffectiveBuckets << endl;
   }

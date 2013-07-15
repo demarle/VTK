@@ -50,7 +50,10 @@ void vtkParallelCellMerger::Execute( vtkIdList* map,
                                      vtkIdType stripCellOffset,
                                      vtkIdType stripTupleOffset ) const
 {
-  if ( !map ) return;
+  if ( !map )
+    {
+    return;
+    }
 
   vtkIdType *pts, totalNumber, newId, n, clIndex;
   vtkCellArray* computedCells;
@@ -82,7 +85,9 @@ void vtkParallelCellMerger::Execute( vtkIdList* map,
     computedCells = lines;
     computedCells->InitTraversal();
     totalNumber = lineTupleOffset;
-    newId = lineCellOffset - 1 + self->vertOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
+
+    // usage of ++newId instead of newId++
+    newId = lineCellOffset - 1 + self->vertOffset->GetNumberOfCells();
     while (computedCells->GetNextCell( n, pts ))
       {
       vtkIdType* writePtr = self->outputLines->WritePointer( 0, totalNumber );
@@ -103,7 +108,8 @@ void vtkParallelCellMerger::Execute( vtkIdList* map,
     computedCells = polys;
     computedCells->InitTraversal();
     totalNumber = polyTupleOffset;
-    newId = polyCellOffset - 1 + self->lineOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
+    // usage of ++newId instead of newId++
+    newId = polyCellOffset - 1 + self->lineOffset->GetNumberOfCells();
     while (computedCells->GetNextCell( n, pts ))
       {
       vtkIdType* writePtr = self->outputPolys->WritePointer( 0, totalNumber );
@@ -124,7 +130,8 @@ void vtkParallelCellMerger::Execute( vtkIdList* map,
     computedCells = strips;
     computedCells->InitTraversal();
     totalNumber = stripTupleOffset;
-    newId = stripCellOffset - 1 + self->polyOffset->GetNumberOfCells(); // usage of ++newId instead of newId++
+    // usage of ++newId instead of newId++
+    newId = stripCellOffset - 1 + self->polyOffset->GetNumberOfCells();
     while (computedCells->GetNextCell( n, pts ))
       {
       vtkIdType* writePtr = self->outputStrips->WritePointer( 0, totalNumber );

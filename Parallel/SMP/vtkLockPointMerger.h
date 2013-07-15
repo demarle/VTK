@@ -12,14 +12,13 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkLockPointMerger - !!!!
+// .NAME vtkLockPointMerger - provides extra synchonization locks
+// for case when you lack allocators per CPU
 // .SECTION Description
-// !!!!
+// ?
 
 #ifndef _vtkLockPointMerger_h_
 #define _vtkLockPointMerger_h_
-
-//extra synchonization locks for case when you lack allocators per CPU
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkFunctor.h"
@@ -31,14 +30,19 @@ class vtkDummyMergeFunctor;
 class VTKPARALLELSMP_EXPORT vtkLockPointMerger : public vtkFunctor
 {
 public:
-  vtkDummyMergeFunctor* Functor;
-  vtkIdType NumberOfPointsFirstThread;
-
   vtkTypeMacro(vtkLockPointMerger,vtkFunctor);
   static vtkLockPointMerger* New();
   void PrintSelf(ostream &os, vtkIndent indent);
 
+  //Description:
+  //?
   void operator()( vtkIdType id ) const;
+
+  //TODO: Can these be private?
+  //Description:
+  //?
+  vtkDummyMergeFunctor* Functor;
+  vtkIdType NumberOfPointsFirstThread;
 
 protected:
   vtkLockPointMerger() {}

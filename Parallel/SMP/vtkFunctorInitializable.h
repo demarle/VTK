@@ -12,16 +12,17 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkFunctorInitializable - !!!!
+// .NAME vtkFunctorInitializable - abstract base class to derive from if
+// you need extra initialization in a vtkFunctor
 // .SECTION Description
-// !!!!
+// ?
 
 #ifndef __vtkFunctorInitializable_h__
 #define __vtkFunctorInitializable_h__
 
 #include "vtkParallelSMPModule.h" // For export macro
 #include "vtkFunctor.h"
-#include <vector> //TODO PIMPLE
+#include <vector> //No STL in API in core
 
 class VTKPARALLELSMP_EXPORT vtkFunctorInitializable : public vtkFunctor
 {
@@ -29,14 +30,24 @@ public:
   vtkTypeMacro(vtkFunctorInitializable,vtkFunctor);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //Description:
+  //?
   virtual void Init ( ) const = 0;
+
+  //Description:
+  //?
   bool ShouldInitialize( ) const;
 
 protected:
   vtkFunctorInitializable();
   ~vtkFunctorInitializable();
 
+  //Description:
+  //?
   void Initialized( ) const;
+
+  //Description:
+  //?
   mutable vtkstd::vector<vtkIdType> IsInitialized;
 
 private:

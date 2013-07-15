@@ -12,9 +12,10 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPPipeline - !!!!
+// .NAME vtkSMPPipeline - Enables multi-core processing of blocks
 // .SECTION Description
-// !!!!
+// vtkSMPPipeline is a vtkExectutive that operates on different blocks
+// simultaneously on different cores.
 
 #ifndef VTKSMPPIPELINE_H
 #define VTKSMPPIPELINE_H
@@ -28,13 +29,20 @@ protected:
   vtkSMPPipeline();
   ~vtkSMPPipeline();
 
+  // Description:
+  // Overridden to...
   virtual int ExecuteData(vtkInformation* request,
                           vtkInformationVector** inInfoVec,
                           vtkInformationVector* outInfoVec);
+
+  // Description:
+  // Overridden to...
   virtual void ExecuteSimpleAlgorithm(vtkInformation* request,
                                       vtkInformationVector** inInfoVec,
                                       vtkInformationVector* outInfoVec,
                                       int compositePort);
+
+  // Description:
   // Check whether the data object in the pipeline information for an
   // output port exists and has a valid type.
   virtual int CheckDataObject(int port, vtkInformationVector* outInfo);

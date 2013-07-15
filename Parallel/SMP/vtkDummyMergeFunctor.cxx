@@ -161,10 +161,14 @@ void vtkDummyMergeFunctor::InitializeNeeds(
   NumberOfPoints = 0;
   vtkThreadLocal<vtkSMPMergePoints>::iterator itLocator;
   if ( _locator )
+    {
     itLocator = Locators->Begin();
+    }
   vtkThreadLocal<vtkPoints>::iterator itPoints;
   if ( _points )
+    {
     itPoints = InPoints->Begin();
+    }
   vtkThreadLocal<vtkCellArray>::iterator itVerts = InVerts->Begin();
   vtkThreadLocal<vtkCellArray>::iterator itLines = InLines->Begin();
   vtkThreadLocal<vtkCellArray>::iterator itPolys = InPolys->Begin();
@@ -205,10 +209,22 @@ void vtkDummyMergeFunctor::InitializeNeeds(
     polyOffset->GetNumberOfCells() +
     stripOffset->GetNumberOfCells();
 
-  if ( this->outputVerts ) this->outputVerts->GetData()->Resize( vertOffset->GetNumberOfTuples() );
-  if ( this->outputLines ) this->outputLines->GetData()->Resize( lineOffset->GetNumberOfTuples() );
-  if ( this->outputPolys ) this->outputPolys->GetData()->Resize( polyOffset->GetNumberOfTuples() );
-  if ( this->outputStrips ) this->outputStrips->GetData()->Resize( stripOffset->GetNumberOfTuples() );
+  if ( this->outputVerts )
+    {
+    this->outputVerts->GetData()->Resize( vertOffset->GetNumberOfTuples() );
+    }
+  if ( this->outputLines )
+    {
+    this->outputLines->GetData()->Resize( lineOffset->GetNumberOfTuples() );
+    }
+  if ( this->outputPolys )
+    {
+    this->outputPolys->GetData()->Resize( polyOffset->GetNumberOfTuples() );
+    }
+  if ( this->outputStrips )
+    {
+    this->outputStrips->GetData()->Resize( stripOffset->GetNumberOfTuples() );
+    }
   // Copy on itself means resize
   this->outputPd->CopyAllocate( this->outputPd, NumberOfPoints, NumberOfPoints );
   this->outputCd->CopyAllocate( this->outputCd, NumberOfCells, NumberOfCells );

@@ -14,11 +14,6 @@
 =========================================================================*/
 
 #include "vtkSMPClipDataSet.h"
-#include "vtkParallelOperators.h"
-#include "vtkFunctor.h"
-#include "vtkFunctorInitializable.h"
-#include "vtkMergeDataSets.h"
-#include "vtkThreadLocal.h"
 
 #include "vtkCallbackCommand.h"
 #include "vtkCellArray.h"
@@ -26,39 +21,35 @@
 #include "vtkClipVolume.h"
 #include "vtkExecutive.h"
 #include "vtkFloatArray.h"
+#include "vtkFunctor.h"
+#include "vtkFunctorInitializable.h"
 #include "vtkGenericCell.h"
 #include "vtkImageData.h"
 #include "vtkImplicitFunction.h"
+#include "vtkIncrementalPointLocator.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkIntArray.h"
-#include "vtkSMPMergePoints.h"
+#include "vtkMergeDataSets.h"
 #include "vtkObjectFactory.h"
+#include "vtkParallelOperators.h"
 #include "vtkPlane.h"
 #include "vtkPointData.h"
+#include "vtkPolyhedron.h"
 #include "vtkSmartPointer.h"
+#include "vtkSMPMergePoints.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkThreadLocal.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkIncrementalPointLocator.h"
-#include "vtkPolyhedron.h"
 
 #include <math.h>
 
+//==============================================================================
 class GenerateClipValueExecutor : public vtkFunctor
 {
-  GenerateClipValueExecutor(const GenerateClipValueExecutor&);
-  void operator =(const GenerateClipValueExecutor&);
-
-protected:
-  GenerateClipValueExecutor(){}
-  ~GenerateClipValueExecutor(){}
-
-  vtkFloatArray* scalars;
-  vtkDataSet* input;
-  vtkImplicitFunction* clipFunction;
-
+//Description:
+//?
 public:
   vtkTypeMacro(GenerateClipValueExecutor,vtkFunctor);
   static GenerateClipValueExecutor* New();
@@ -67,6 +58,8 @@ public:
     this->Superclass::PrintSelf(os,indent);
     }
 
+  //Description:
+  //?
   void SetData(vtkFloatArray* s, vtkDataSet* i, vtkImplicitFunction* f)
     {
     scalars = s;
@@ -74,6 +67,8 @@ public:
     clipFunction = f;
     }
 
+  //Description:
+  //?
   void operator ()(vtkIdType i) const
     {
     double p[3];
@@ -81,66 +76,30 @@ public:
     double s = this->clipFunction->FunctionValue(p);
     this->scalars->SetTuple1(i,s);
     }
-};
 
-class DoClip : public vtkFunctorInitializable
-{
-  DoClip(const DoClip&);
-  void operator =(const DoClip&);
+  //TODO: Can be private and markes not implemented?
+  GenerateClipValueExecutor(const GenerateClipValueExecutor&);
+  void operator =(const GenerateClipValueExecutor&);
 
 protected:
-  DoClip() : input(0), clipScalars(0), inPD(0), inCD(0), estimatedSize(0),
-             value(0.0), insideOut(0), numOutputs(0), refLocator(0)
-    {
-    cell = vtkThreadLocal<vtkGenericCell>::New();
-    cellScalars = vtkThreadLocal<vtkFloatArray>::New();
-    newPoints = vtkThreadLocal<vtkPoints>::New();
-    outPD = vtkThreadLocal<vtkPointData>::New();
-    locator = vtkThreadLocal<vtkIncrementalPointLocator>::New();
+  GenerateClipValueExecutor(){}
+  ~GenerateClipValueExecutor(){}
 
-    conn[0] = conn[1] = 0;
-    outCD[0] = outCD[1] = 0;
-    types[0] = types[1] = 0;
-    locs[0] = locs[1] = 0;
-    }
-  ~DoClip()
-    {
-    cell->Delete();
-    cellScalars->Delete();
-    newPoints->Delete();
-    outPD->Delete();
-    locator->Delete();
-    for (int i = 0; i < numOutputs; ++i)
-      {
-      conn[i]->Delete();
-      outCD[i]->Delete();
-      types[i]->Delete();
-      locs[i]->Delete();
-      }
-    }
-
+  // TODO: Can be private?
+  vtkFloatArray* scalars;
   vtkDataSet* input;
-  vtkDataArray* clipScalars;
-  vtkPointData* inPD;
-  vtkCellData* inCD;
-  double value;
-  int insideOut;
-  int numOutputs;
-  vtkIdType estimatedSize;
-  vtkIncrementalPointLocator* refLocator;
+  vtkImplicitFunction* clipFunction;
+};
 
+vtkStandardNewMacro(GenerateClipValueExecutor);
+
+//==============================================================================
+//TODO: rename -> vtkDoClip
+class DoClip : public vtkFunctorInitializable
+{
+  //Description:
+  //?
 public:
-  vtkThreadLocal<vtkGenericCell>* cell;
-  vtkThreadLocal<vtkFloatArray>* cellScalars;
-  vtkThreadLocal<vtkPoints>* newPoints;
-  vtkThreadLocal<vtkPointData>* outPD;
-  vtkThreadLocal<vtkIncrementalPointLocator>* locator;
-
-  vtkThreadLocal<vtkCellArray>* conn[2];
-  vtkThreadLocal<vtkCellData>* outCD[2];
-  vtkThreadLocal<vtkUnsignedCharArray>* types[2];
-  vtkThreadLocal<vtkIdTypeArray>* locs[2];
-
   vtkTypeMacro(DoClip,vtkFunctorInitializable);
   static DoClip* New();
   void PrintSelf(ostream &os, vtkIndent indent)
@@ -148,6 +107,8 @@ public:
     this->Superclass::PrintSelf(os,indent);
     }
 
+  //Description:
+  //?
   void SetData(vtkDataSet* i, vtkDataArray* c, vtkPointData* pd, vtkCellData* cd,
                vtkIdType e, double v, int inside, int num, vtkPoints* pts,
                vtkPointData* out_pd, vtkIncrementalPointLocator* l, vtkCellArray** _conn,
@@ -176,6 +137,8 @@ public:
     Initialized();
     }
 
+  //Description:
+  //?
   void Init() const
     {
     cell->NewLocal();
@@ -196,6 +159,8 @@ public:
     Initialized();
     }
 
+  //Description:
+  //?
   void operator ()(vtkIdType cellId) const
     {
     vtkGenericCell* cell = this->cell->GetLocal();
@@ -271,20 +236,83 @@ public:
         } //for each new cell
       } //for both outputs
     }
+
+  //TODO Can be protected and marked not implemented?
+  DoClip(const DoClip&);
+  void operator =(const DoClip&);
+
+  //TODO: Can be private?
+  vtkThreadLocal<vtkGenericCell>* cell;
+  vtkThreadLocal<vtkFloatArray>* cellScalars;
+  vtkThreadLocal<vtkPoints>* newPoints;
+  vtkThreadLocal<vtkPointData>* outPD;
+  vtkThreadLocal<vtkIncrementalPointLocator>* locator;
+
+  vtkThreadLocal<vtkCellArray>* conn[2];
+  vtkThreadLocal<vtkCellData>* outCD[2];
+  vtkThreadLocal<vtkUnsignedCharArray>* types[2];
+  vtkThreadLocal<vtkIdTypeArray>* locs[2];
+
+protected:
+  DoClip() : input(0), clipScalars(0), inPD(0), inCD(0), estimatedSize(0),
+             value(0.0), insideOut(0), numOutputs(0), refLocator(0)
+    {
+    cell = vtkThreadLocal<vtkGenericCell>::New();
+    cellScalars = vtkThreadLocal<vtkFloatArray>::New();
+    newPoints = vtkThreadLocal<vtkPoints>::New();
+    outPD = vtkThreadLocal<vtkPointData>::New();
+    locator = vtkThreadLocal<vtkIncrementalPointLocator>::New();
+
+    conn[0] = conn[1] = 0;
+    outCD[0] = outCD[1] = 0;
+    types[0] = types[1] = 0;
+    locs[0] = locs[1] = 0;
+    }
+  ~DoClip()
+    {
+    cell->Delete();
+    cellScalars->Delete();
+    newPoints->Delete();
+    outPD->Delete();
+    locator->Delete();
+    for (int i = 0; i < numOutputs; ++i)
+      {
+      conn[i]->Delete();
+      outCD[i]->Delete();
+      types[i]->Delete();
+      locs[i]->Delete();
+      }
+    }
+
+  vtkDataSet* input;
+  vtkDataArray* clipScalars;
+  vtkPointData* inPD;
+  vtkCellData* inCD;
+  double value;
+  int insideOut;
+  int numOutputs;
+  vtkIdType estimatedSize;
+  vtkIncrementalPointLocator* refLocator;
 };
 
 vtkStandardNewMacro(DoClip);
-vtkStandardNewMacro(GenerateClipValueExecutor);
+
+//==============================================================================
 vtkStandardNewMacro(vtkSMPClipDataSet);
 
+//------------------------------------------------------------------------------
 vtkSMPClipDataSet::vtkSMPClipDataSet() : vtkClipDataSet() { }
+
+//------------------------------------------------------------------------------
 vtkSMPClipDataSet::~vtkSMPClipDataSet() { }
 
+//------------------------------------------------------------------------------
 void vtkSMPClipDataSet::PrintSelf(ostream& os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os,indent);
   }
 
+//------------------------------------------------------------------------------
 int vtkSMPClipDataSet::RequestData(
   vtkInformation* request,
   vtkInformationVector** inputVector,

@@ -12,9 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkMergeDataSets - !!!!
+// .NAME vtkMergeDataSets - ?
 // .SECTION Description
-// !!!!
+// ?
 
 #ifndef __vtkMergeDataSets_h__
 #define __vtkMergeDataSets_h__
@@ -33,9 +33,25 @@ class vtkIdList;
 
 class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
 {
+  public:
+    vtkTypeMacro(vtkMergeDataSets,vtkObject);
+    void PrintSelf(ostream& os, vtkIndent indent);
+    static vtkMergeDataSets* New();
+
+    // Description:
+    // ?
+    vtkSetMacro(MasterThreadPopulatedOutput,int);
+    vtkGetMacro(MasterThreadPopulatedOutput,int);
+    vtkBooleanMacro(MasterThreadPopulatedOutput,int);
+
+    // Description:
+    // ?
     void Parallel(
         const vtkTask* function,
         vtkThreadLocal<vtkSMPMergePoints>::iterator data);
+
+    // Description:
+    // ?
     void Parallel(
         const vtkTask* function,
         vtkThreadLocal<vtkIdList>::iterator data1,
@@ -53,14 +69,8 @@ class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
         vtkstd::vector<vtkIdType>::iterator offset7,
         vtkstd::vector<vtkIdType>::iterator offset8);
 
-  public:
-    vtkTypeMacro(vtkMergeDataSets,vtkObject);
-    void PrintSelf(ostream& os, vtkIndent indent);
-    static vtkMergeDataSets* New();
-
-    vtkSetMacro(MasterThreadPopulatedOutput,int);
-    vtkBooleanMacro(MasterThreadPopulatedOutput,int);
-
+    // Description:
+    // ?
     void MergePolyData(
         vtkPoints* outPoints,
         vtkThreadLocal<vtkPoints>* inPoints,
@@ -71,6 +81,9 @@ class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
         vtkCellArray* outPolys, vtkThreadLocal<vtkCellArray>* inPolys,
         vtkCellArray* outStrips, vtkThreadLocal<vtkCellArray>* inStrips,
         vtkCellData* outCellsData, vtkThreadLocal<vtkCellData>* inCellsData);
+
+    // Description:
+    // ?
     void MergePolyData(
         vtkSMPMergePoints* outPoints,
         vtkThreadLocal<vtkSMPMergePoints>* inPoints,
@@ -85,7 +98,12 @@ class VTKPARALLELSMP_EXPORT vtkMergeDataSets : public vtkObject
     vtkMergeDataSets();
     ~vtkMergeDataSets();
 
+    // Description:
+    // ?
     int MasterThreadPopulatedOutput;
+
+    // Description:
+    // ?
     vtkIdType** TreatedTable;
 
   private:

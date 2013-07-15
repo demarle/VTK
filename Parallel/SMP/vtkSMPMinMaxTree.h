@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPMinMaxTree - !!!!
+// .NAME vtkSMPMinMaxTree - A multi-core accelerated vtkSimpleScalarTree
 // .SECTION Description
 // !!!!
 
@@ -30,12 +30,6 @@ class InitializeFunctor;
 //TODO: single inheritance
 class VTKPARALLELSMP_EXPORT vtkSMPMinMaxTree : public vtkSimpleScalarTree, public vtkParallelTree
 {
-  friend class InitializeFunctor;
-
-protected:
-  vtkSMPMinMaxTree();
-  ~vtkSMPMinMaxTree();
-
 public:
   vtkTypeMacro(vtkSMPMinMaxTree, vtkSimpleScalarTree);
   static vtkSMPMinMaxTree* New();
@@ -46,6 +40,12 @@ public:
 
   virtual int TraverseNode( vtkIdType id, int lvl, vtkFunctor* function ) const;
   virtual void GetTreeSize ( int& max_level, vtkIdType& branching_factor ) const;
+
+  friend class InitializeFunctor;
+
+protected:
+  vtkSMPMinMaxTree();
+  ~vtkSMPMinMaxTree();
 
 private:
   vtkSMPMinMaxTree(const vtkSMPMinMaxTree&); // Not implemented

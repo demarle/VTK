@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkParallelTree - !!!!
+// .NAME vtkParallelTree - abstract base for SMP accelerated search trees
 // .SECTION Description
 // !!!!
 
@@ -28,7 +28,12 @@ class vtkFunctor;
 class VTKPARALLELSMP_EXPORT vtkParallelTree
 {
 public:
+  // Description:
+  // ?
   virtual int TraverseNode( vtkIdType id, int lvl, vtkFunctor* function ) const = 0;
+
+  // Description:
+  // ?
   virtual void GetTreeSize ( int& max_level, vtkIdType& branching_factor ) const = 0;
 };
 

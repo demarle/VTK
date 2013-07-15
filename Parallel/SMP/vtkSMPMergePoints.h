@@ -12,10 +12,11 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkSMPMergePoints - !!!!
+// .NAME vtkSMPMergePoints - multithreaded vtkMergePoints
 // .SECTION Description
-// !!!!
-
+// Just like parent, but uses the SMP framework to do work on many threads.
+// This is used frequently in multithreaded algorithms because the many
+// threads need to gather their results together at in the end.
 #ifndef VTKSMPMERGEPOINTS_H
 #define VTKSMPMERGEPOINTS_H
 
@@ -27,6 +28,52 @@ class vtkMutexLock;
 
 class VTKPARALLELSMP_EXPORT vtkSMPMergePoints : public vtkMergePoints
 {
+public:
+  vtkTypeMacro(vtkSMPMergePoints, vtkMergePoints);
+  static vtkSMPMergePoints* New();
+  void PrintSelf(ostream &os, vtkIndent indent);
+
+  // Replace InitPointInsertion for ?
+  int InitLockInsertion(vtkPoints *newPts, const double bounds[6], vtkIdType estSize);
+
+  //Description:
+  //?
+  void AddPointIdInBucket( vtkIdType ptId );
+
+  //Description:
+  //?
+  int SetUniquePoint( const double x[3], vtkIdType& id );
+
+  //Description:
+  //?
+  void Merge ( vtkSMPMergePoints* locator, vtkIdType idx,
+      vtkPointData *outPd, vtkPointData *ptData, vtkIdList* idList );
+
+  //Description:
+  //?
+  void FixSizeOfPointArray();
+
+  //Description:
+  //?
+  virtual vtkIdType LocateBucketThatPointIsIn ( double x, double y, double z );
+
+  //Description:
+  //?
+  vtkIdType GetNumberOfIdInBucket ( vtkIdType idx );
+
+  //Description:
+  //?
+  vtkIdType GetNumberOfBuckets();
+
+  //Description:
+  //?
+  void PrintSizeOfThis();
+
+  //Description:
+  //?
+  void FreeSearchStructure();
+
+  //TODO Can be private?
   typedef vtkMutexLock *vtkMutexLockPtr;
   vtkMutexLock** LockTable;
   vtkMutexLock* CreatorLock;
@@ -34,27 +81,6 @@ class VTKPARALLELSMP_EXPORT vtkSMPMergePoints : public vtkMergePoints
 protected:
   vtkSMPMergePoints();
   ~vtkSMPMergePoints();
-
-public:
-  vtkTypeMacro(vtkSMPMergePoints, vtkMergePoints);
-  static vtkSMPMergePoints* New();
-  void PrintSelf(ostream &os, vtkIndent indent);
-
-  // Replace InitPointInsertion for
-  int InitLockInsertion(vtkPoints *newPts, const double bounds[6], vtkIdType estSize);
-  void AddPointIdInBucket( vtkIdType ptId );
-  int SetUniquePoint( const double x[3], vtkIdType& id );
-
-  void Merge ( vtkSMPMergePoints* locator, vtkIdType idx, vtkPointData *outPd, vtkPointData *ptData, vtkIdList* idList );
-
-  void FixSizeOfPointArray();
-  virtual vtkIdType LocateBucketThatPointIsIn ( double x, double y, double z );
-  vtkIdType GetNumberOfIdInBucket ( vtkIdType idx );
-  vtkIdType GetNumberOfBuckets();
-
-  void PrintSizeOfThis();
-
-  void FreeSearchStructure();
 
 private:
   vtkSMPMergePoints(const vtkSMPMergePoints&); // Not implemented

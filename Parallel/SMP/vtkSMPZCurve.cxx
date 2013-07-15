@@ -33,54 +33,63 @@
 #include "vtkFunctor.h"
 #include "vtkUnstructuredGrid.h"
 
+//============================================================================
 class MyOctreeLocator : public vtkOctreePointLocator
 {
-  public:
-    static MyOctreeLocator* New();
-    vtkTypeMacro(MyOctreeLocator, vtkOctreePointLocator);
-    void PrintSelf(ostream &os, vtkIndent indent)
-      {
-      this->Superclass::PrintSelf(os, indent);
-      }
+//Description:
+//?
+public:
+  static MyOctreeLocator* New();
+  vtkTypeMacro(MyOctreeLocator, vtkOctreePointLocator);
+  void PrintSelf(ostream &os, vtkIndent indent)
+  {
+    this->Superclass::PrintSelf(os, indent);
+  }
 
-    int GetSortedPoints( vtkIdType id, double pt[3] )
-      {
-      int pointId = this->LocatorIds[id];
-      this->DataSet->GetPoint( pointId, pt );
-      return pointId;
-      }
+  int GetSortedPoints( vtkIdType id, double pt[3] )
+  {
+    int pointId = this->LocatorIds[id];
+    this->DataSet->GetPoint( pointId, pt );
+    return pointId;
+  }
 
-    int GetSortedPoints( vtkIdType id )
-      {
-      return this->LocatorIds[id];
-      }
+  int GetSortedPoints( vtkIdType id )
+  {
+    return this->LocatorIds[id];
+  }
 
-  protected:
-    MyOctreeLocator()
-      {
-      }
-    ~MyOctreeLocator()
-      {
-      }
+protected:
+  MyOctreeLocator()
+  {
+  }
+  ~MyOctreeLocator()
+  {
+  }
 
-  private:
-    MyOctreeLocator(const MyOctreeLocator&);
-    void operator =(const MyOctreeLocator&);
+private:
+  MyOctreeLocator(const MyOctreeLocator&);
+  void operator =(const MyOctreeLocator&);
 };
 
+//----------------------------------------------------------------------------
+vtkStandardNewMacro(MyOctreeLocator);
+
+//============================================================================
 class PointsFunctor : public vtkFunctor
 {
+//Description:
+//?
 protected:
   PointsFunctor()
-    {
+  {
     newPointsLayout = vtkPoints::New();
     oldToNew = vtkIdList::New();
-    }
+  }
   ~PointsFunctor()
-    {
+  {
     newPointsLayout->Delete();
     oldToNew->Delete();
-    }
+  }
 
   vtkIdList* oldToNew;
   vtkPoints* newPointsLayout;
@@ -96,6 +105,8 @@ public:
     this->Superclass::PrintSelf(os, indent);
     }
 
+  //Description:
+  //?
   void Initialize( MyOctreeLocator* locator, vtkPointData* oldPointData, vtkPointData* newPointData )
     {
     vtkIdType num_points = locator->GetDataSet()->GetNumberOfPoints();
@@ -108,6 +119,8 @@ public:
     this->locator = locator;
     }
 
+  //Description:
+  //?
   virtual void operator ()( vtkIdType i ) const
     {
     double pt[3];
@@ -117,11 +130,15 @@ public:
     newPd->SetTuple( i, id, oldPd );
     }
 
+  //Description:
+  //?
   vtkPoints* GetNewPoints()
     {
     return newPointsLayout;
     }
 
+  //Description:
+  //?
   vtkIdList* GetOldToNew()
     {
     return oldToNew;
@@ -132,18 +149,23 @@ private:
   void operator =(const PointsFunctor&);
 };
 
-vtkStandardNewMacro(MyOctreeLocator);
-vtkStandardNewMacro(vtkSMPZCurve);
+//----------------------------------------------------------------------------
 vtkStandardNewMacro(PointsFunctor);
 
+//============================================================================
+vtkStandardNewMacro(vtkSMPZCurve);
+
+//----------------------------------------------------------------------------
 vtkSMPZCurve::vtkSMPZCurve()
   {
   }
 
+//----------------------------------------------------------------------------
 vtkSMPZCurve::~vtkSMPZCurve()
   {
   }
 
+//----------------------------------------------------------------------------
 int vtkSMPZCurve::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -212,9 +234,13 @@ int vtkSMPZCurve::RequestData(
   vtkPolyData* polyOutput = vtkPolyData::SafeDownCast(output);
   vtkUnstructuredGrid* usgOutput = vtkUnstructuredGrid::SafeDownCast(output);
   if ( polyOutput )
+    {
     polyOutput->Allocate( numberOfCells );
+    }
   else
+    {
     usgOutput->Allocate( numberOfCells );
+    }
   output->GetCellData()->Allocate( numberOfCells );
   output->GetCellData()->SetNumberOfTuples( numberOfCells );
   for ( vtkIdType i = 0; i < numberOfCells; ++i )
@@ -227,9 +253,13 @@ int vtkSMPZCurve::RequestData(
       newPtIds[j] = oldToNew->GetId( c->GetPointId(j) );
       }
     if (polyOutput)
+      {
       polyOutput->InsertNextCell( c->GetCellType(), c->GetNumberOfPoints(), newPtIds );
+      }
     else
+      {
       usgOutput->InsertNextCell( c->GetCellType(), c->GetNumberOfPoints(), newPtIds );
+      }
     output->GetCellData()->SetTuple( i, newCellId, input->GetCellData() );
     }
   oldToNew->UnRegister(this);
@@ -238,6 +268,7 @@ int vtkSMPZCurve::RequestData(
   return 1;
   }
 
+//----------------------------------------------------------------------------
 void vtkSMPZCurve::PrintSelf(ostream& os, vtkIndent indent)
   {
   this->Superclass::PrintSelf(os,indent);
