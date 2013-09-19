@@ -5,14 +5,13 @@ include(CheckCXXSourceCompiles)
 include(SetUpVersion)
 
 if(VERSION_CONTROL_AUTOUPDATE OR 
-    NOT EXISTS ${CMAKE_BINARY_DIR}/XdmfVersion.hpp)
+    NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/XdmfVersion.hpp)
   VersionCreate("Xdmf" "2" "XDMFCORE_EXPORT" "XdmfCore.hpp")
-endif(VERSION_CONTROL_AUTOUPDATE OR 
-    NOT EXISTS ${CMAKE_BINARY_DIR}/XdmfVersion.hpp)
+endif()
 
 set(BUILD_SHARED_LIBS true)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
@@ -85,7 +84,7 @@ int main(int ac, char ** av)
 "
 HAVE_BOOST_SHARED_DYNAMIC_CAST)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/XdmfConfig.hpp.in 
-               ${CMAKE_BINARY_DIR}/XdmfConfig.hpp)
+               ${CMAKE_CURRENT_BINARY_DIR}/XdmfConfig.hpp)
 
 set(XdmfCoreSources
   XdmfArray
@@ -102,7 +101,7 @@ set(XdmfCoreSources
   XdmfItemProperty
   XdmfSparseMatrix
   XdmfSystemUtils
-  ${CMAKE_BINARY_DIR}/XdmfVersion
+  ${CMAKE_CURRENT_BINARY_DIR}/XdmfVersion
   XdmfVisitor
   XdmfWriter)
 
@@ -130,7 +129,8 @@ endif(XDMF_BUILD_DSM)
 
 add_library(XdmfCore ${XdmfCoreSources})
 link_directories(${XDMF_LIBRARY_DIRS})
-target_link_libraries(XdmfCore ${XDMF_LIBRARIES})
+target_link_libraries(XdmfCore ${XDMF_LIBRARIES} ${vtkxdmf2_LINK_DEPENDS})
+vtk_target_install(XdmfCore)
 
 if(WIN32)
   add_definitions(-D_HDF5USEDLL_ -D_HDF5USEHLDLL_)
@@ -140,9 +140,9 @@ if(WIN32)
 	set_target_properties(XdmfCore PROPERTIES
       PREFIX ../
       IMPORT_PREFIX ../
-      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-      LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-      ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   endif(NOT MSVC10)
 endif(WIN32)
 
@@ -192,9 +192,9 @@ set(XdmfCore_INCLUDE_DIRS
 set(XDMF_LIBRARIES ${XDMF_LIBRARIES} ${CMAKE_INSTALL_PREFIX}/lib)
 set(XDMF_BINARIES ${XDMF_BINARIES} ${CMAKE_INSTALL_PREFIX}/bin)
 
-if(BUILD_TESTING)
-  add_subdirectory(tests)
-endif(BUILD_TESTING)
+#if(BUILD_TESTING)
+#  add_subdirectory(tests)
+#endif(BUILD_TESTING)
 
 set(XDMF_LIBRARIES ${XDMF_LIBRARIES} PARENT_SCOPE)
 set(XDMF_BINARIES ${XDMF_BINARIES} PARENT_SCOPE)
