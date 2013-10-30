@@ -9,7 +9,7 @@ if(VERSION_CONTROL_AUTOUPDATE OR
   VersionCreate("Xdmf" "2" "XDMFCORE_EXPORT" "XdmfCore.hpp")
 endif()
 
-set(BUILD_SHARED_LIBS true)
+#set(BUILD_SHARED_LIBS true)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
