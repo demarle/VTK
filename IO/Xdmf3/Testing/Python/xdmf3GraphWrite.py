@@ -1,8 +1,11 @@
 import vtk
 import sys
 
-fname = sys.argv[1]
-odir = "/Users/demarle/tmp/xdmfout/"
+if len(sys.argv) != 3:
+  print "usage:", sys.argv[0], " outdir infile.xdmf"
+  exit(0)
+odir = sys.argv[1]
+fname = sys.argv[2]
 
 x3r = vtk.vtkXdmf3Reader()
 x3r.SetFileName(fname)
