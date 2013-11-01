@@ -66,13 +66,13 @@ public:
   static bool VTKToXdmfArray(
     vtkDataArray *vArray,
     XdmfArray* xArray,
-    bool deleteMe = false)
+    int rank = 0, int *dims = NULL)
   ;
 
-  static void XToVAttributes(XdmfGrid *grid, vtkDataObject *dObject)
+  static void XdmfToVTKAttributes(XdmfGrid *grid, vtkDataObject *dObject)
   ;
 
-  static void VToXAttributes(vtkDataObject *dObject, XdmfGrid *grid)
+  static void VTKToXdmfAttributes(vtkDataObject *dObject, XdmfGrid *grid)
   ;
 
   static int GetNumberOfPointsPerCell(int vtk_cell_type)

@@ -400,7 +400,6 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
     {
     return 0;
     }
-  return 1;
 
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
 
