@@ -43,12 +43,18 @@ public:
   void Init(const char *filename)
   {
     this->Domain = XdmfDomain::New();
-    this->TopTemporalGrid = XdmfGridCollection::New();
-    this->TopTemporalGrid->setType(XdmfGridCollectionType::Temporal());
     this->Writer = XdmfWriter::New(filename);
     this->Writer->setLightDataLimit(10000);
+    this->Destination = this->Domain;
   }
-  void WriteDataObject(vtkDataObject *dataSet)
+  void SwitchToTemporal()
+  {
+    shared_ptr<XdmfGridCollection> dest = XdmfGridCollection::New();
+    dest->setType(XdmfGridCollectionType::Temporal());
+    this->Destination = dest;
+    this->Domain->insert(dest);
+  }
+  void WriteDataObject(vtkDataObject *dataSet, bool hasTime, double time)
   {
     if (!dataSet)
       {
@@ -62,21 +68,24 @@ public:
         {
         vtkXdmf3RegularGrid::VTKToXdmf(
           vtkDataSet::SafeDownCast(dataSet),
-          this->Domain.get());
+          this->Destination.get(),
+          hasTime, time);
         break;
         }
       case VTK_RECTILINEAR_GRID:
         {
         vtkXdmf3RectilinearGrid::VTKToXdmf(
           vtkDataSet::SafeDownCast(dataSet),
-          this->Domain.get());
+          this->Destination.get(),
+          hasTime, time);
         break;
         }
       case VTK_STRUCTURED_GRID:
         {
         vtkXdmf3CurvilinearGrid::VTKToXdmf(
           vtkDataSet::SafeDownCast(dataSet),
-          this->Domain.get());
+          this->Destination.get(),
+          hasTime, time);
         break;
         }
       case VTK_POLY_DATA:
@@ -84,7 +93,8 @@ public:
         {
         vtkXdmf3UnstructuredGrid::VTKToXdmf(
           vtkDataSet::SafeDownCast(dataSet),
-          this->Domain.get());
+          this->Destination.get(),
+          hasTime, time);
         break;
         }
       //case VTK_GRAPH:
@@ -93,7 +103,8 @@ public:
         {
         vtkXdmf3Graph::VTKToXdmf(
           vtkDirectedGraph::SafeDownCast(dataSet),
-          this->Domain.get());
+          this->Destination.get(),
+          hasTime, time);
         break;
         }
       default:
@@ -102,7 +113,7 @@ public:
       }
   }
   boost::shared_ptr<XdmfDomain> Domain;
-  boost::shared_ptr<XdmfGridCollection> TopTemporalGrid;
+  boost::shared_ptr<XdmfDomain> Destination;
   boost::shared_ptr<XdmfWriter> Writer;
 };
 
@@ -195,6 +206,7 @@ int vtkXdmf3Writer::RequestInformation(
     {
     this->NumberOfTimeSteps = 1;
     }
+  cerr << "WRITER NUM TS = " << this->NumberOfTimeSteps << endl;
 
   return 1;
 }
@@ -239,19 +251,21 @@ int vtkXdmf3Writer::RequestData(
       this->NumberOfTimeSteps > 1)
     {
     // Tell the pipeline to start looping.
+    this->Internal->SwitchToTemporal();
     request->Set(vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1);
     }
 
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
   vtkDataObject* input = inInfo->Get(vtkDataObject::DATA_OBJECT());
   vtkInformation *inDataInfo = input->GetInformation();
+  double dataT = 0;
+  bool hasTime = false;
   if (inDataInfo->Has(vtkDataObject::DATA_TIME_STEP()))
     {
-    double dataT = input->GetInformation()->Get(vtkDataObject::DATA_TIME_STEP());
-    //cerr << "Writing " << this->CurrentTimeIndex << " " << *dataT << endl;
+    dataT = input->GetInformation()->Get(vtkDataObject::DATA_TIME_STEP());
+    hasTime = true;
     }
-
-  this->Internal->WriteDataObject(input);
+  this->Internal->WriteDataObject(input, hasTime, dataT);
 
   this->CurrentTimeIndex++;
   if (this->CurrentTimeIndex >= this->NumberOfTimeSteps &&

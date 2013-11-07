@@ -35,6 +35,8 @@
 #include "XdmfCurvilinearGrid.hpp"
 #include "XdmfDomain.hpp"
 #include "XdmfGraph.hpp"
+#include "XdmfGridCollection.hpp"
+#include "XdmfGridCollectionType.hpp"
 #include "XdmfReader.hpp"
 #include "XdmfRectilinearGrid.hpp"
 #include "XdmfRegularGrid.hpp"
@@ -42,24 +44,28 @@
 #include "XdmfTime.hpp"
 #include "XdmfVisitor.hpp"
 
+#define DEBUG_VXDMF3 0
+#if DEBUG_VXDMF3
+//these two are just here for debug code
+#include "vtkPointData.h"
+#include "vtkDataArray.h"
+#endif
+
 #include <set>
 
 //TODO: multiblock
-//TODO: time
-//TODO: active attributes
+//TODO: enable/disable arrays, blocks
 //TODO: strides
 //TODO: information elements
 //TODO: test 2D cases
 //TODO: test in parallel
-//TODO: SIL
-//TODO: enable/disable arrays, blocks
 //TODO: domains
+//TODO: SIL
 
 //=============================================================================
 class vtkXdmfVisitor_GatherTimes : public XdmfVisitor
 {
-  //This traverses the hierarchy and prints out child types.
-  //Just for diagnostic use.
+  //Traverses the xdmf hierarchy to build up the list of times it can serve.
 public:
 
   static shared_ptr<vtkXdmfVisitor_GatherTimes>
@@ -75,11 +81,90 @@ public:
   visit(XdmfItem & item,
     const shared_ptr<XdmfBaseVisitor> visitor)
   {
-    XdmfTime *timespec = dynamic_cast<XdmfTime *>(&item);
-    if (timespec)
+    //make up default of 0..nchildren for temporal collection without times
+    //TODO: handle range, list and slab timetypes similarly when they come to libxdmf3
+    XdmfGridCollection *gc = dynamic_cast<XdmfGridCollection *>(&item);
+    if (gc && gc->getType() == XdmfGridCollectionType::Temporal())
       {
-      times.insert(timespec->getValue());
+      bool foundOne = false;
+      unsigned int nUnstructuredGrids = gc->getNumberUnstructuredGrids();
+      unsigned int nRectilinearGrids = gc->getNumberRectilinearGrids();
+      unsigned int nCurvilinearGrids= gc->getNumberCurvilinearGrids();
+      unsigned int nRegularGrids = gc->getNumberRegularGrids();
+      unsigned int nGraphs = gc->getNumberGraphs();
+      for (unsigned int i = 0; i < nUnstructuredGrids; i++)
+        {
+        if (gc->getUnstructuredGrid(i)->getTime())
+          {
+          foundOne = true;
+          break;
+          }
+        }
+      for (unsigned int i = 0; i < nRectilinearGrids && !foundOne; i++)
+        {
+        if (gc->getRectilinearGrid(i)->getTime())
+          {
+          foundOne = true;
+          break;
+          }
+        }
+      for (unsigned int i = 0; i < nCurvilinearGrids && !foundOne; i++)
+        {
+        if (gc->getCurvilinearGrid(i)->getTime())
+          {
+          foundOne = true;
+          break;
+          }
+        }
+      for (unsigned int i = 0; i < nRegularGrids && !foundOne; i++)
+        {
+        if (gc->getRegularGrid(i)->getTime())
+          {
+          foundOne = true;
+          break;
+          }
+        }
+      /*TODO:: for... XdmfGraph->hasNoTime() */
+
+      if (!foundOne)
+        {
+        //add implicit times to the immediate children to make searching for matching
+        //times easier later on
+        for (int i = 0;
+            i < nUnstructuredGrids+nRectilinearGrids+nCurvilinearGrids+nRegularGrids+nGraphs;
+            i++)
+          {
+          shared_ptr<XdmfTime> time = XdmfTime::New(i);
+          if (gc->getUnstructuredGrid(i))
+            {
+            gc->getUnstructuredGrid(i)->setTime(time);
+            }
+          if (gc->getRectilinearGrid(i))
+            {
+            gc->getRectilinearGrid(i)->setTime(time);
+            }
+          if (gc->getCurvilinearGrid(i))
+            {
+            gc->getCurvilinearGrid(i)->setTime(time);
+            }
+          if (gc->getRegularGrid(i))
+            {
+            gc->getRegularGrid(i)->setTime(time);
+            }
+          //TODO:: XdmfGraph->setTime
+          times.insert(i);
+          }
+        }
       }
+    else
+      {
+      XdmfTime *timespec = dynamic_cast<XdmfTime *>(&item);
+      if (timespec)
+        {
+        times.insert(timespec->getValue());
+        }
+      }
+
     item.traverse(visitor);
   }
 
@@ -90,9 +175,9 @@ public:
 
 protected:
 
-  std::set<double> times;
-
   vtkXdmfVisitor_GatherTimes() {}
+  std::set<double> times; //semi-relying on implicit sort from set<double>
+
 };
 
 //=============================================================================
@@ -116,36 +201,59 @@ public:
   visit(XdmfItem & item,
     const shared_ptr<XdmfBaseVisitor> visitor)
   {
+    //TODO: return ONLY requested time
     XdmfRegularGrid *regGrid = dynamic_cast<XdmfRegularGrid *>(&item);
-    //TODO: strides
     if (regGrid)
       {
-      vtkImageData *dataSet = vtkImageData::SafeDownCast(this->dataObject);
-      vtkXdmf3RegularGrid::XdmfToVTK(regGrid, dataSet);
+      if (!this->doTime ||
+          (regGrid->getTime() && regGrid->getTime()->getValue() == this->time)
+          )
+        {
+        vtkImageData *dataSet = vtkImageData::SafeDownCast(this->dataObject);
+        vtkXdmf3RegularGrid::XdmfToVTK(regGrid, dataSet);
+        }
       }
     else
       {
       XdmfRectilinearGrid *recGrid = dynamic_cast<XdmfRectilinearGrid *>(&item);
       if (recGrid)
         {
-        vtkRectilinearGrid *dataSet = vtkRectilinearGrid::SafeDownCast(this->dataObject);
-        vtkXdmf3RectilinearGrid::XdmfToVTK(recGrid, dataSet);
+        if (!this->doTime ||
+            (recGrid->getTime() && recGrid->getTime()->getValue() == this->time)
+            )
+          {
+          vtkRectilinearGrid *dataSet = vtkRectilinearGrid::SafeDownCast(this->dataObject);
+          vtkXdmf3RectilinearGrid::XdmfToVTK(recGrid, dataSet);
+          }
         }
       else
         {
         XdmfCurvilinearGrid *crvGrid = dynamic_cast<XdmfCurvilinearGrid *>(&item);
         if (crvGrid)
           {
-          vtkStructuredGrid *dataSet = vtkStructuredGrid::SafeDownCast(this->dataObject);
-          vtkXdmf3CurvilinearGrid::XdmfToVTK(crvGrid, dataSet);
+          if (!this->doTime ||
+              (crvGrid->getTime() && crvGrid->getTime()->getValue() == this->time)
+              )
+            {
+            vtkStructuredGrid *dataSet = vtkStructuredGrid::SafeDownCast(this->dataObject);
+            vtkXdmf3CurvilinearGrid::XdmfToVTK(crvGrid, dataSet);
+            }
           }
         else
           {
           XdmfUnstructuredGrid *unsGrid = dynamic_cast<XdmfUnstructuredGrid *>(&item);
           if (unsGrid)
             {
-            vtkUnstructuredGrid *dataSet = vtkUnstructuredGrid::SafeDownCast(this->dataObject);
-            vtkXdmf3UnstructuredGrid::XdmfToVTK(unsGrid, dataSet);
+            if (!this->doTime ||
+                (unsGrid->getTime() && unsGrid->getTime()->getValue() == this->time)
+                )
+              {
+              vtkUnstructuredGrid *dataSet = vtkUnstructuredGrid::SafeDownCast(this->dataObject);
+              vtkXdmf3UnstructuredGrid::XdmfToVTK(unsGrid, dataSet);
+#if DEBUG_VXDMF3
+              cerr << "UGPD0 " << *dataSet->GetPointData()->GetArray("NodeScalar")->GetTuple(0) << endl;
+#endif
+              }
             }
           else
             {
@@ -157,7 +265,7 @@ public:
               }
             else
               {
-              cerr << "other " << item.getItemTag() << endl;
+              //cerr << "other " << item.getItemTag() << endl;
               item.traverse(visitor);
               }
             }
@@ -166,39 +274,72 @@ public:
       }
   }
 
-  void SetOwner(vtkXdmf3Reader *self)
-  {
-    this->owner = self;
-  }
   void SetDataObject(vtkDataObject *dobj)
   {
     this->dataObject = dobj;
   }
+  void SetTimeRequest(bool dt, double t)
+  {
+    this->doTime = dt;
+    this->time = t;
+  }
 
 protected:
-
-  vtkXdmfVisitor_ReadGrids() {}
-  vtkXdmf3Reader *owner;
+  vtkXdmfVisitor_ReadGrids()
+  {
+    this->dataObject = NULL;
+    this->doTime = false;
+  }
   vtkDataObject *dataObject;
+  bool doTime;
+  double time;
 };
 
 //=============================================================================
 class vtkXdmf3Reader::Internals {
+  //Private implementation details for vtkXdmf3Reader
 public:
   Internals() {};
   ~Internals() {};
-
+  //--------------------------------------------------------------------------
+  bool PrepareDocument(vtkXdmf3Reader *self, const char *FileName)
+  {
+    // Calling this method repeatedly is okay. It does work only when something
+    // has changed.
+    //TODO Implement read from buffer path
+    if (!FileName )
+      {
+      vtkErrorWithObjectMacro(self, "File name not set");
+      return false;
+      }
+    if (!vtksys::SystemTools::FileExists(FileName))
+      {
+      vtkErrorWithObjectMacro(self, "Error opening file " << FileName);
+      return false;
+      }
+    if (!this->Domain)
+      {
+      cerr << "READING XML" << endl;
+      this->Init(FileName);
+      }
+    return true;
+  }
+  //--------------------------------------------------------------------------
   void Init(const char *filename)
   {
     this->Reader = XdmfReader::New();
+    //TODO:
+    //Domains are no longer used. Ken wants us to handle files without domains.
     this->Domain = shared_dynamic_cast<XdmfDomain>(
       this->Reader->read(filename)
       );
+    //this->TopAtomicGrid = NULL;
     this->VTKType = -1;
   }
   //--------------------------------------------------------------------------
   void GatherTimes()
   {
+    //ask XDMF for the times it can provide data for
     if (this->TimeSteps.size())
       {
       this->TimeSteps.erase(this->TimeSteps.begin());
@@ -217,21 +358,46 @@ public:
   //--------------------------------------------------------------------------
   int GetVTKType()
   {
+    //find out what kind of vtkdataobject we should make
     if (this->VTKType != -1)
       {
       return this->VTKType;
       }
-    unsigned int nGridCollections = this->Domain->getNumberGridCollections();
-    unsigned int nUnstructuredGrids = this->Domain->getNumberUnstructuredGrids();
-    unsigned int nRectilinearGrids = this->Domain->getNumberRectilinearGrids();
-    unsigned int nCurvilinearGrids= this->Domain->getNumberCurvilinearGrids();
-    unsigned int nRegularGrids = this->Domain->getNumberRegularGrids();
-    unsigned int nGraphs = this->Domain->getNumberGraphs();
-    if (nGridCollections != 0 ||
-        (nUnstructuredGrids+
-         nCurvilinearGrids+nRectilinearGrids+nRegularGrids+
-         nGraphs
-         !=1)
+    shared_ptr<XdmfDomain> toCheck = this->Domain;
+    //this->TopAtomicGrid = NULL;
+    unsigned int nGridCollections = toCheck->getNumberGridCollections();
+
+    //check for temporal of atomic, in that case return atomic type
+    bool temporal = false;
+    if (nGridCollections == 1)
+      {
+      shared_ptr<XdmfGridCollection> gc = toCheck->getGridCollection(0);
+      if (gc->getType() == XdmfGridCollectionType::Temporal() &&
+          gc->getNumberGridCollections() == 0)
+        {
+        temporal = true;
+        toCheck = gc;
+        nGridCollections = 0;
+        }
+      }
+    unsigned int nUnstructuredGrids = toCheck->getNumberUnstructuredGrids();
+    unsigned int nRectilinearGrids = toCheck->getNumberRectilinearGrids();
+    unsigned int nCurvilinearGrids= toCheck->getNumberCurvilinearGrids();
+    unsigned int nRegularGrids = toCheck->getNumberRegularGrids();
+    unsigned int nGraphs = toCheck->getNumberGraphs();
+    int numTypes = 0;
+    numTypes = numTypes + (nUnstructuredGrids!=0?1:0);
+    numTypes = numTypes + (nRectilinearGrids!=0?1:0);
+    numTypes = numTypes + (nCurvilinearGrids!=0?1:0);
+    numTypes = numTypes + (nRegularGrids!=0?1:0);
+    numTypes = numTypes + (nGraphs!=0?1:0);
+    if (!(nGridCollections == 0 ||
+         (numTypes==1 && temporal) ||
+         (nUnstructuredGrids+
+          nCurvilinearGrids+nRectilinearGrids+nRegularGrids+
+          nGraphs
+          ==1)
+         )
        )
       {
       this->VTKType = VTK_MULTIBLOCK_DATA_SET;
@@ -239,59 +405,34 @@ public:
     else
       {
       this->VTKType = VTK_UNIFORM_GRID;
-      if (nCurvilinearGrids==1)
+      this->TopAtomicGrid = toCheck->getRegularGrid(0);
+      if (nCurvilinearGrids>0)
         {
         this->VTKType = VTK_STRUCTURED_GRID;
+        this->TopAtomicGrid = toCheck->getCurvilinearGrid(0);
         }
-      else if (nRectilinearGrids==1)
+      else if (nRectilinearGrids>0)
         {
         this->VTKType = VTK_RECTILINEAR_GRID;
+        this->TopAtomicGrid = toCheck->getRectilinearGrid(0);
         }
-      else if (nUnstructuredGrids==1)
+      else if (nUnstructuredGrids>0)
         {
         this->VTKType = VTK_UNSTRUCTURED_GRID;
+        this->TopAtomicGrid = toCheck->getUnstructuredGrid(0);
         }
-      else if (nGraphs == 1)
+      else if (nGraphs>0)
         {
         this->VTKType = VTK_DIRECTED_GRAPH; //VTK_MUTABLE_DIRECTED_GRAPH more specifically
+        this->TopAtomicGrid = toCheck->getGraph(0);
         }
       }
      return this->VTKType;
   }
 
-  //--------------------------------------------------------------------------
-  bool PrepareDocument(vtkXdmf3Reader *self, const char *FileName)
-  {
-    // Calling this method repeatedly is okay. It does work only when something
-    // has changed.
-
-    //TODO Implement read from buffer path
-
-    // Parse the file...
-    if (!FileName )
-      {
-      vtkErrorWithObjectMacro(self, "File name not set");
-      return false;
-      }
-
-    // First make sure the file exists.
-    if (!vtksys::SystemTools::FileExists(FileName))
-      {
-      vtkErrorWithObjectMacro(self, "Error opening file " << FileName);
-      return false;
-      }
-
-    if (!this->Domain)
-      {
-      cerr << "READING XML" << endl;
-      this->Init(FileName);
-      }
-
-    return true;
-  }
-
   boost::shared_ptr<XdmfReader> Reader;
   boost::shared_ptr<XdmfDomain> Domain;
+  boost::shared_ptr<XdmfItem> TopAtomicGrid;
   int VTKType;
   std::vector<double> TimeSteps;
   };
@@ -363,11 +504,10 @@ int vtkXdmf3Reader::RequestDataObject(vtkInformation *,
     }
   cerr << "RDO!" << endl;
 
-  //TODO: What about temporal collection of single grid?
-
   //Determine what vtkDataObject we should produce
   int vtk_type = this->Internal->GetVTKType();
-  cerr << "vtk type is " << vtk_type << " " << vtkDataObjectTypes::GetClassNameFromTypeId(vtk_type) << endl;
+  cerr << "vtk type is " << vtk_type << " "
+       << vtkDataObjectTypes::GetClassNameFromTypeId(vtk_type) << endl;
   //Make an empty vtkDataObject
   vtkDataObject* output = vtkDataObject::GetData(outputVector, 0);
   if (!output || output->GetDataObjectType() != vtk_type)
@@ -400,6 +540,7 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
     {
     return 0;
     }
+  cerr << "RI!" << endl;
 
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
 
@@ -416,10 +557,10 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
     double timeRange[2];
     timeRange[0] = this->Internal->TimeSteps.front();
     timeRange[1] = this->Internal->TimeSteps.back();
-    cerr << "TIMES " << timeRange[0] << "," << timeRange[1] << endl;
     outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
     }
 
+  // Structured atomic must announce the whole extent it can provide
   int vtk_type = this->Internal->GetVTKType();
   if (vtk_type == VTK_STRUCTURED_GRID ||
       vtk_type == VTK_RECTILINEAR_GRID ||
@@ -442,8 +583,8 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
     spacing[1] = 1.0;
     spacing[2] = 1.0;
 
-    //TODO: temporal containing a dataset
-    shared_ptr<XdmfRegularGrid> regGrid = this->Internal->Domain->getRegularGrid(0);
+    shared_ptr<XdmfRegularGrid> regGrid =
+      shared_dynamic_cast<XdmfRegularGrid>(this->Internal->TopAtomicGrid);
     if (regGrid)
       {
       vtkImageData *dataSet = vtkImageData::New();
@@ -453,7 +594,8 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
       dataSet->GetSpacing(spacing);
       dataSet->Delete();
       }
-    shared_ptr<XdmfRectilinearGrid> recGrid = this->Internal->Domain->getRectilinearGrid(0);
+    shared_ptr<XdmfRectilinearGrid> recGrid =
+      shared_dynamic_cast<XdmfRectilinearGrid>(this->Internal->TopAtomicGrid);
     if (recGrid)
       {
       vtkRectilinearGrid *dataSet = vtkRectilinearGrid::New();
@@ -461,7 +603,8 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
       dataSet->GetExtent(whole_extent);
       dataSet->Delete();
       }
-    shared_ptr<XdmfCurvilinearGrid> crvGrid = this->Internal->Domain->getCurvilinearGrid(0);
+    shared_ptr<XdmfCurvilinearGrid> crvGrid =
+      shared_dynamic_cast<XdmfCurvilinearGrid>(this->Internal->TopAtomicGrid);
     if (crvGrid)
       {
       vtkStructuredGrid *dataSet = vtkStructuredGrid::New();
@@ -475,6 +618,7 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
     outInfo->Set(vtkDataObject::ORIGIN(), origin, 3);
     outInfo->Set(vtkDataObject::SPACING(), spacing, 3);
     }
+
   //TODO: SIL
 
   return 1;
@@ -494,7 +638,7 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
 
   vtkInformation* outInfo = outputVector->GetInformationObject(0);
 
-  // Collect information about what part of the data is requested.
+  // Collect information about what spatial extent is requested.
   unsigned int updatePiece = 0;
   unsigned int updateNumPieces = 1;
   int ghost_levels = 0;
@@ -519,17 +663,38 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
         update_extent);
     }
 
+  // Collect information about what temporal extent is requested.
+  double time;
+  bool doTime = false;
+  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()))
+    {
+    doTime = true;
+    time =
+      outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
+    //find the nearest match (floor), so we have something exact to search for
+    std::vector<double>::iterator it = upper_bound(
+      this->Internal->TimeSteps.begin(), this->Internal->TimeSteps.end(), time);
+    if (it != this->Internal->TimeSteps.begin())
+      {
+      it--;
+      }
+    time = *it;
+    }
+
   //TODO: Why is this needed?
   this->RequestDataObject(request, inputVector, outputVector);
+
+  //traverse the xdmf hierarchy, and convert and return what was requested
   shared_ptr<vtkXdmfVisitor_ReadGrids> visitor = vtkXdmfVisitor_ReadGrids::New();
-  visitor->SetOwner(this);
   vtkDataObject* output = vtkDataObject::GetData(outInfo);
   if (!output)
     {
     cerr << "UH OH" << endl;
     return 0;
     }
+  output->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), time);
   visitor->SetDataObject(output);
+  visitor->SetTimeRequest(doTime, time);
   this->Internal->Domain->accept(visitor);
 
   return 1;

@@ -47,6 +47,7 @@
 #include "XdmfRectilinearGrid.hpp"
 #include "XdmfRegularGrid.hpp"
 #include "XdmfUnstructuredGrid.hpp"
+#include "XdmfTime.hpp"
 #include "XdmfTopology.hpp"
 #include "XdmfTopologyType.hpp"
 
@@ -816,6 +817,15 @@ int vtkXdmf3Common::GetVTKCellType(
 }
 
 //==========================================================================
+void vtkXdmf3Common::SetTime(XdmfGrid *grid, double hasTime, double time)
+{
+  if (hasTime)
+    {
+    grid->setTime(XdmfTime::New(time));
+    }
+}
+
+//==========================================================================
 
 void vtkXdmf3RegularGrid::XdmfToVTK(
   XdmfRegularGrid *grid,
@@ -887,7 +897,8 @@ void vtkXdmf3RegularGrid::CopyShape(
 //--------------------------------------------------------------------------
 void vtkXdmf3RegularGrid::VTKToXdmf(
   vtkDataSet *ds,
-  XdmfDomain *domain)
+  XdmfDomain *domain,
+  bool hasTime, double time)
 {
   vtkImageData *dataSet = vtkImageData::SafeDownCast(ds);
   int whole_extent[6];
@@ -904,9 +915,11 @@ void vtkXdmf3RegularGrid::VTKToXdmf(
     spacing[2], spacing[1], spacing[0],
     dims[2], dims[1], dims[0],
     origin[2], origin[1], origin[0]);
-  domain->insert(grid);
 
   vtkXdmf3Common::VTKToXdmfAttributes(dataSet, grid.get());
+  vtkXdmf3Common::SetTime(grid.get(), hasTime, time);
+
+  domain->insert(grid);
 }
 
 
@@ -980,7 +993,8 @@ void vtkXdmf3RectilinearGrid::CopyShape(
 //--------------------------------------------------------------------------
 void vtkXdmf3RectilinearGrid::VTKToXdmf(
   vtkDataSet *ds,
-  XdmfDomain *domain)
+  XdmfDomain *domain,
+  bool hasTime, double time)
 {
   vtkRectilinearGrid *dataSet = vtkRectilinearGrid::SafeDownCast(ds);
 
@@ -1011,9 +1025,10 @@ void vtkXdmf3RectilinearGrid::VTKToXdmf(
   shared_ptr<XdmfRectilinearGrid> grid = XdmfRectilinearGrid::New(
     xXCoords, xYCoords, xZCoords);
 
-  domain->insert(grid);
-
   vtkXdmf3Common::VTKToXdmfAttributes(dataSet, grid.get());
+  vtkXdmf3Common::SetTime(grid.get(), hasTime, time);
+
+  domain->insert(grid);
 }
 
 //==========================================================================
@@ -1072,7 +1087,8 @@ void vtkXdmf3CurvilinearGrid::CopyShape(
 //--------------------------------------------------------------------------
 void vtkXdmf3CurvilinearGrid::VTKToXdmf(
   vtkDataSet *ds,
-  XdmfDomain *domain)
+  XdmfDomain *domain,
+  bool hasTime, double time)
 {
   vtkStructuredGrid *dataSet = vtkStructuredGrid::SafeDownCast(ds);
 
@@ -1105,9 +1121,11 @@ void vtkXdmf3CurvilinearGrid::VTKToXdmf(
     }
   shared_ptr<XdmfCurvilinearGrid> grid = XdmfCurvilinearGrid::New(xCoords);
   grid->setDimensions(xdims);
-  domain->insert(grid);
 
   vtkXdmf3Common::VTKToXdmfAttributes(dataSet, grid.get());
+  vtkXdmf3Common::SetTime(grid.get(), hasTime, time);
+
+  domain->insert(grid);
 }
 
 //==========================================================================
@@ -1255,7 +1273,8 @@ void vtkXdmf3UnstructuredGrid::CopyShape(
 //--------------------------------------------------------------------------
 void vtkXdmf3UnstructuredGrid::VTKToXdmf(
   vtkDataSet *ds,
-  XdmfDomain *domain)
+  XdmfDomain *domain,
+  bool hasTime, double time)
 {
   vtkPointSet *dataSet = vtkPointSet::SafeDownCast(ds);
 
@@ -1344,6 +1363,7 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
     }
 
   vtkXdmf3Common::VTKToXdmfAttributes(dataSet, grid.get());
+  vtkXdmf3Common::SetTime(grid.get(), hasTime, time);
 
   domain->insert(grid);
 }
@@ -1445,7 +1465,8 @@ void vtkXdmf3Graph::XdmfToVTK(
 //--------------------------------------------------------------------------
 void vtkXdmf3Graph::VTKToXdmf(
   vtkDirectedGraph *dataSet,
-  XdmfDomain *domain)
+  XdmfDomain *domain,
+  bool vtkNotUsed(hasTime), double vtkNotUsed(time))
 {
   //get list of vertices
   vtkSmartPointer<vtkVertexListIterator> vit =
@@ -1541,6 +1562,9 @@ void vtkXdmf3Graph::VTKToXdmf(
         }
       }
     }
+
+  //XdmfGraph has no time
+  //vtkXdmf3Common::SetTime(grid, hasTime, time);
 
   domain->insert(grid);
 }

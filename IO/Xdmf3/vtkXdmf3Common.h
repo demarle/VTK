@@ -82,6 +82,10 @@ public:
   ;
   static int GetXdmfCellType(int vtkType)
   ;
+
+  static void SetTime(XdmfGrid *grid, double hasTime, double time)
+  ;
+
 };
 
 //==============================================================================
@@ -99,7 +103,8 @@ public:
   ;
   static void VTKToXdmf(
     vtkDataSet *dataSet,
-    XdmfDomain *domain)
+    XdmfDomain *domain,
+    bool hasTime, double time)
   ;
 };
 
@@ -118,7 +123,8 @@ public:
   ;
   static void VTKToXdmf(
     vtkDataSet *dataSet,
-    XdmfDomain *domain)
+    XdmfDomain *domain,
+    bool hasTime, double time)
   ;
 };
 
@@ -137,7 +143,8 @@ public:
   ;
   static void VTKToXdmf(
     vtkDataSet *dataSet,
-    XdmfDomain *domain)
+    XdmfDomain *domain,
+    bool hasTime, double time)
   ;
 };
 
@@ -156,7 +163,8 @@ public:
   ;
   static void VTKToXdmf(
     vtkDataSet *dataSet,
-    XdmfDomain *domain)
+    XdmfDomain *domain,
+    bool hasTime, double time)
   ;
 };
 
@@ -171,7 +179,8 @@ public:
   ;
   static void VTKToXdmf(
     vtkDirectedGraph *dataSet,
-    XdmfDomain *domain)
+    XdmfDomain *domain,
+    bool hasTime, double time)
   ;
 };
 
