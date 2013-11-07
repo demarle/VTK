@@ -1,3 +1,6 @@
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+
 vtk_module_third_party(xdmf3
   LIBRARIES vtkxdmf3
   INCLUDE_DIRS
@@ -16,10 +19,11 @@ endif()
 #########################################################################
 # Set Xdmf build environment options the way VTK wants them
 
-#???
+#?
 
 #########################################################################
 # Setup cmake to pull the library into place as a vtk module
+
 vtk_module_export_info()
 add_subdirectory(vtkxdmf3)
 
