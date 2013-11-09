@@ -44,8 +44,10 @@ public:
   {
     this->Domain = XdmfDomain::New();
     this->Writer = XdmfWriter::New(filename);
-    this->Writer->setLightDataLimit(10000);
+    this->Writer->setLightDataLimit(0);
     this->Destination = this->Domain;
+    this->NumberOfTimeSteps = 1;
+    this->CurrentTimeIndex = 0;
   }
   void SwitchToTemporal()
   {
@@ -115,6 +117,8 @@ public:
   boost::shared_ptr<XdmfDomain> Domain;
   boost::shared_ptr<XdmfDomain> Destination;
   boost::shared_ptr<XdmfWriter> Writer;
+  int NumberOfTimeSteps;
+  int CurrentTimeIndex;
 };
 
 //==============================================================================
@@ -125,12 +129,8 @@ vtkStandardNewMacro(vtkXdmf3Writer);
 vtkXdmf3Writer::vtkXdmf3Writer()
 {
   this->FileName = NULL;
-  this->HeavyDataFileName = NULL;
-  this->HeavyDataGroupName = NULL;
   this->LightDataLimit = 100;
   this->WriteAllTimeSteps = 0;
-  this->NumberOfTimeSteps = 1;
-  this->CurrentTimeIndex = 0;
   this->Internal = new Internals();
 }
 
@@ -138,8 +138,6 @@ vtkXdmf3Writer::vtkXdmf3Writer()
 vtkXdmf3Writer::~vtkXdmf3Writer()
 {
   this->SetFileName(NULL);
-  this->SetHeavyDataFileName(NULL);
-  this->SetHeavyDataGroupName(NULL);
 }
 
 //----------------------------------------------------------------------------
@@ -199,14 +197,14 @@ int vtkXdmf3Writer::RequestInformation(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   if ( inInfo->Has(vtkStreamingDemandDrivenPipeline::TIME_STEPS()) )
     {
-    this->NumberOfTimeSteps =
+    this->Internal->NumberOfTimeSteps =
       inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
     }
   else
     {
-    this->NumberOfTimeSteps = 1;
+    this->Internal->NumberOfTimeSteps = 1;
     }
-  cerr << "WRITER NUM TS = " << this->NumberOfTimeSteps << endl;
+  cerr << "WRITER NUM TS = " << this->Internal->NumberOfTimeSteps << endl;
 
   return 1;
 }
@@ -225,7 +223,7 @@ int vtkXdmf3Writer::RequestUpdateExtent(
     //which is different from current time. Can do it by updating
     //to a particular time then writing without writealltimesteps,
     //but that is annoying.
-    double timeReq = inTimes[this->CurrentTimeIndex];
+    double timeReq = inTimes[this->Internal->CurrentTimeIndex];
     inputVector[0]->GetInformationObject(0)->Set(
         vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP(),
         timeReq);
@@ -246,9 +244,11 @@ int vtkXdmf3Writer::RequestData(
     return 1;
     }
 
-  if (this->CurrentTimeIndex == 0 &&
+  this->Internal->Writer->setLightDataLimit(this->LightDataLimit);
+
+  if (this->Internal->CurrentTimeIndex == 0 &&
       this->WriteAllTimeSteps &&
-      this->NumberOfTimeSteps > 1)
+      this->Internal->NumberOfTimeSteps > 1)
     {
     // Tell the pipeline to start looping.
     this->Internal->SwitchToTemporal();
@@ -267,13 +267,13 @@ int vtkXdmf3Writer::RequestData(
     }
   this->Internal->WriteDataObject(input, hasTime, dataT);
 
-  this->CurrentTimeIndex++;
-  if (this->CurrentTimeIndex >= this->NumberOfTimeSteps &&
+  this->Internal->CurrentTimeIndex++;
+  if (this->Internal->CurrentTimeIndex >= this->Internal->NumberOfTimeSteps &&
       this->WriteAllTimeSteps)
     {
     // Tell the pipeline to stop looping.
     request->Remove(vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING());
-    this->CurrentTimeIndex = 0;
+    this->Internal->CurrentTimeIndex = 0;
     }
 
   return 1;

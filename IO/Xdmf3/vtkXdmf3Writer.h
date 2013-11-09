@@ -44,18 +44,6 @@ public:
   vtkGetStringMacro(FileName);
 
   // Description:
-  // Set or get the file name of the hdf5 file.
-  // Note that if the File name is not specified, then the group name is ignore
-  vtkSetStringMacro(HeavyDataFileName);
-  vtkGetStringMacro(HeavyDataFileName);
-
-  // Description:
-  // Set or get the group name into which data will be written
-  // it may contain nested groups as in "/Proc0/Block0"
-  vtkSetStringMacro(HeavyDataGroupName);
-  vtkGetStringMacro(HeavyDataGroupName);
-
-  // Description:
   // Write data to output. Method executes subclasses WriteData() method, as
   // well as StartMethod() and EndMethod() methods.
   // Returns 1 on success and 0 on failure.
@@ -93,14 +81,8 @@ protected:
                           vtkInformationVector*);
 
   char *FileName;
-  char *HeavyDataFileName;
-  char *HeavyDataGroupName;
-
   int LightDataLimit;
-
   int WriteAllTimeSteps;
-  int NumberOfTimeSteps;
-  int CurrentTimeIndex;
 
 private:
   vtkXdmf3Writer(const vtkXdmf3Writer&); // Not implemented
