@@ -490,12 +490,22 @@ int vtkXdmf3Reader::FillOutputPortInformation(int, vtkInformation *info)
 }
 
 //----------------------------------------------------------------------------
-int vtkXdmf3Reader::RequestDataObject(vtkInformation *,
-    vtkInformationVector **,
+int vtkXdmf3Reader::ProcessRequest(vtkInformation *request,
+    vtkInformationVector **inputVector,
     vtkInformationVector *outputVector)
 {
-  //TODO: Why is this never called?
+  // create the output
+  if (request->Has(vtkDemandDrivenPipeline::REQUEST_DATA_OBJECT()))
+    {
+    return this->RequestDataObject(outputVector);
+    }
 
+  return this->Superclass::ProcessRequest(request, inputVector, outputVector);
+}
+
+//----------------------------------------------------------------------------
+int vtkXdmf3Reader::RequestDataObject(vtkInformationVector *outputVector)
+{
   //let libXdmf parse XML
   cerr << "RDO?" << endl;
   if (!this->Internal->PrepareDocument(this, this->FileName))
@@ -681,8 +691,7 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
     time = *it;
     }
 
-  //TODO: Why is this needed?
-  this->RequestDataObject(request, inputVector, outputVector);
+  this->RequestDataObject(outputVector);
 
   //traverse the xdmf hierarchy, and convert and return what was requested
   shared_ptr<vtkXdmfVisitor_ReadGrids> visitor = vtkXdmfVisitor_ReadGrids::New();

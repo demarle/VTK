@@ -54,9 +54,12 @@ protected:
   //Overridden to announce that we make general DataObjects.
   virtual int FillOutputPortInformation(int port, vtkInformation *info);
 
+  //Overridden to respond to RDO requests.
+  virtual int ProcessRequest(vtkInformation *, vtkInformationVector **,
+    vtkInformationVector *);
+
   //Overridden to create the correct vtkDataObject subclass for the file.
   virtual int RequestDataObject(
-    vtkInformation *, vtkInformationVector **,
     vtkInformationVector *);
 
   //Overridden to announce temporal information and to participate in
