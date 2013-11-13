@@ -21,6 +21,7 @@
 #include "vtkDirectedGraph.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkMultiBlockDataSet.h"
 #include "vtkObjectFactory.h"
 #include "vtkSmartPointer.h"
 #include "vtkXdmf3Common.h"
@@ -32,6 +33,7 @@
 #include "XdmfRegularGrid.hpp"
 #include "XdmfTime.hpp"
 #include "XdmfWriter.hpp"
+#include <stack>
 
 //=============================================================================
 class vtkXdmf3Writer::Internals {
@@ -45,15 +47,18 @@ public:
     this->Domain = XdmfDomain::New();
     this->Writer = XdmfWriter::New(filename);
     this->Writer->setLightDataLimit(0);
-    this->Destination = this->Domain;
     this->NumberOfTimeSteps = 1;
     this->CurrentTimeIndex = 0;
+    this->DestinationGroups.push(this->Domain);
+    this->Destination = this->DestinationGroups.top();
+
   }
   void SwitchToTemporal()
   {
     shared_ptr<XdmfGridCollection> dest = XdmfGridCollection::New();
     dest->setType(XdmfGridCollectionType::Temporal());
-    this->Destination = dest;
+    this->DestinationGroups.push(dest);
+    this->Destination = this->DestinationGroups.top();
     this->Domain->insert(dest);
   }
   void WriteDataObject(vtkDataObject *dataSet, bool hasTime, double time)
@@ -64,6 +69,23 @@ public:
       }
     switch (dataSet->GetDataObjectType())
       {
+      case VTK_MULTIBLOCK_DATA_SET:
+        {
+        shared_ptr<XdmfGridCollection> group = XdmfGridCollection::New();
+        this->Destination->insert(group);
+        this->DestinationGroups.push(group);
+        this->Destination = this->DestinationGroups.top();
+        vtkMultiBlockDataSet *mbds = vtkMultiBlockDataSet::SafeDownCast(dataSet);
+        for (unsigned int i = 0; i< mbds->GetNumberOfBlocks(); i++)
+          {
+          vtkDataObject *next = mbds->GetBlock(i);
+          //cerr << "WRITING["<<i<<"] " << next << endl;
+          this->WriteDataObject(next, hasTime, time);
+          }
+        this->DestinationGroups.pop();
+        this->Destination = this->DestinationGroups.top();
+        break;
+        }
       case VTK_STRUCTURED_POINTS:
       case VTK_IMAGE_DATA:
       case VTK_UNIFORM_GRID:
@@ -117,6 +139,9 @@ public:
   boost::shared_ptr<XdmfDomain> Domain;
   boost::shared_ptr<XdmfDomain> Destination;
   boost::shared_ptr<XdmfWriter> Writer;
+
+  std::stack<boost::shared_ptr<XdmfDomain> > DestinationGroups;
+
   int NumberOfTimeSteps;
   int CurrentTimeIndex;
 };
@@ -204,7 +229,7 @@ int vtkXdmf3Writer::RequestInformation(
     {
     this->Internal->NumberOfTimeSteps = 1;
     }
-  cerr << "WRITER NUM TS = " << this->Internal->NumberOfTimeSteps << endl;
+  //cerr << "WRITER NUM TS = " << this->Internal->NumberOfTimeSteps << endl;
 
   return 1;
 }

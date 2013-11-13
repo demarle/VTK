@@ -1107,7 +1107,6 @@ void vtkXdmf3CurvilinearGrid::VTKToXdmf(
     for (unsigned int i = 0; i < 3; i++)
       {
       int extent = whole_extent[(2-i)*2+1]-whole_extent[(2-i)*2]+1;
-      cerr << extent << endl;
       xdims->pushBack<int>(extent);
       }
     }
@@ -1193,9 +1192,7 @@ void vtkXdmf3UnstructuredGrid::CopyShape(
     {
     // mixed cell types
     unsigned int conn_length = xTopology->getSize();
-    cerr << "conn_length " << conn_length << endl;
     vtkIdType numCells = xTopology->getNumberElements();
-    cerr << "numCells " << numCells << endl;
 
     const unsigned int *xCells =
       (const unsigned int*)xTopology->getValuesInternal();
@@ -1213,21 +1210,17 @@ void vtkXdmf3UnstructuredGrid::CopyShape(
     int sub = 0;
     for(vtkIdType cc = 0 ; cc < numCells; cc++ )
       {
-      cerr << "cc " << cc << endl;
-
       shared_ptr<const XdmfTopologyType> nextCellType =
         XdmfTopologyType::New(xCells[index++]); //TODO: ICKY
       int vtk_cell_typeI = vtkXdmf3Common::GetVTKCellType(nextCellType);
-      cerr << "vtk_cell_typeI " << vtk_cell_typeI << endl;
 
       unsigned int numPointsPerCell =
         vtkXdmf3Common::GetNumberOfPointsPerCell(vtk_cell_typeI);
-      cerr << "numPointsPerCell " << numPointsPerCell << endl;
 
       if (numPointsPerCell==-1)
         {
         // encountered an unknown cell.
-        cerr << "UH OH" << endl;
+        cerr << "strange cell" << endl;
         vCells->Delete();
         delete [] cell_types;
         return;
@@ -1316,7 +1309,6 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
     vtkIdType cellType = ds->GetCellType(cid);
     vtkIdType numPts = cell->GetNumberOfPoints();
     int xType = vtkXdmf3Common::GetXdmfCellType(cellType);
-    cerr << "Insert Cell Type " << xType << endl;
     if (xType != -1)
       {
       xTopology->insert(cntr++, xType);
