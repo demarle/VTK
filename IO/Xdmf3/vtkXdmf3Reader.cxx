@@ -802,7 +802,8 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
   // Collect information about what temporal extent is requested.
   double time;
   bool doTime = false;
-  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()))
+  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()) &&
+      this->Internal->TimeSteps.size())
     {
     doTime = true;
     time =
