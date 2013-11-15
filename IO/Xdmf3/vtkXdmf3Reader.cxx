@@ -602,6 +602,8 @@ int vtkXdmf3Reader::CanReadFile(const char* filename)
     return 0;
     }
 
+  //TODO: see below
+  return 1;
   shared_ptr<XdmfReader> tester = XdmfReader::New();
   try {
     shared_ptr<XdmfItem> item = tester->read(filename);
