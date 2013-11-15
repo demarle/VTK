@@ -1112,14 +1112,16 @@ void vtkXdmf3CurvilinearGrid::VTKToXdmf(
     }
 
   vtkDataArray *vCoords = dataSet->GetPoints()->GetData();
-  shared_ptr<XdmfArray> xCoords = XdmfArray::New();
+  shared_ptr<XdmfGeometry> xCoords = XdmfGeometry::New();
   bool OK = vtkXdmf3Common::VTKToXdmfArray(vCoords, xCoords.get());
   if (!OK)
     {
     return;
     }
-  shared_ptr<XdmfCurvilinearGrid> grid = XdmfCurvilinearGrid::New(xCoords);
-  grid->setDimensions(xdims);
+  xCoords->setType(XdmfGeometryType::XYZ());
+
+  shared_ptr<XdmfCurvilinearGrid> grid = XdmfCurvilinearGrid::New(xdims);
+  grid->setGeometry(xCoords);
 
   vtkXdmf3Common::VTKToXdmfAttributes(dataSet, grid.get());
   vtkXdmf3Common::SetTime(grid.get(), hasTime, time);
@@ -1291,6 +1293,8 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
   //for simplicity I am treating all dataSets as having mixed cell types
   xTopology->setType(XdmfTopologyType::Mixed());
   vtkIdType numCells = ds->GetNumberOfCells();
+
+  //reserve some space
   const int PER_CELL_ESTIMATE=4; /*celltype+numids+id0+id1 or celltype+id0+id1+id2*/
   unsigned int total_estimate = numCells*PER_CELL_ESTIMATE;
   if (VTK_SIZEOF_ID_TYPE == XdmfArrayType::Int64()->getElementSize())
@@ -1302,6 +1306,7 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
     xTopology->initialize(XdmfArrayType::Int32(), total_estimate);
     }
 
+  unsigned int tcount = 0;
   vtkIdType cntr = 0;
   for (vtkIdType cid=0 ; cid < numCells; cid++)
     {
@@ -1313,6 +1318,7 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
       {
       xTopology->insert(cntr++, xType);
       }
+    tcount +=1;
     switch(cellType)
       {
       case VTK_VERTEX :
@@ -1321,6 +1327,7 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
       case VTK_POLY_LINE :
       case VTK_POLYGON :
         xTopology->insert(cntr++, (int)numPts); ////TODO: why can't push long long?
+        tcount +=1;
         break;
       default:
         break;
@@ -1336,6 +1343,7 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
       xTopology->insert(cntr++, (int)cell->GetPointId(5));
       xTopology->insert(cntr++, (int)cell->GetPointId(7));
       xTopology->insert(cntr++, (int)cell->GetPointId(6));
+      tcount +=8;
       }
     else if ( cellType == VTK_PIXEL )
       {
@@ -1344,6 +1352,7 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
       xTopology->insert(cntr++, (int)cell->GetPointId(1));
       xTopology->insert(cntr++, (int)cell->GetPointId(3));
       xTopology->insert(cntr++, (int)cell->GetPointId(2));
+      tcount +=4;
       }
     else
       {
@@ -1351,8 +1360,10 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
         {
         xTopology->insert(cntr++, (int)cell->GetPointId(pid));
         }
+      tcount +=numPts;
       }
     }
+  xTopology->resize(tcount,0); //release unused reserved space
 
   vtkXdmf3Common::VTKToXdmfAttributes(dataSet, grid.get());
   vtkXdmf3Common::SetTime(grid.get(), hasTime, time);
