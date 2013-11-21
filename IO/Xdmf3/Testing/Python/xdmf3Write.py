@@ -16,7 +16,7 @@ if "vtkXdmfWriter" in dir(vtk):
   x2r.Update()
   rdata = x2r.GetOutputDataObject(0)
   print rdata
-  if rdata.GetPointData().GetArray(0):
+  if False and hasattr(rdata, 'GetPointData') and rdata.GetPointData().GetArray(0):
     for x in range(0,rdata.GetPointData().GetArray(0).GetNumberOfTuples()):
       print rdata.GetPointData().GetArray(0).GetValue(x)
 
@@ -47,11 +47,13 @@ ofname = odir+"x3w.vtk"
 print "VTK WRITE "+ ofname
 dsw.SetInputConnection(x3r.GetOutputPort())
 dsw.SetFileName(odir+"x3w.vtk")
-dsw.Write()
+#dsw.Write()
 
 ofname = odir+"x3w.xdmf"
 print "XDMF3 WRITE "+ ofname
 x3w = vtk.vtkXdmf3Writer()
-x3w.SetInputData(x3r.GetOutputDataObject(0))
+x3w.SetLightDataLimit(100)
+x3w.SetInputConnection(x3r.GetOutputPort())
 x3w.SetFileName(odir+"x3w.xdmf")
+x3w.WriteAllTimeStepsOff()
 x3w.Write()
