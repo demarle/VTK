@@ -132,19 +132,19 @@ vtkDataArray *vtkXdmf3Common::XdmfToVTKArray(
     vArray->SetNumberOfComponents(ncomp);
     vArray->SetNumberOfTuples(ntuples);
     xArray->read();
-#if 0
+#if 1
     //deepcopy
-    vArray->Allocate(ntuples*ncomp);
     switch(vArray->GetDataType())
       {
       vtkTemplateMacro(
-        xArray->getValues(0, static_cast<VTK_TT*>(vArray->GetVoidPointer(0)))
+         xArray->getValues(0, static_cast<VTK_TT*>(vArray->GetVoidPointer(0)),ntuples*ncomp);
         );
       default:
         cerr << "UNKNOWN" << endl;
       }
 #else
     //shallowcopy
+    //TODO: this would be vastly preferable, but with xinclude data, xdmf throws it away before I am done
     vArray->SetVoidArray(xArray->getValuesInternal(), ntuples*ncomp, 1);
 #endif
     }
