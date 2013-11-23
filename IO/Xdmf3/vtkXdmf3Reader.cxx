@@ -47,6 +47,9 @@
 #include "XdmfVisitor.hpp"
 
 #include <set>
+#include <fstream>
+
+ofstream *logfile;
 
 //TODO: enable/disable arrays, blocks
 //TODO: strides
@@ -204,16 +207,16 @@ public:
   {
   }
 
-  vtkDataObject *Populate(XdmfItem & item, vtkDataObject *toFill)
+  vtkDataObject *Populate(XdmfItem & item, vtkDataObject *toFill, bool splittable)
   {
     assert(toFill);
-    cerr << "populate " << toFill << " " << toFill->GetClassName() << endl;
+    (*logfile) << this->Rank << " populate " << toFill << " a " << toFill->GetClassName() << endl;
 
     XdmfRegularGrid *regGrid = dynamic_cast<XdmfRegularGrid *>(&item);
     if (regGrid)
       {
       vtkImageData *dataSet = vtkImageData::SafeDownCast(toFill);
-      //cerr << "ID" << endl;
+      //(*logfile) << "ID" << endl;
       if (!this->doTime ||
           (regGrid->getTime() && regGrid->getTime()->getValue() == this->time))
         {
@@ -226,7 +229,7 @@ public:
     XdmfRectilinearGrid *recGrid = dynamic_cast<XdmfRectilinearGrid *>(&item);
     if (recGrid)
       {
-      //cerr << "RGRID" << endl;
+      //(*logfile) << "RGRID" << endl;
       if (!this->doTime ||
           (recGrid->getTime() && recGrid->getTime()->getValue() == this->time))
         {
@@ -240,7 +243,7 @@ public:
     XdmfCurvilinearGrid *crvGrid = dynamic_cast<XdmfCurvilinearGrid *>(&item);
     if (crvGrid)
       {
-      //cerr << "SGRID" << endl;
+      //(*logfile) << "SGRID" << endl;
       if (!this->doTime ||
           (crvGrid->getTime() && crvGrid->getTime()->getValue() == this->time))
         {
@@ -254,7 +257,7 @@ public:
     XdmfUnstructuredGrid *unsGrid = dynamic_cast<XdmfUnstructuredGrid *>(&item);
     if (unsGrid)
       {
-      //cerr << "UNS" << endl;
+      //(*logfile) << "UNS" << endl;
       if (!this->doTime ||
           (unsGrid->getTime() && unsGrid->getTime()->getValue() == this->time))
         {
@@ -268,7 +271,7 @@ public:
     XdmfGraph *graph = dynamic_cast<XdmfGraph *>(&item);
     if (graph)
       {
-      //cerr << "GRAPH" << endl;
+      //(*logfile) << "GRAPH" << endl;
       //TODO: XdmfGraph has no getTime() yet
       vtkMutableDirectedGraph *dataSet = vtkMutableDirectedGraph::SafeDownCast(toFill);
       vtkXdmf3Graph::XdmfToVTK(graph, dataSet);
@@ -285,24 +288,23 @@ public:
       if (!asGC)
         {
         gtype = 0;
-        cerr << "DOMAIN" << endl;
         }
       else
         {
         if (asGC->getType() == XdmfGridCollectionType::Temporal())
           {
           gtype = 1;
-          cerr << "TEMPORAL GROUP" << endl;
+          (*logfile) << "TEMPORAL GROUP" << endl;
           }
         else if (asGC->getType() == XdmfGridCollectionType::Spatial())
           {
           gtype = 2;
-          cerr << "SPATIAL GROUP" << endl;
+          (*logfile) << "SPATIAL GROUP" << endl;
           }
         else
           {
           gtype = 3;
-          cerr << "UNSPECIFIED GROUP" << endl;
+          (*logfile) << "UNSPECIFIED GROUP" << endl;
           }
         }
 
@@ -320,6 +322,7 @@ public:
         stacked = true;
         }
 
+      bool subSplittable = false;
       if (nGridCollections == 1 &&
           toCheck->getGridCollection(0)->getType() == XdmfGridCollectionType::Temporal())
         {
@@ -338,8 +341,15 @@ public:
       unsigned int nGraphs = toCheck->getNumberGraphs();
       for (unsigned int i = 0; i < nGridCollections; i++)
         {
+        if (!this->ShouldRead(i,nGridCollections,false))
+          {
+          (*logfile) << this->Rank << " ignoring " << i << endl;
+          top->SetBlock(cnt++, NULL);
+          continue;
+          }
+        (*logfile) << this->Rank << " reading " << i << endl;
         vtkMultiBlockDataSet *child = vtkMultiBlockDataSet::New();
-        result = this->Populate(*(toCheck->getGridCollection(i)), child);
+        result = this->Populate(*(toCheck->getGridCollection(i)), child, subSplittable);
         if (result)
           {
           top->SetBlock(cnt++, result);
@@ -348,8 +358,13 @@ public:
         }
       for (unsigned int i = 0; i < nUnstructuredGrids; i++)
         {
+        if (!this->ShouldRead(i,nUnstructuredGrids,true))
+          {
+          (*logfile) << this->Rank << " ignoring ug" << i << endl;
+          continue;
+          }
         vtkUnstructuredGrid *child = vtkUnstructuredGrid::New();
-        result = this->Populate(*(toCheck->getUnstructuredGrid(i)), child);
+        result = this->Populate(*(toCheck->getUnstructuredGrid(i)), child, false);
         if (result)
           {
           top->SetBlock(cnt++, result);
@@ -358,8 +373,13 @@ public:
         }
       for (unsigned int i = 0; i < nRectilinearGrids; i++)
         {
+        if (!this->ShouldRead(i,nRectilinearGrids,true))
+          {
+          (*logfile) << this->Rank << " ignoring rg" << i << endl;
+          continue;
+          }
         vtkRectilinearGrid *child = vtkRectilinearGrid::New();
-        result = this->Populate(*(toCheck->getRectilinearGrid(i)), child);
+        result = this->Populate(*(toCheck->getRectilinearGrid(i)), child, false);
         if (result)
           {
           top->SetBlock(cnt++, result);
@@ -368,8 +388,13 @@ public:
         }
       for (unsigned int i = 0; i < nCurvilinearGrids; i++)
         {
+        if (!this->ShouldRead(i,nCurvilinearGrids,true))
+          {
+          (*logfile) << this->Rank << " ignoring cg" << i << endl;
+          continue;
+          }
         vtkStructuredGrid *child = vtkStructuredGrid::New();
-        result = this->Populate(*(toCheck->getCurvilinearGrid(i)), child);
+        result = this->Populate(*(toCheck->getCurvilinearGrid(i)), child, false);
         if (result)
           {
           top->SetBlock(cnt++, result);
@@ -378,8 +403,13 @@ public:
         }
       for (unsigned int i = 0; i < nRegularGrids; i++)
         {
+        if (!this->ShouldRead(i,nRegularGrids,true))
+          {
+          (*logfile) << this->Rank << " ignoring rg" << i << endl;
+          continue;
+          }
         vtkUniformGrid *child = vtkUniformGrid::New();
-        result = this->Populate(*(group->getRegularGrid(i)), child);
+        result = this->Populate(*(group->getRegularGrid(i)), child, false);
         if (result)
           {
           top->SetBlock(cnt++, result);
@@ -388,8 +418,13 @@ public:
         }
       for (unsigned int i = 0; i < nGraphs; i++)
         {
+        if (!this->ShouldRead(i,nGraphs,true))
+          {
+          (*logfile) << this->Rank << " ignoring g" << i << endl;
+          continue;
+          }
         vtkMutableDirectedGraph *child = vtkMutableDirectedGraph::New();
-        result = this->Populate(*(group->getGraph(i)), child);
+        result = this->Populate(*(group->getGraph(i)), child, false);
         if (result)
           {
           top->SetBlock(cnt++, result);
@@ -415,13 +450,60 @@ public:
     this->time = t;
   }
 
+  void SetRank(int processor, int nprocessors)
+  {
+    this->Rank = processor;
+    this->NumProcs = nprocessors;
+  }
+
 protected:
   vtkXdmfVisitor_ReadGrids()
   {
     this->doTime = false;
   }
+  bool ShouldRead(int piece, int npieces, bool splittable)
+  {
+    if (!splittable)
+      {
+      return true;
+      }
+    (*logfile) << this->Rank << "?" << piece << "/" << npieces << endl;
+    if (this->NumProcs<1)
+      {
+      //no parallel information given to us, assume serial
+      return true;
+      }
+    if (npieces == 1)
+      {
+      return true;
+      }
+    if (npieces < this->NumProcs)
+      {
+      if (piece == this->Rank)
+        {
+        return true;
+        }
+      return false;
+      }
+
+    int mystart = this->Rank*npieces/this->NumProcs;
+    int myend = (this->Rank+1)*npieces/this->NumProcs;
+    (*logfile) << this->Rank << " responsible for [" << mystart << "," << myend << ")" << endl;
+    if (piece >= mystart)
+      {
+      if (piece < myend || (this->Rank==this->NumProcs-1))
+        {
+        (*logfile) << piece << " is for me " << this->Rank << endl;
+        return true;
+        }
+      }
+    return false;
+  }
+
   bool doTime;
   double time;
+  int Rank;
+  int NumProcs;
 };
 
 //=============================================================================
@@ -448,7 +530,6 @@ public:
       }
     if (!this->Domain)
       {
-      cerr << "READING XML" << endl;
       this->Init(FileName);
       }
     return true;
@@ -647,8 +728,8 @@ int vtkXdmf3Reader::RequestDataObject(vtkInformationVector *outputVector)
 
   //Determine what vtkDataObject we should produce
   int vtk_type = this->Internal->GetVTKType();
-  cerr << "vtk type is " << vtk_type << " "
-       << vtkDataObjectTypes::GetClassNameFromTypeId(vtk_type) << endl;
+  //(*logfile) << "vtk type is " << vtk_type << " "
+  //     << vtkDataObjectTypes::GetClassNameFromTypeId(vtk_type) << endl;
   //Make an empty vtkDataObject
   vtkDataObject* output = vtkDataObject::GetData(outputVector, 0);
   if (!output || output->GetDataObjectType() != vtk_type)
@@ -661,7 +742,6 @@ int vtkXdmf3Reader::RequestDataObject(vtkInformationVector *outputVector)
       {
       output = vtkDataObjectTypes::NewDataObject(vtk_type);
       }
-    cerr << "MADE " << output << " A " << output->GetClassName() << endl;
     outputVector->GetInformationObject(0)->Set(
         vtkDataObject::DATA_OBJECT(), output );
     this->GetOutputPortInformation(0)->Set(
@@ -832,22 +912,27 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
     output->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), time);
     }
 
+  char fname[120];
+  sprintf(fname, "/Users/demarle/tmp/log_%d.log", updatePiece);
+  cerr << fname << endl;
+  logfile = new ofstream(fname);
+  (*logfile) << "Hello from " << updatePiece << endl;
+
   vtkMultiBlockDataSet *mbds = vtkMultiBlockDataSet::New();
-  cerr << "MAKING TEMPSTORE " << mbds << endl;
+  visitor->SetRank(updatePiece, updateNumPieces);
   visitor->SetTimeRequest(doTime, time);
-  visitor->Populate(*(this->Internal->Domain), mbds);
-  //mbds->PrintSelf(cerr, vtkIndent(0));
+  visitor->Populate(*(this->Internal->Domain), mbds, true);
+  //mbds->PrintSelf((*logfile), vtkIndent(0));
   if (mbds->GetNumberOfBlocks()==1)
     {
-    cerr << "COPY ONE\n " << mbds->GetBlock(0) << " " << mbds->GetBlock(0)->GetClassName() << " INTO " << output << " " << output->GetClassName() << endl;
     output->ShallowCopy(mbds->GetBlock(0));
     }
   else
     {
-    cerr << "COPY ALL\n " << mbds << " " << mbds->GetClassName() << " INTO " << output << " " << output->GetClassName() << endl;
     output->ShallowCopy(mbds);
     }
   mbds->Delete();
 
+  (*logfile).close();
   return 1;
 }

@@ -11,4 +11,6 @@ vtk_module(vtkIOXdmf3
     vtkxdmf3
   TEST_DEPENDS
     vtkFiltersGeneral
+    vtkTestingCore
+    vtkParallelMPI
   )
