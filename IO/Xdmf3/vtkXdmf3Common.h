@@ -31,6 +31,11 @@
 
 #include "XdmfSharedPtr.hpp"
 
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+
 class XdmfArray;
 class vtkDataArray;
 class XdmfGrid;
