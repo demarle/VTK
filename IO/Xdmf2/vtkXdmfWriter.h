@@ -131,13 +131,13 @@ protected:
   //These do the work: recursively parse down input's structure all the way to arrays,
   //use XDMF lib to dump everything to file.
 
-  virtual void CreateTopology(vtkDataSet *ds, xdmf2::XdmfGrid *grid, vtkIdType PDims[3], vtkIdType CDims[3], vtkIdType &PRank, vtkIdType &CRank, void *staticdata);
-  virtual void CreateGeometry(vtkDataSet *ds, xdmf2::XdmfGrid *grid, void *staticdata);
+  virtual int CreateTopology(vtkDataSet *ds, xdmf2::XdmfGrid *grid, vtkIdType PDims[3], vtkIdType CDims[3], vtkIdType &PRank, vtkIdType &CRank, void *staticdata);
+  virtual int CreateGeometry(vtkDataSet *ds, xdmf2::XdmfGrid *grid, void *staticdata);
 
-  virtual void WriteDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid);
-  virtual void WriteCompositeDataSet(vtkCompositeDataSet *dobj, xdmf2::XdmfGrid *grid);
-  virtual void WriteAtomicDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid);
-  virtual void WriteArrays(vtkFieldData* dsa, xdmf2::XdmfGrid *grid, int association,
+  virtual int WriteDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid);
+  virtual int WriteCompositeDataSet(vtkCompositeDataSet *dobj, xdmf2::XdmfGrid *grid);
+  virtual int WriteAtomicDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid);
+  virtual int WriteArrays(vtkFieldData* dsa, xdmf2::XdmfGrid *grid, int association,
                            vtkIdType rank, vtkIdType *dims, const char *name);
   virtual void ConvertVToXArray(vtkDataArray *vda, xdmf2::XdmfArray *xda,
                                 vtkIdType rank, vtkIdType *dims,

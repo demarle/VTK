@@ -414,7 +414,7 @@ int vtkXdmfWriter::RequestData(
 }
 
 //------------------------------------------------------------------------------
-void vtkXdmfWriter::WriteDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid)
+int vtkXdmfWriter::WriteDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid)
 {
   //TODO:
   // respect parallelism
@@ -440,7 +440,7 @@ void vtkXdmfWriter::WriteDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid)
 }
 
 //------------------------------------------------------------------------------
-void vtkXdmfWriter::WriteCompositeDataSet(vtkCompositeDataSet *dobj, xdmf2::XdmfGrid *grid)
+int vtkXdmfWriter::WriteCompositeDataSet(vtkCompositeDataSet *dobj, xdmf2::XdmfGrid *grid)
 {
   //cerr << "internal node " << dobj << " is a " << dobj->GetClassName() << endl;
   if (dobj->IsA("vtkMultiPieceDataSet"))
@@ -485,7 +485,7 @@ void vtkXdmfWriter::WriteCompositeDataSet(vtkCompositeDataSet *dobj, xdmf2::Xdmf
   return 1;
 }
 //------------------------------------------------------------------------------
-void vtkXdmfWriter::CreateTopology(vtkDataSet *ds, xdmf2::XdmfGrid *grid, vtkIdType PDims[3], vtkIdType CDims[3], vtkIdType &PRank, vtkIdType &CRank, void *staticdata)
+int vtkXdmfWriter::CreateTopology(vtkDataSet *ds, xdmf2::XdmfGrid *grid, vtkIdType PDims[3], vtkIdType CDims[3], vtkIdType &PRank, vtkIdType &CRank, void *staticdata)
 {
   //cerr << "Writing " << dobj << " a " << dobj->GetClassName() << endl;
 
@@ -857,7 +857,7 @@ void vtkXdmfWriter::CreateTopology(vtkDataSet *ds, xdmf2::XdmfGrid *grid, vtkIdT
 }
 
 //----------------------------------------------------------------------------
-void vtkXdmfWriter::CreateGeometry(vtkDataSet *ds, xdmf2::XdmfGrid *grid, void *staticdata)
+int vtkXdmfWriter::CreateGeometry(vtkDataSet *ds, xdmf2::XdmfGrid *grid, void *staticdata)
 {
   //Geometry
   XdmfGeometry *geo = grid->GetGeometry();
@@ -959,7 +959,7 @@ void vtkXdmfWriter::CreateGeometry(vtkDataSet *ds, xdmf2::XdmfGrid *grid, void *
   return 1;
 }
 //------------------------------------------------------------------------------
-void vtkXdmfWriter::WriteAtomicDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid)
+int vtkXdmfWriter::WriteAtomicDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *grid)
 {
   cerr << "Writing " << dobj << " a " << dobj->GetClassName() << endl;
   vtkDataSet *ds = vtkDataSet::SafeDownCast(dobj);
@@ -993,7 +993,7 @@ void vtkXdmfWriter::WriteAtomicDataSet(vtkDataObject *dobj, xdmf2::XdmfGrid *gri
 }
 
 //----------------------------------------------------------------------------
-void vtkXdmfWriter::WriteArrays(vtkFieldData* fd, xdmf2::XdmfGrid *grid, int association,
+int vtkXdmfWriter::WriteArrays(vtkFieldData* fd, xdmf2::XdmfGrid *grid, int association,
                                  vtkIdType rank, vtkIdType *dims, const char *name)
 {
   if (fd)
