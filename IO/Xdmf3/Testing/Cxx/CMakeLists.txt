@@ -1,7 +1,4 @@
-message("HERE")
-
 if(VTK_MPI_MAX_NUMPROCS GREATER 1)
-  message("AND HERE")
   include(vtkMPI)
   find_package(MPI REQUIRED)
   include_directories(${MPI_INCLUDE_PATH})

@@ -17,8 +17,7 @@
 =========================================================================*/
 // .NAME vtkXdmf3Common - dataset level translation between xdmf3 and vtk
 // .SECTION Description
-// vtkXdmf3Common holds lower level data translation facilities.
-// vtkXdmf3Common has the lowest level, Xdmf2VTKarray and such.
+// The class vtkXdmf3Common has the lowest level, Xdmf2VTKarray and such.
 // From that, we build classes with simple to and from methods that
 // translate individual grids to and from vtkDataSet types.
 
@@ -65,31 +64,23 @@ public:
   static vtkDataArray *XdmfToVTKArray(
     XdmfArray* xArray,
     std::string attrName, //TODO: passing in attrName, because XdmfArray::getName() is oddly not virtual
-    int preferredComponents = 0)
-  ;
+    int preferredComponents = 0);
 
   static bool VTKToXdmfArray(
     vtkDataArray *vArray,
     XdmfArray* xArray,
-    int rank = 0, int *dims = NULL)
-  ;
+    int rank = 0, int *dims = NULL);
 
-  static void XdmfToVTKAttributes(XdmfGrid *grid, vtkDataObject *dObject)
-  ;
+  static void XdmfToVTKAttributes(XdmfGrid *grid, vtkDataObject *dObject);
 
-  static void VTKToXdmfAttributes(vtkDataObject *dObject, XdmfGrid *grid)
-  ;
+  static void VTKToXdmfAttributes(vtkDataObject *dObject, XdmfGrid *grid);
 
-  static int GetNumberOfPointsPerCell(int vtk_cell_type)
-  ;
+  static int GetNumberOfPointsPerCell(int vtk_cell_type);
 
-  static int GetVTKCellType(shared_ptr<const XdmfTopologyType> topologyType)
-  ;
-  static int GetXdmfCellType(int vtkType)
-  ;
+  static int GetVTKCellType(shared_ptr<const XdmfTopologyType> topologyType);
+  static int GetXdmfCellType(int vtkType);
 
-  static void SetTime(XdmfGrid *grid, double hasTime, double time)
-  ;
+  static void SetTime(XdmfGrid *grid, double hasTime, double time);
 
 };
 
@@ -100,17 +91,16 @@ class VTKIOXDMF3_EXPORT vtkXdmf3RegularGrid
 public:
   static void XdmfToVTK(
     XdmfRegularGrid *grid,
-    vtkImageData *dataSet)
-  ;
+    vtkImageData *dataSet);
+
   static void CopyShape(
     XdmfRegularGrid *grid,
-    vtkImageData *dataSet)
-  ;
+    vtkImageData *dataSet);
+
   static void VTKToXdmf(
     vtkDataSet *dataSet,
     XdmfDomain *domain,
-    bool hasTime, double time)
-  ;
+    bool hasTime, double time);
 };
 
 //==============================================================================
@@ -120,17 +110,16 @@ class VTKIOXDMF3_EXPORT vtkXdmf3RectilinearGrid
 public:
   static void XdmfToVTK(
     XdmfRectilinearGrid *grid,
-    vtkRectilinearGrid *dataSet)
-  ;
+    vtkRectilinearGrid *dataSet);
+
   static void CopyShape(
     XdmfRectilinearGrid *grid,
-    vtkRectilinearGrid *dataSet)
-  ;
+    vtkRectilinearGrid *dataSet);
+
   static void VTKToXdmf(
     vtkDataSet *dataSet,
     XdmfDomain *domain,
-    bool hasTime, double time)
-  ;
+    bool hasTime, double time);
 };
 
 //==============================================================================
@@ -140,17 +129,16 @@ class VTKIOXDMF3_EXPORT vtkXdmf3CurvilinearGrid
 public:
   static void XdmfToVTK(
     XdmfCurvilinearGrid *grid,
-    vtkStructuredGrid *dataSet)
-  ;
+    vtkStructuredGrid *dataSet);
+
   static void CopyShape(
     XdmfCurvilinearGrid *grid,
-    vtkStructuredGrid *dataSet)
-  ;
+    vtkStructuredGrid *dataSet);
+
   static void VTKToXdmf(
     vtkDataSet *dataSet,
     XdmfDomain *domain,
-    bool hasTime, double time)
-  ;
+    bool hasTime, double time);
 };
 
 //==============================================================================
@@ -160,17 +148,16 @@ class VTKIOXDMF3_EXPORT vtkXdmf3UnstructuredGrid
 public:
   static void XdmfToVTK(
     XdmfUnstructuredGrid *grid,
-    vtkUnstructuredGrid *dataSet)
-  ;
+    vtkUnstructuredGrid *dataSet);
+
   static void CopyShape(
     XdmfUnstructuredGrid *grid,
-    vtkUnstructuredGrid *dataSet)
-  ;
+    vtkUnstructuredGrid *dataSet);
+
   static void VTKToXdmf(
     vtkDataSet *dataSet,
     XdmfDomain *domain,
-    bool hasTime, double time)
-  ;
+    bool hasTime, double time);
 };
 
 //==============================================================================
@@ -180,13 +167,12 @@ class VTKIOXDMF3_EXPORT vtkXdmf3Graph
 public:
   static void XdmfToVTK(
     XdmfGraph *grid,
-    vtkMutableDirectedGraph *dataSet)
-  ;
+    vtkMutableDirectedGraph *dataSet);
+
   static void VTKToXdmf(
     vtkDirectedGraph *dataSet,
     XdmfDomain *domain,
-    bool hasTime, double time)
-  ;
+    bool hasTime, double time);
 };
 
 #endif

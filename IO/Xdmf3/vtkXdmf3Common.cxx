@@ -178,12 +178,12 @@ bool vtkXdmf3Common::VTKToXdmfArray(
     xdims.push_back(ncomp);
     }
 
-  //TODO: verify the 32/64 choices are correct in all configurations
   if (vArray->GetName())
     {
     xArray->setName(vArray->GetName());
     }
 
+  //TODO: verify the 32/64 choices are correct in all configurations
   switch(vArray->GetDataType())
     {
     case VTK_VOID:
@@ -311,7 +311,6 @@ void vtkXdmf3Common::XdmfToVTKAttributes(
     }
   int numCells = dataSet->GetNumberOfCells();
   int numPoints = dataSet->GetNumberOfPoints();
-
   int numAttributes = grid->getNumberAttributes();
   for (int cc=0; cc < numAttributes; cc++)
     {
@@ -331,6 +330,7 @@ void vtkXdmf3Common::XdmfToVTKAttributes(
       {
       nvals = nvals * dims[i];
       }
+
     int ncomp = 1;
 
     vtkFieldData * fieldData = 0;
@@ -345,11 +345,13 @@ void vtkXdmf3Common::XdmfToVTKAttributes(
       {
       fieldData = dataSet->GetCellData();
       ncomp = nvals/numCells;
+      //TODO: if numCells == 0 continue;
       }
     else if (attrCenter == XdmfAttributeCenter::Node())
       {
       fieldData = dataSet->GetPointData();
       ncomp = nvals/numPoints;
+      //TODO: if numPoints == 0 continue;
       }
     else
       {
@@ -396,16 +398,16 @@ void vtkXdmf3Common::XdmfToVTKAttributes(
         switch (atype)
           {
           case SCALAR:
-            fdAsDSA->SetScalars(array);
+            //fdAsDSA->SetScalars(array); //TODO: setting two different arrays removes the first?
             break;
           case VECTOR:
-            fdAsDSA->SetVectors(array);
+            //fdAsDSA->SetVectors(array);
             break;
           case TENSOR:
-            fdAsDSA->SetTensors(array);
+            //fdAsDSA->SetTensors(array);
             break;
           case GLOBALID:
-            fdAsDSA->SetGlobalIds(array);
+            //fdAsDSA->SetGlobalIds(array);
             break;
           }
         }
@@ -861,6 +863,10 @@ void vtkXdmf3RegularGrid::CopyShape(
       whole_extent[(2-i)*2+1] = xdims->getValue<int>(i)-1;
       }
     }
+  if (xdims->getSize() == 2)
+    {
+    whole_extent[1] = whole_extent[0];
+    }
   dataSet->SetExtent(whole_extent);
 
   double origin[3];
@@ -960,6 +966,10 @@ void vtkXdmf3RectilinearGrid::CopyShape(
       whole_extent[(2-i)*2+1] = xdims->getValue<int>(i)-1;
       }
     }
+  if (xdims->getSize() == 2)
+    {
+    whole_extent[1] = whole_extent[0];
+    }
   dataSet->SetExtent(whole_extent);
 
   vtkDataArray *vCoords = NULL;
@@ -981,12 +991,15 @@ void vtkXdmf3RectilinearGrid::CopyShape(
     vCoords->Delete();
     }
 
-  xCoords = grid->getCoordinates(2);
-  vCoords = vtkXdmf3Common::XdmfToVTKArray(xCoords.get(), xCoords->getName(), 1);
-  dataSet->SetZCoordinates(vCoords);
-  if (vCoords)
+  if (xdims->getSize() > 2)
     {
-    vCoords->Delete();
+    xCoords = grid->getCoordinates(2);
+    vCoords = vtkXdmf3Common::XdmfToVTKArray(xCoords.get(), xCoords->getName(), 1);
+    dataSet->SetZCoordinates(vCoords);
+    if (vCoords)
+      {
+      vCoords->Delete();
+      }
     }
 }
 
@@ -1067,13 +1080,36 @@ void vtkXdmf3CurvilinearGrid::CopyShape(
       whole_extent[(2-i)*2+1] = xdims->getValue<int>(i)-1;
       }
     }
+  if (xdims->getSize() == 2)
+    {
+    whole_extent[1] = whole_extent[0];
+    }
   dataSet->SetExtent(whole_extent);
-
 
   vtkDataArray *vPoints = NULL;
   shared_ptr<XdmfGeometry> geom = grid->getGeometry();
-
-  vPoints = vtkXdmf3Common::XdmfToVTKArray(geom.get(), "", 3);
+  if (geom->getType() == XdmfGeometryType::XY())
+    {
+    vPoints = vtkXdmf3Common::XdmfToVTKArray(geom.get(), "", 2);
+    vtkDataArray *vPoints3 = vPoints->NewInstance();
+    vPoints3->SetNumberOfComponents(3);
+    vPoints3->SetNumberOfTuples(vPoints->GetNumberOfTuples());
+    vPoints3->SetName("");
+    vPoints3->CopyComponent(0, vPoints, 0);
+    vPoints3->CopyComponent(1, vPoints, 1);
+    vPoints3->FillComponent(2, 0.0);
+    vPoints->Delete();
+    vPoints = vPoints3;
+    }
+  else if (geom->getType() == XdmfGeometryType::XYZ())
+    {
+    vPoints = vtkXdmf3Common::XdmfToVTKArray(geom.get(), "", 3);
+    }
+  else
+    {
+    //Todo: No X_Y or X_Y_Z anymore?
+    return;
+    }
   vtkPoints *p = vtkPoints::New();
   p->SetData(vPoints);
   dataSet->SetPoints(p);
@@ -1253,8 +1289,29 @@ void vtkXdmf3UnstructuredGrid::CopyShape(
   //copy geometry
   vtkDataArray *vPoints = NULL;
   shared_ptr<XdmfGeometry> geom = grid->getGeometry();
-  geom->setType(XdmfGeometryType::XYZ());
-  vPoints = vtkXdmf3Common::XdmfToVTKArray(geom.get(), "", 3);
+  if (geom->getType() == XdmfGeometryType::XY())
+    {
+    vPoints = vtkXdmf3Common::XdmfToVTKArray(geom.get(), "", 2);
+    vtkDataArray *vPoints3 = vPoints->NewInstance();
+    vPoints3->SetNumberOfComponents(3);
+    vPoints3->SetNumberOfTuples(vPoints->GetNumberOfTuples());
+    vPoints3->SetName("");
+    vPoints3->CopyComponent(0, vPoints, 0);
+    vPoints3->CopyComponent(1, vPoints, 1);
+    vPoints3->FillComponent(2, 0.0);
+    vPoints->Delete();
+    vPoints = vPoints3;
+    }
+  else if (geom->getType() == XdmfGeometryType::XYZ())
+    {
+    vPoints = vtkXdmf3Common::XdmfToVTKArray(geom.get(), "", 3);
+    }
+  else
+    {
+    //Todo: No X_Y or X_Y_Z anymore?
+    return;
+    }
+
   vtkPoints *p = vtkPoints::New();
   p->SetData(vPoints);
   dataSet->SetPoints(p);

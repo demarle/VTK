@@ -155,7 +155,7 @@ vtkXdmf3Writer::vtkXdmf3Writer()
 {
   this->FileName = NULL;
   this->LightDataLimit = 100;
-  this->WriteAllTimeSteps = 0;
+  this->WriteAllTimeSteps = false;
   this->Internal = new Internals();
 }
 
@@ -265,7 +265,7 @@ int vtkXdmf3Writer::RequestData(
 {
   if (!this->Internal->Domain)
     {
-    //call Write instead of this directly. That does setup first, then calls this.
+    //call Write() instead of RD() directly. Write() does setup first before it calls RD().
     return 1;
     }
 

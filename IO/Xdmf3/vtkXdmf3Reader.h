@@ -23,12 +23,8 @@
 // then the output type is a vtkDataSet subclass of the appropriate type,
 // otherwise it's a vtkMultiBlockDataSet.
 //
-// Refer to vtkDataReader which provides many methods for controlling the
-// reading of the data file.
 // .SECTION Caveats
 // Uses the XDMF API (http://www.xdmf.org)
-// .SECTION See Also
-// vtkDataReader
 
 #ifndef __vtkXdmf3Reader_h
 #define __vtkXdmf3Reader_h
@@ -54,7 +50,7 @@ protected:
   //Overridden to announce that we make general DataObjects.
   virtual int FillOutputPortInformation(int port, vtkInformation *info);
 
-  //Overridden to respond to RDO requests.
+  //Overridden to handle RDO requests the way we need to
   virtual int ProcessRequest(vtkInformation *, vtkInformationVector **,
     vtkInformationVector *);
 

@@ -59,9 +59,9 @@ public:
   //Controls whether writer automatically writes all input time steps, or
   //just the timestep that is currently on the input.
   //Default is OFF.
-  vtkSetMacro(WriteAllTimeSteps, int);
-  vtkGetMacro(WriteAllTimeSteps, int);
-  vtkBooleanMacro(WriteAllTimeSteps, int);
+  vtkSetMacro(WriteAllTimeSteps, bool);
+  vtkGetMacro(WriteAllTimeSteps, bool);
+  vtkBooleanMacro(WriteAllTimeSteps, bool);
 
 protected:
   vtkXdmf3Writer();
@@ -82,7 +82,7 @@ protected:
 
   char *FileName;
   int LightDataLimit;
-  int WriteAllTimeSteps;
+  bool WriteAllTimeSteps;
 
 private:
   vtkXdmf3Writer(const vtkXdmf3Writer&); // Not implemented

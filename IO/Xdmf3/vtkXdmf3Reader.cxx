@@ -49,15 +49,19 @@
 #include <set>
 #include <fstream>
 
+//for debugging
+//#define MAKELOGS
+#ifdef MAKELOGS
 ofstream *logfile;
+#endif
 
-//TODO: enable/disable arrays, blocks
-//TODO: strides
+//TODO: verify correctness/compliance with specs
+//TODO: benchmark and optimize
+//TODO: enable/disable arrays
+//TODO: enable/disable blocks aka SIL
+//TODO: strided access
 //TODO: information elements
-//TODO: test 2D cases
-//TODO: test in parallel
 //TODO: domains
-//TODO: SIL
 
 //=============================================================================
 class vtkXdmfVisitor_GatherTimes : public XdmfVisitor
@@ -79,7 +83,7 @@ public:
     const shared_ptr<XdmfBaseVisitor> visitor)
   {
     //make up default of 0..nchildren for temporal collection without times
-    //TODO: handle range, list and slab timetypes similarly when they come back libxdmf3
+    //TODO: handle range, list and slab timetypes similarly when they come back to libxdmf3
     XdmfGridCollection *gc = dynamic_cast<XdmfGridCollection *>(&item);
     if (gc && gc->getType() == XdmfGridCollectionType::Temporal())
       {
@@ -210,13 +214,16 @@ public:
   vtkDataObject *Populate(XdmfItem & item, vtkDataObject *toFill, bool splittable)
   {
     assert(toFill);
+#ifdef MAKELOGS
     (*logfile) << this->Rank << " populate " << toFill << " a " << toFill->GetClassName() << endl;
-
+#endif
     XdmfRegularGrid *regGrid = dynamic_cast<XdmfRegularGrid *>(&item);
     if (regGrid)
       {
       vtkImageData *dataSet = vtkImageData::SafeDownCast(toFill);
-      //(*logfile) << "ID" << endl;
+#ifdef MAKELOGS
+      (*logfile) << "ID" << endl;
+#endif
       if (!this->doTime ||
           (regGrid->getTime() && regGrid->getTime()->getValue() == this->time))
         {
@@ -229,7 +236,9 @@ public:
     XdmfRectilinearGrid *recGrid = dynamic_cast<XdmfRectilinearGrid *>(&item);
     if (recGrid)
       {
-      //(*logfile) << "RGRID" << endl;
+#ifdef MAKELOGS
+      (*logfile) << "RGRID" << endl;
+#endif
       if (!this->doTime ||
           (recGrid->getTime() && recGrid->getTime()->getValue() == this->time))
         {
@@ -243,7 +252,9 @@ public:
     XdmfCurvilinearGrid *crvGrid = dynamic_cast<XdmfCurvilinearGrid *>(&item);
     if (crvGrid)
       {
-      //(*logfile) << "SGRID" << endl;
+#ifdef MAKELOGS
+      (*logfile) << "SGRID" << endl;
+#endif
       if (!this->doTime ||
           (crvGrid->getTime() && crvGrid->getTime()->getValue() == this->time))
         {
@@ -257,7 +268,9 @@ public:
     XdmfUnstructuredGrid *unsGrid = dynamic_cast<XdmfUnstructuredGrid *>(&item);
     if (unsGrid)
       {
-      //(*logfile) << "UNS" << endl;
+#ifdef MAKELOGS
+      (*logfile) << "UNS" << endl;
+#endif
       if (!this->doTime ||
           (unsGrid->getTime() && unsGrid->getTime()->getValue() == this->time))
         {
@@ -271,7 +284,9 @@ public:
     XdmfGraph *graph = dynamic_cast<XdmfGraph *>(&item);
     if (graph)
       {
-      //(*logfile) << "GRAPH" << endl;
+#ifdef MAKELOGS
+      (*logfile) << "GRAPH" << endl;
+#endif
       //TODO: XdmfGraph has no getTime() yet
       vtkMutableDirectedGraph *dataSet = vtkMutableDirectedGraph::SafeDownCast(toFill);
       vtkXdmf3Graph::XdmfToVTK(graph, dataSet);
@@ -284,9 +299,15 @@ public:
       XdmfDomain *toCheck = group;
       unsigned int nGridCollections = toCheck->getNumberGridCollections();
       XdmfGridCollection *asGC = dynamic_cast<XdmfGridCollection *>(&item);
+#ifdef MAKELOGS
+      (*logfile) << item.getItemTag() << endl;
+#endif
       int gtype = -1;
       if (!asGC)
         {
+#ifdef MAKELOGS
+        (*logfile) << "NOT A GRID COLLECTION" << endl;
+#endif
         gtype = 0;
         }
       else
@@ -294,17 +315,23 @@ public:
         if (asGC->getType() == XdmfGridCollectionType::Temporal())
           {
           gtype = 1;
+#ifdef MAKELOGS
           (*logfile) << "TEMPORAL GROUP" << endl;
+#endif
           }
         else if (asGC->getType() == XdmfGridCollectionType::Spatial())
           {
           gtype = 2;
+#ifdef MAKELOGS
           (*logfile) << "SPATIAL GROUP" << endl;
+#endif
           }
         else
           {
           gtype = 3;
+#ifdef MAKELOGS
           (*logfile) << "UNSPECIFIED GROUP" << endl;
+#endif
           }
         }
 
@@ -313,7 +340,7 @@ public:
         {
         if (asGC->getTime()->getValue() != this->time)
           {
-          //don't return MB that don't match the requested time
+          //don't return MB that doesn't match the requested time
           return NULL;
           }
         //when we find a match, turn off time request, so that
@@ -327,7 +354,7 @@ public:
           toCheck->getGridCollection(0)->getType() == XdmfGridCollectionType::Temporal())
         {
         //skip over temporal collections and return their sieved content
-        toCheck = group->getGridCollection(0).get();
+        toCheck = toCheck->getGridCollection(0).get();
         }
 
       vtkMultiBlockDataSet *top = vtkMultiBlockDataSet::SafeDownCast(toFill);
@@ -343,11 +370,15 @@ public:
         {
         if (!this->ShouldRead(i,nGridCollections,false))
           {
+#ifdef MAKELOGS
           (*logfile) << this->Rank << " ignoring " << i << endl;
+#endif
           top->SetBlock(cnt++, NULL);
           continue;
           }
+#ifdef MAKELOGS
         (*logfile) << this->Rank << " reading " << i << endl;
+#endif
         vtkMultiBlockDataSet *child = vtkMultiBlockDataSet::New();
         result = this->Populate(*(toCheck->getGridCollection(i)), child, subSplittable);
         if (result)
@@ -360,7 +391,9 @@ public:
         {
         if (!this->ShouldRead(i,nUnstructuredGrids,true))
           {
+#ifdef MAKELOGS
           (*logfile) << this->Rank << " ignoring ug" << i << endl;
+#endif
           continue;
           }
         vtkUnstructuredGrid *child = vtkUnstructuredGrid::New();
@@ -375,7 +408,9 @@ public:
         {
         if (!this->ShouldRead(i,nRectilinearGrids,true))
           {
+#ifdef MAKELOGS
           (*logfile) << this->Rank << " ignoring rg" << i << endl;
+#endif
           continue;
           }
         vtkRectilinearGrid *child = vtkRectilinearGrid::New();
@@ -390,7 +425,9 @@ public:
         {
         if (!this->ShouldRead(i,nCurvilinearGrids,true))
           {
+#ifdef MAKELOGS
           (*logfile) << this->Rank << " ignoring cg" << i << endl;
+#endif
           continue;
           }
         vtkStructuredGrid *child = vtkStructuredGrid::New();
@@ -405,11 +442,13 @@ public:
         {
         if (!this->ShouldRead(i,nRegularGrids,true))
           {
+#ifdef MAKELOGS
           (*logfile) << this->Rank << " ignoring rg" << i << endl;
+#endif
           continue;
           }
         vtkUniformGrid *child = vtkUniformGrid::New();
-        result = this->Populate(*(group->getRegularGrid(i)), child, false);
+        result = this->Populate(*(toCheck->getRegularGrid(i)), child, false);
         if (result)
           {
           top->SetBlock(cnt++, result);
@@ -420,11 +459,13 @@ public:
         {
         if (!this->ShouldRead(i,nGraphs,true))
           {
+#ifdef MAKELOGS
           (*logfile) << this->Rank << " ignoring g" << i << endl;
+#endif
           continue;
           }
         vtkMutableDirectedGraph *child = vtkMutableDirectedGraph::New();
-        result = this->Populate(*(group->getGraph(i)), child, false);
+        result = this->Populate(*(toCheck->getGraph(i)), child, false);
         if (result)
           {
           top->SetBlock(cnt++, result);
@@ -440,7 +481,7 @@ public:
       return top;
       }
 
-    //shoule never get here
+    //should never get here
     return NULL;
   }
 
@@ -467,7 +508,9 @@ protected:
       {
       return true;
       }
+#ifdef MAKELOGS
     (*logfile) << this->Rank << "?" << piece << "/" << npieces << endl;
+#endif
     if (this->NumProcs<1)
       {
       //no parallel information given to us, assume serial
@@ -488,12 +531,16 @@ protected:
 
     int mystart = this->Rank*npieces/this->NumProcs;
     int myend = (this->Rank+1)*npieces/this->NumProcs;
+#ifdef MAKELOGS
     (*logfile) << this->Rank << " responsible for [" << mystart << "," << myend << ")" << endl;
+#endif
     if (piece >= mystart)
       {
       if (piece < myend || (this->Rank==this->NumProcs-1))
         {
+#ifdef MAKELOGS
         (*logfile) << piece << " is for me " << this->Rank << endl;
+#endif
         return true;
         }
       }
@@ -515,8 +562,11 @@ public:
   //--------------------------------------------------------------------------
   bool PrepareDocument(vtkXdmf3Reader *self, const char *FileName)
   {
-    // Calling this method repeatedly is okay. It does work only when something
-    // has changed.
+    if (this->Domain)
+      {
+      return true;
+      }
+
     //TODO Implement read from buffer path
     if (!FileName )
       {
@@ -538,13 +588,11 @@ public:
   void Init(const char *filename)
   {
     this->Reader = XdmfReader::New();
-    //TODO:
-    //Domains are no longer used in practice.
-    //So we should handle files without domains.
+    //TODO: Domains are not used in practice.
+    //We should handle files without them.
     this->Domain = shared_dynamic_cast<XdmfDomain>(
       this->Reader->read(filename)
       );
-    //this->TopGrid = NULL;
     this->VTKType = -1;
   }
   //--------------------------------------------------------------------------
@@ -555,7 +603,8 @@ public:
       {
       this->TimeSteps.erase(this->TimeSteps.begin());
       }
-    shared_ptr<vtkXdmfVisitor_GatherTimes> visitor = vtkXdmfVisitor_GatherTimes::New();
+    shared_ptr<vtkXdmfVisitor_GatherTimes> visitor =
+      vtkXdmfVisitor_GatherTimes::New();
     this->Domain->accept(visitor);
     std::set<double> times = visitor->getTimes();
     std::set<double>::const_iterator it; // declare an iterator
@@ -577,7 +626,7 @@ public:
     unsigned int nGridCollections = this->Domain->getNumberGridCollections();
     shared_ptr<XdmfDomain> toCheck = this->Domain;
 
-    //check for temporal of atomic, act on the atomic type
+    //check for temporal of atomic, in which case we produce the atomic type
     bool temporal = false;
     if (nGridCollections == 1)
       {
@@ -728,8 +777,10 @@ int vtkXdmf3Reader::RequestDataObject(vtkInformationVector *outputVector)
 
   //Determine what vtkDataObject we should produce
   int vtk_type = this->Internal->GetVTKType();
-  //(*logfile) << "vtk type is " << vtk_type << " "
-  //     << vtkDataObjectTypes::GetClassNameFromTypeId(vtk_type) << endl;
+#ifdef MAKELOGS
+  (*logfile) << "vtk type is " << vtk_type << " "
+       << vtkDataObjectTypes::GetClassNameFromTypeId(vtk_type) << endl;
+#endif
   //Make an empty vtkDataObject
   vtkDataObject* output = vtkDataObject::GetData(outputVector, 0);
   if (!output || output->GetDataObjectType() != vtk_type)
@@ -912,17 +963,25 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
     output->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), time);
     }
 
+
+#ifdef MAKELOGS
+  //DEBUG CODE
   char fname[120];
   sprintf(fname, "/Users/demarle/tmp/log_%d.log", updatePiece);
   cerr << fname << endl;
   logfile = new ofstream(fname);
   (*logfile) << "Hello from " << updatePiece << endl;
+#endif
 
   vtkMultiBlockDataSet *mbds = vtkMultiBlockDataSet::New();
   visitor->SetRank(updatePiece, updateNumPieces);
   visitor->SetTimeRequest(doTime, time);
   visitor->Populate(*(this->Internal->Domain), mbds, true);
-  //mbds->PrintSelf((*logfile), vtkIndent(0));
+
+#ifdef MAKELOGS
+  mbds->PrintSelf((*logfile), vtkIndent(0));
+#endif
+
   if (mbds->GetNumberOfBlocks()==1)
     {
     output->ShallowCopy(mbds->GetBlock(0));
@@ -933,6 +992,8 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
     }
   mbds->Delete();
 
+#ifdef MAKELOGS
   (*logfile).close();
+#endif
   return 1;
 }
