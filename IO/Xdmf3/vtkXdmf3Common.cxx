@@ -959,16 +959,18 @@ void vtkXdmf3RectilinearGrid::CopyShape(
 
   shared_ptr<XdmfArray> xdims;
   xdims = grid->getDimensions();
+  //XDMF RECTMESH is apparently inconsistent with SMESH and CORECTMESH
+  //it is ijk in VTK terms and they are kji
   if (xdims)
     {
     for (unsigned int i = 0; (i < 3 && i < xdims->getSize()); i++)
       {
-      whole_extent[(2-i)*2+1] = xdims->getValue<int>(i)-1;
+      whole_extent[i*2+1] = xdims->getValue<int>(i)-1;
       }
     }
   if (xdims->getSize() == 2)
     {
-    whole_extent[1] = whole_extent[0];
+    whole_extent[5] = whole_extent[4];
     }
   dataSet->SetExtent(whole_extent);
 
