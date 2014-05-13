@@ -1,23 +1,32 @@
 project(XdmfCore)
 cmake_minimum_required(VERSION 2.6)
+if (POLICY CMP0015)
+  cmake_policy(SET CMP0015 NEW)
+endif (POLICY CMP0015)
 
 include(CheckCXXSourceCompiles)
 include(SetUpVersion)
+include(TestBigEndian)
 
 if(VERSION_CONTROL_AUTOUPDATE OR 
-    NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/XdmfVersion.hpp)
+    NOT EXISTS ${CMAKE_BINARY_DIR}/XdmfVersion.hpp)
   VersionCreate("Xdmf" "2" "XDMFCORE_EXPORT" "XdmfCore.hpp")
-endif()
+endif(VERSION_CONTROL_AUTOUPDATE OR 
+    NOT EXISTS ${CMAKE_BINARY_DIR}/XdmfVersion.hpp)
 
-#set(BUILD_SHARED_LIBS true)
+set(BUILD_SHARED_LIBS true)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_BINARY_DIR})
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 option(XDMF_BUILD_DSM OFF)
+
+if(XDMF_BUILD_DSM)
+  option(XDMF_BUILD_DSM_THREADS ON)
+endif(XDMF_BUILD_DSM)
 
 mark_as_advanced(CLEAR Boost_INCLUDE_DIR)
 find_package(Boost REQUIRED)
@@ -29,11 +38,6 @@ endif(Boost_FOUND)
 mark_as_advanced(CLEAR HDF5_C_INCLUDE_DIR)
 mark_as_advanced(CLEAR HDF5_hdf5_LIBRARY_DEBUG)
 mark_as_advanced(CLEAR HDF5_hdf5_LIBRARY_RELEASE)
-set(HDF5_LIBRARIES ${vtkhdf5_LIBRARIES})
-set(HDF5_hdf5_LIBRARY_RELEASE ${vtkhdf5_LIBRARIES})
-set(HDF5_INCLUDE_DIRS ${vtkhdf5_INCLUDE_DIRS})
-set(HDF5_C_INCLUDE_DIR ${vtkhdf5_INCLUDE_DIRS})
-set(HDF5_FOUND TRUE)
 find_package(HDF5 REQUIRED)
 if(HDF5_FOUND)
   mark_as_advanced(FORCE HDF5_C_INCLUDE_DIR)
@@ -62,9 +66,6 @@ if(HDF5_FOUND)
   set(XDMF_BINARIES ${XDMF_BINARIES} ${HDF5_BINARY_DIRS})
 endif(HDF5_FOUND)
 
-set(LIBXML2_LIBRARIES ${vtklibxml2_LIBRARIES})
-set(LIBXML2_INCLUDE_DIR ${vtklibxml2_INCLUDE_DIRS})
-set(LIBXML2_FOUND TRUE)
 find_package(LibXml2 REQUIRED)
 if(LIBXML2_FOUND)
   include_directories(${LIBXML2_INCLUDE_DIR})
@@ -76,6 +77,9 @@ if(LIBXML2_FOUND)
 endif(LIBXML2_FOUND)
 
 # Perform compile-time checks and generate XdmfConfig.hpp
+
+TEST_BIG_ENDIAN(XDMF_BIG_ENDIAN)
+
 unset(HAVE_BOOST_SHARED_DYNAMIC_CAST CACHE)
 set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${Boost_INCLUDE_DIRS})
 check_cxx_source_compiles("
@@ -84,7 +88,7 @@ check_cxx_source_compiles("
 struct Base { virtual ~Base(){} };
 struct Derived : public Base {};
 
-int main(int ac, char ** av)
+int main(int ac, char * av[])
 {
   boost::shared_ptr<Base> ptr(new Base());
   boost::shared_dynamic_cast<Derived>(ptr);
@@ -92,14 +96,17 @@ int main(int ac, char ** av)
 "
 HAVE_BOOST_SHARED_DYNAMIC_CAST)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/XdmfConfig.hpp.in 
-               ${CMAKE_CURRENT_BINARY_DIR}/XdmfConfig.hpp)
+               ${CMAKE_BINARY_DIR}/XdmfConfig.hpp)
 
 set(XdmfCoreSources
   XdmfArray
+  XdmfArrayReference
   XdmfArrayType
+  XdmfBinaryController
   XdmfCoreItemFactory
   XdmfCoreReader
   XdmfError
+  XdmfFunction
   XdmfHDF5Controller
   XdmfHDF5Writer
   XdmfHeavyDataController
@@ -108,37 +115,15 @@ set(XdmfCoreSources
   XdmfItem
   XdmfItemProperty
   XdmfSparseMatrix
+  XdmfSubset
   XdmfSystemUtils
-  ${CMAKE_CURRENT_BINARY_DIR}/XdmfVersion
+  ${CMAKE_BINARY_DIR}/XdmfVersion
   XdmfVisitor
   XdmfWriter)
 
-option(XDMF_BUILD_DSM OFF)
-if(XDMF_BUILD_DSM)
-  set(XdmfCoreSources
-    ${XdmfCoreSources}
-    XdmfHDF5ControllerDSM
-    XdmfHDF5WriterDSM)
-
-  find_package(H5FDdsm REQUIRED NO_MODULE)
-  if(H5FDdsm_FOUND)
-    include_directories(${H5FDdsm_INCLUDE_DIR})
-    get_filename_component(H5FDdsm_LIBRARY_DIR 
-                           "${H5FDdsm_INCLUDE_DIR}/../lib" REALPATH)
-    set(XDMF_LIBRARY_DIRS ${XDMF_LIBRARY_DIRS} ${H5FDdsm_LIBRARY_DIR})
-    get_property(h5fddsm_lib_location TARGET H5FDdsm PROPERTY LOCATION)
-    set(H5FDdsm_LIBRARIES ${h5fddsm_lib_location})
-    set(XDMF_LIBRARIES ${XDMF_LIBRARIES} ${H5FDdsm_LIBRARIES})
-  else(H5FDdsm_FOUND)
-    message(SEND_ERROR
-      "Cannot find HDF5 DSM!  Please set H5FDdsm_DIR and configure again.")
-  endif(H5FDdsm_FOUND)
-endif(XDMF_BUILD_DSM)
-
 add_library(XdmfCore ${XdmfCoreSources})
 link_directories(${XDMF_LIBRARY_DIRS})
-target_link_libraries(XdmfCore ${XDMF_LIBRARIES} ${vtkxdmf2_LINK_DEPENDS})
-vtk_target_install(XdmfCore)
+target_link_libraries(XdmfCore ${XDMF_LIBRARIES})
 
 if(WIN32)
   add_definitions(-D_HDF5USEDLL_ -D_HDF5USEHLDLL_)
@@ -148,9 +133,9 @@ if(WIN32)
 	set_target_properties(XdmfCore PROPERTIES
       PREFIX ../
       IMPORT_PREFIX ../
-      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+      LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+      ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
   endif(NOT MSVC10)
 endif(WIN32)
 
@@ -200,9 +185,13 @@ set(XdmfCore_INCLUDE_DIRS
 set(XDMF_LIBRARIES ${XDMF_LIBRARIES} ${CMAKE_INSTALL_PREFIX}/lib)
 set(XDMF_BINARIES ${XDMF_BINARIES} ${CMAKE_INSTALL_PREFIX}/bin)
 
-#if(BUILD_TESTING)
-#  add_subdirectory(tests)
-#endif(BUILD_TESTING)
+if(XDMF_BUILD_DSM)
+  add_subdirectory(dsm)
+endif(XDMF_BUILD_DSM)
+
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif(BUILD_TESTING)
 
 set(XDMF_LIBRARIES ${XDMF_LIBRARIES} PARENT_SCOPE)
 set(XDMF_BINARIES ${XDMF_BINARIES} PARENT_SCOPE)
