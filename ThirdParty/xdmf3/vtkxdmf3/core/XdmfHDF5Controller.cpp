@@ -22,6 +22,7 @@
 /*****************************************************************************/
 
 #include <hdf5.h>
+#include <numeric>
 #include <sstream>
 #include "XdmfArray.hpp"
 #include "XdmfArrayType.hpp"
@@ -42,20 +43,15 @@ XdmfHDF5Controller::New(const std::string & hdf5FilePath,
                         const std::vector<unsigned int> & dimensions,
                         const std::vector<unsigned int> & dataspaceDimensions)
 {
-  try {
-    shared_ptr<XdmfHDF5Controller> 
-      p(new XdmfHDF5Controller(hdf5FilePath,
-                               dataSetPath,
-                               type,
-                               start,
-                               stride,
-                               dimensions,
-                               dataspaceDimensions));
-    return p;
-  }
-  catch (XdmfError e) {
-    throw e;
-  }
+  shared_ptr<XdmfHDF5Controller> 
+    p(new XdmfHDF5Controller(hdf5FilePath,
+                             dataSetPath,
+                             type,
+                             start,
+                             stride,
+                             dimensions,
+                             dataspaceDimensions));
+  return p;
 }
 
 XdmfHDF5Controller::XdmfHDF5Controller(const std::string & hdf5FilePath,
@@ -76,15 +72,10 @@ XdmfHDF5Controller::XdmfHDF5Controller(const std::string & hdf5FilePath,
   if(!(mStart.size() == mStride.size() && 
        mStride.size() == mDimensions.size() &&
        mDimensions.size() == mDataspaceDimensions.size())) {
-    try {
-      XdmfError::message(XdmfError::FATAL,
-                         "mStart, mStride, mDimensions, and "
-                         "mDataSpaceDimensions must all be of equal length in "
-                         "XdmfHDF5Controller constructor");
-    }
-    catch (XdmfError e) {
-      throw e;
-    }
+    XdmfError::message(XdmfError::FATAL,
+                       "mStart, mStride, mDimensions, and "
+                       "mDataSpaceDimensions must all be of equal length in "
+                       "XdmfHDF5Controller constructor");
   }
 }
 
@@ -183,22 +174,45 @@ XdmfHDF5Controller::read(XdmfArray * const array, const int fapl)
       mOpenFileUsage[mFilePath]++;
     }
   }
-  hid_t dataset = H5Dopen(hdf5Handle, mDataSetPath.c_str(), H5P_DEFAULT);
-  hid_t dataspace = H5Dget_space(dataset);
 
-  std::vector<hsize_t> start(mStart.begin(), mStart.end());
-  std::vector<hsize_t> stride(mStride.begin(), mStride.end());
-  std::vector<hsize_t> count(mDimensions.begin(), mDimensions.end());
+  const hid_t dataset = H5Dopen(hdf5Handle, mDataSetPath.c_str(), H5P_DEFAULT);
+  const hid_t dataspace = H5Dget_space(dataset);
 
+  const unsigned int dataspaceDims = H5Sget_simple_extent_ndims(dataspace);
+  const std::vector<hsize_t> count(mDimensions.begin(), mDimensions.end());
 
-  status = H5Sselect_hyperslab(dataspace,
-                               H5S_SELECT_SET,
-                               &start[0],
-                               &stride[0],
-                               &count[0],
-                               NULL);
-  hssize_t numVals = H5Sget_select_npoints(dataspace);
+  if(dataspaceDims != mDimensions.size()) {
+    // special case where the number of dimensions of the hdf5 dataset
+    // does not equal the number of dimensions in the light data
+    // description - in this case we cannot properly take a hyperslab
+    // selection, so we assume we are reading the entire dataset and
+    // check whether that is ok to do
+    const int numberValuesHDF5 = H5Sget_select_npoints(dataspace);
+    const int numberValuesXdmf = 
+      std::accumulate(mDimensions.begin(),
+                      mDimensions.end(),
+                      1,
+                      std::multiplies<unsigned int>());
+    if(numberValuesHDF5 != numberValuesXdmf) {
+      XdmfError::message(XdmfError::FATAL,
+                         "Number of dimensions in light data description in "
+                         "Xdmf does not match number of dimensions in hdf5 "
+                         "file.");
+    }
+  }
+  else {
+    const std::vector<hsize_t> start(mStart.begin(), mStart.end());
+    const std::vector<hsize_t> stride(mStride.begin(), mStride.end());
 
+    status = H5Sselect_hyperslab(dataspace,
+                                 H5S_SELECT_SET,
+                                 &start[0],
+                                 &stride[0],
+                                 &count[0],
+                                 NULL);
+  }
+
+  const hssize_t numVals = H5Sget_select_npoints(dataspace);
   hid_t memspace = H5Screate_simple(mDimensions.size(),
                                     &count[0],
                                     NULL);
@@ -245,30 +259,19 @@ XdmfHDF5Controller::read(XdmfArray * const array, const int fapl)
     closeDatatype = true;
   }
   else {
-    try {
-      XdmfError::message(XdmfError::FATAL,
-                         "Unknown XdmfArrayType encountered in hdf5 "
-                         "controller.");
-        }
-    catch (XdmfError & e) {
-      throw e;
-    }
+    XdmfError::message(XdmfError::FATAL,
+                       "Unknown XdmfArrayType encountered in hdf5 "
+                       "controller.");
   }
-
 
   array->initialize(mType, mDimensions);
 
   if(numVals != array->getSize()) {
-    try {
-      std::stringstream errOut;
-      errOut << "Number of values in hdf5 dataset (" << numVals;
-      errOut << ")\ndoes not match allocated size in XdmfArray (" << array->getSize() << ").";
-      XdmfError::message(XdmfError::FATAL,
-                         errOut.str());
-    }
-    catch (XdmfError & e) {
-      throw e;
-    }
+    std::stringstream errOut;
+    errOut << "Number of values in hdf5 dataset (" << numVals;
+    errOut << ")\ndoes not match allocated size in XdmfArray (" << array->getSize() << ").";
+    XdmfError::message(XdmfError::FATAL,
+                       errOut.str());
   }
   if(closeDatatype) {
     char ** data = new char*[numVals];
