@@ -32,6 +32,8 @@
 #include "vtkIOXdmf3Module.h" // For export macro
 #include "vtkDataReader.h"
 
+class vtkXdmf3ArraySelection;
+
 class VTKIOXDMF3_EXPORT vtkXdmf3Reader : public vtkDataReader
 {
 public:
@@ -43,6 +45,30 @@ public:
   // Determine if the file can be read with this reader.
   virtual int CanReadFile(const char* filename);
 
+  // Description:
+  // Get information about point-based arrays. As is typical with readers this
+  // in only valid after the filename is set and UpdateInformation() has been
+  // called.
+  int GetNumberOfPointArrays();
+
+  // Description:
+  // Returns the name of point array at the give index. Returns NULL if index is
+  // invalid.
+  const char* GetPointArrayName(int index);
+
+  // Description:
+  // Get/Set the point array status.
+  int GetPointArrayStatus(const char* name);
+  void SetPointArrayStatus(const char* name, int status);
+
+  // Description:
+  // Get information about cell-based arrays.  As is typical with readers this
+  // in only valid after the filename is set and UpdateInformation() has been
+  // called.
+  int GetNumberOfCellArrays();
+  const char* GetCellArrayName(int index);
+  void SetCellArrayStatus(const char* name, int status);
+  int GetCellArrayStatus(const char* name);
 protected:
   vtkXdmf3Reader();
   ~vtkXdmf3Reader();
@@ -66,6 +92,13 @@ protected:
   //Read the XDMF and HDF input files and fill in vtk data objects.
   virtual int RequestData(vtkInformation *, vtkInformationVector **,
     vtkInformationVector *);
+
+  vtkXdmf3ArraySelection* GetFieldArraySelection();
+  vtkXdmf3ArraySelection* GetCellArraySelection();
+  vtkXdmf3ArraySelection* GetPointArraySelection();
+  vtkXdmf3ArraySelection* FieldArraysCache;
+  vtkXdmf3ArraySelection* CellArraysCache;
+  vtkXdmf3ArraySelection* PointArraysCache;
 
 private:
   vtkXdmf3Reader(const vtkXdmf3Reader&); // Not implemented

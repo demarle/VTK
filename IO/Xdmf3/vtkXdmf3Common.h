@@ -57,6 +57,22 @@ class XdmfDomain;
 
 //==============================================================================
 
+class vtkXdmf3ArraySelection : public std::map<std::string, bool>
+{
+public:
+  void Merge(const vtkXdmf3ArraySelection& other);
+  void AddArray(const char* name, bool status=true);
+  bool ArrayIsEnabled(const char* name);
+  bool HasArray(const char* name);
+  int GetArraySetting(const char* name);
+  void SetArrayStatus(const char* name, bool status);
+  const char* GetArrayName(int index);
+  int GetNumberOfArrays();
+  std::set<std::string> GetEnabledArrays();
+};
+
+//==============================================================================
+
 class VTKIOXDMF3_EXPORT vtkXdmf3Common
 {
 public:
@@ -71,7 +87,11 @@ public:
     XdmfArray* xArray,
     int rank = 0, int *dims = NULL);
 
-  static void XdmfToVTKAttributes(XdmfGrid *grid, vtkDataObject *dObject);
+  static void XdmfToVTKAttributes(
+    vtkXdmf3ArraySelection *fselection,
+    vtkXdmf3ArraySelection *cselection,
+    vtkXdmf3ArraySelection *pselection,
+    XdmfGrid *grid, vtkDataObject *dObject);
 
   static void VTKToXdmfAttributes(vtkDataObject *dObject, XdmfGrid *grid);
 
@@ -81,7 +101,6 @@ public:
   static int GetXdmfCellType(int vtkType);
 
   static void SetTime(XdmfGrid *grid, double hasTime, double time);
-
 };
 
 //==============================================================================
@@ -90,6 +109,9 @@ class VTKIOXDMF3_EXPORT vtkXdmf3RegularGrid
 {
 public:
   static void XdmfToVTK(
+    vtkXdmf3ArraySelection *fselection,
+    vtkXdmf3ArraySelection *cselection,
+    vtkXdmf3ArraySelection *pselection,
     XdmfRegularGrid *grid,
     vtkImageData *dataSet);
 
@@ -109,6 +131,9 @@ class VTKIOXDMF3_EXPORT vtkXdmf3RectilinearGrid
 {
 public:
   static void XdmfToVTK(
+    vtkXdmf3ArraySelection *fselection,
+    vtkXdmf3ArraySelection *cselection,
+    vtkXdmf3ArraySelection *pselection,
     XdmfRectilinearGrid *grid,
     vtkRectilinearGrid *dataSet);
 
@@ -128,6 +153,9 @@ class VTKIOXDMF3_EXPORT vtkXdmf3CurvilinearGrid
 {
 public:
   static void XdmfToVTK(
+    vtkXdmf3ArraySelection *fselection,
+    vtkXdmf3ArraySelection *cselection,
+    vtkXdmf3ArraySelection *pselection,
     XdmfCurvilinearGrid *grid,
     vtkStructuredGrid *dataSet);
 
@@ -147,6 +175,9 @@ class VTKIOXDMF3_EXPORT vtkXdmf3UnstructuredGrid
 {
 public:
   static void XdmfToVTK(
+    vtkXdmf3ArraySelection *fselection,
+    vtkXdmf3ArraySelection *cselection,
+    vtkXdmf3ArraySelection *pselection,
     XdmfUnstructuredGrid *grid,
     vtkUnstructuredGrid *dataSet);
 

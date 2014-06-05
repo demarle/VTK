@@ -51,7 +51,78 @@
 #include "XdmfTopology.hpp"
 #include "XdmfTopologyType.hpp"
 
+
+//==============================================================================
+void vtkXdmf3ArraySelection::Merge(const vtkXdmf3ArraySelection& other)
+{
+  vtkXdmf3ArraySelection::const_iterator iter = other.begin();
+  for (; iter != other.end(); ++iter)
+    {
+    (*this)[iter->first] = iter->second;
+    }
+}
+
 //--------------------------------------------------------------------------
+void vtkXdmf3ArraySelection::AddArray(const char* name, bool status)
+{
+  (*this)[name] = status;
+}
+
+//--------------------------------------------------------------------------
+bool vtkXdmf3ArraySelection::ArrayIsEnabled(const char* name)
+{
+  vtkXdmf3ArraySelection::iterator iter = this->find(name);
+  if (iter != this->end())
+    {
+    return iter->second;
+    }
+
+  // don't know anything about this array, enable it by default.
+  return true;
+}
+
+//--------------------------------------------------------------------------
+bool vtkXdmf3ArraySelection::HasArray(const char* name)
+{
+  vtkXdmf3ArraySelection::iterator iter = this->find(name);
+  return (iter != this->end());
+}
+
+//--------------------------------------------------------------------------
+int vtkXdmf3ArraySelection::GetArraySetting(const char* name)
+{
+  return this->ArrayIsEnabled(name)? 1 : 0;
+}
+
+//--------------------------------------------------------------------------
+void vtkXdmf3ArraySelection::SetArrayStatus(const char* name, bool status)
+{
+  this->AddArray(name, status);
+}
+
+//--------------------------------------------------------------------------
+const char* vtkXdmf3ArraySelection::GetArrayName(int index)
+{
+  int cc=0;
+  for (vtkXdmf3ArraySelection::iterator iter = this->begin();
+      iter != this->end(); ++iter)
+  {
+    if (cc==index)
+      {
+      return iter->first.c_str();
+      }
+    cc++;
+  }
+  return NULL;
+}
+
+//--------------------------------------------------------------------------
+int vtkXdmf3ArraySelection::GetNumberOfArrays()
+{
+  return static_cast<int>(this->size());
+}
+
+//==============================================================================
 vtkDataArray *vtkXdmf3Common::XdmfToVTKArray(
   XdmfArray* xArray,
   std::string attrName, //TODO: passing in attrName, because XdmfArray::getName() is oddly not virtual
@@ -108,7 +179,7 @@ vtkDataArray *vtkXdmf3Common::XdmfToVTKArray(
     }
   else
     {
-    cerr << "skipping unrecognized array type" << endl;
+    cerr << "Skipping unrecognized array type" << endl;
     return NULL;
     }
   vArray = vtkDataArray::CreateDataArray(vtk_type);
@@ -302,6 +373,9 @@ bool vtkXdmf3Common::VTKToXdmfArray(
 
 //--------------------------------------------------------------------------
 void vtkXdmf3Common::XdmfToVTKAttributes(
+  vtkXdmf3ArraySelection *fselection,
+  vtkXdmf3ArraySelection *cselection,
+  vtkXdmf3ArraySelection *pselection,
   XdmfGrid *grid, vtkDataObject *dObject)
 {
   vtkDataSet *dataSet = vtkDataSet::SafeDownCast(dObject);
@@ -334,21 +408,33 @@ void vtkXdmf3Common::XdmfToVTKAttributes(
     int ncomp = 1;
 
     vtkFieldData * fieldData = 0;
-    //TODO: skip disabled arrays.
+
     shared_ptr<const XdmfAttributeCenter> attrCenter = xmfAttribute->getCenter();
     if (attrCenter == XdmfAttributeCenter::Grid())
       {
+      if (!fselection->ArrayIsEnabled(attrName.c_str()))
+        {
+        continue;
+        }
       fieldData = dataSet->GetFieldData();
       ncomp = dims[ndims-1];
       }
     else if (attrCenter == XdmfAttributeCenter::Cell())
       {
+      if (!cselection->ArrayIsEnabled(attrName.c_str()))
+        {
+        continue;
+        }
       fieldData = dataSet->GetCellData();
       ncomp = nvals/numCells;
       //TODO: if numCells == 0 continue;
       }
     else if (attrCenter == XdmfAttributeCenter::Node())
       {
+      if (!pselection->ArrayIsEnabled(attrName.c_str()))
+        {
+        continue;
+        }
       fieldData = dataSet->GetPointData();
       ncomp = nvals/numPoints;
       //TODO: if numPoints == 0 continue;
@@ -830,11 +916,14 @@ void vtkXdmf3Common::SetTime(XdmfGrid *grid, double hasTime, double time)
 //==========================================================================
 
 void vtkXdmf3RegularGrid::XdmfToVTK(
+  vtkXdmf3ArraySelection *fselection,
+  vtkXdmf3ArraySelection *cselection,
+  vtkXdmf3ArraySelection *pselection,
   XdmfRegularGrid *grid,
   vtkImageData *dataSet)
 {
   vtkXdmf3RegularGrid::CopyShape(grid, dataSet);
-  vtkXdmf3Common::XdmfToVTKAttributes(grid, dataSet);
+  vtkXdmf3Common::XdmfToVTKAttributes(fselection, cselection, pselection, grid, dataSet);
 }
 
 //--------------------------------------------------------------------------
@@ -932,11 +1021,14 @@ void vtkXdmf3RegularGrid::VTKToXdmf(
 //==========================================================================
 
 void vtkXdmf3RectilinearGrid::XdmfToVTK(
+  vtkXdmf3ArraySelection *fselection,
+  vtkXdmf3ArraySelection *cselection,
+  vtkXdmf3ArraySelection *pselection,
   XdmfRectilinearGrid *grid,
   vtkRectilinearGrid *dataSet)
 {
   vtkXdmf3RectilinearGrid::CopyShape(grid, dataSet);
-  vtkXdmf3Common::XdmfToVTKAttributes(grid, dataSet);
+  vtkXdmf3Common::XdmfToVTKAttributes(fselection, cselection, pselection, grid, dataSet);
 }
 
 //--------------------------------------------------------------------------
@@ -1049,11 +1141,14 @@ void vtkXdmf3RectilinearGrid::VTKToXdmf(
 //==========================================================================
 
 void vtkXdmf3CurvilinearGrid::XdmfToVTK(
+  vtkXdmf3ArraySelection *fselection,
+  vtkXdmf3ArraySelection *cselection,
+  vtkXdmf3ArraySelection *pselection,
   XdmfCurvilinearGrid *grid,
   vtkStructuredGrid *dataSet)
 {
   vtkXdmf3CurvilinearGrid::CopyShape(grid, dataSet);
-  vtkXdmf3Common::XdmfToVTKAttributes(grid, dataSet);
+  vtkXdmf3Common::XdmfToVTKAttributes(fselection, cselection, pselection, grid, dataSet);
 }
 
 //--------------------------------------------------------------------------
@@ -1170,11 +1265,14 @@ void vtkXdmf3CurvilinearGrid::VTKToXdmf(
 //==========================================================================
 
 void vtkXdmf3UnstructuredGrid::XdmfToVTK(
+  vtkXdmf3ArraySelection *fselection,
+  vtkXdmf3ArraySelection *cselection,
+  vtkXdmf3ArraySelection *pselection,
   XdmfUnstructuredGrid *grid,
   vtkUnstructuredGrid *dataSet)
 {
   vtkXdmf3UnstructuredGrid::CopyShape(grid, dataSet);
-  vtkXdmf3Common::XdmfToVTKAttributes(grid, dataSet);
+  vtkXdmf3Common::XdmfToVTKAttributes(fselection, cselection, pselection, grid, dataSet);
 }
 
 //--------------------------------------------------------------------------
@@ -1510,7 +1608,7 @@ void vtkXdmf3Graph::XdmfToVTK(
       }
     else
       {
-      cerr << "skipping " << attrName << " unrecognized association" << endl;
+      cerr << "Skipping " << attrName << " unrecognized association" << endl;
       continue; // unhandled.
       }
 

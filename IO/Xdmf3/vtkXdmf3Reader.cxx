@@ -34,6 +34,8 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkXdmf3Common.h"
 
+#include "XdmfAttribute.hpp"
+#include "XdmfAttributeCenter.hpp"
 #include "XdmfCurvilinearGrid.hpp"
 #include "XdmfDomain.hpp"
 #include "XdmfGraph.hpp"
@@ -57,11 +59,86 @@ ofstream *logfile;
 
 //TODO: verify correctness/compliance with specs
 //TODO: benchmark and optimize
-//TODO: enable/disable arrays
 //TODO: enable/disable blocks aka SIL
 //TODO: strided access
 //TODO: information elements
 //TODO: domains
+
+//=============================================================================
+class vtkXdmfVisitor_GatherArrays : public XdmfVisitor
+{
+  //Traverses the xdmf hierarchy to build up the list of arrays it can serve.
+public:
+
+  static shared_ptr<vtkXdmfVisitor_GatherArrays>
+  New()
+  {
+    shared_ptr<vtkXdmfVisitor_GatherArrays> p(new vtkXdmfVisitor_GatherArrays());
+    return p;
+  }
+
+  ~vtkXdmfVisitor_GatherArrays() {}
+
+  void
+  visit(XdmfItem & item,
+    const shared_ptr<XdmfBaseVisitor> visitor)
+  {
+    //make up default of 0..nchildren for temporal collection without times
+    //TODO: handle range, list and slab timetypes similarly when they come back to libxdmf3
+    XdmfGrid *grid = dynamic_cast<XdmfGrid *>(&item);
+    if (grid)
+      {
+        int numAttributes = grid->getNumberAttributes();
+        for (int cc=0; cc < numAttributes; cc++)
+          {
+          shared_ptr<XdmfAttribute> xmfAttribute = grid->getAttribute(cc);
+          std::string attrName = xmfAttribute->getName();
+          if (attrName.length() == 0)
+            {
+            cerr << "Skipping unnamed array." << endl;
+            continue;
+            }
+          shared_ptr<const XdmfAttributeCenter> attrCenter = xmfAttribute->getCenter();
+          if (attrCenter == XdmfAttributeCenter::Grid())
+            {
+            if (!this->FieldArrays->HasArray(attrName.c_str()))
+              {
+              this->FieldArrays->AddArray(attrName.c_str());
+              }
+            }
+          else if (attrCenter == XdmfAttributeCenter::Cell())
+            {
+            if (!this->CellArrays->HasArray(attrName.c_str()))
+              {
+              this->CellArrays->AddArray(attrName.c_str());
+              }
+            }
+          else if (attrCenter == XdmfAttributeCenter::Node())
+            {
+            if (!this->PointArrays->HasArray(attrName.c_str()))
+              {
+              this->PointArrays->AddArray(attrName.c_str());
+              }
+            }
+          else
+            {
+            cerr << "Skipping " << attrName << " unrecognized association" << endl;
+            continue; // unhandled.
+            }
+          }
+      }
+
+    item.traverse(visitor);
+  }
+
+  vtkXdmf3ArraySelection* FieldArrays;
+  vtkXdmf3ArraySelection* CellArrays;
+  vtkXdmf3ArraySelection* PointArrays;
+
+protected:
+
+  vtkXdmfVisitor_GatherArrays() {}
+};
 
 //=============================================================================
 class vtkXdmfVisitor_GatherTimes : public XdmfVisitor
@@ -201,9 +278,10 @@ class vtkXdmfVisitor_ReadGrids
   //This traverses the hierarchy and reads each grid.
 public:
 
-  static shared_ptr<vtkXdmfVisitor_ReadGrids> New()
+  static shared_ptr<vtkXdmfVisitor_ReadGrids> New(
+      vtkXdmf3ArraySelection *fs, vtkXdmf3ArraySelection *cs, vtkXdmf3ArraySelection *ps)
   {
-    shared_ptr<vtkXdmfVisitor_ReadGrids> p(new vtkXdmfVisitor_ReadGrids());
+    shared_ptr<vtkXdmfVisitor_ReadGrids> p(new vtkXdmfVisitor_ReadGrids(fs,cs,ps));
     return p;
   }
 
@@ -227,7 +305,7 @@ public:
       if (!this->doTime ||
           (regGrid->getTime() && regGrid->getTime()->getValue() == this->time))
         {
-        vtkXdmf3RegularGrid::XdmfToVTK(regGrid, dataSet);
+        vtkXdmf3RegularGrid::XdmfToVTK(FieldArrays, CellArrays, PointArrays, regGrid, dataSet);
         return dataSet;
         }
       return NULL;
@@ -243,7 +321,7 @@ public:
           (recGrid->getTime() && recGrid->getTime()->getValue() == this->time))
         {
         vtkRectilinearGrid *dataSet = vtkRectilinearGrid::SafeDownCast(toFill);
-        vtkXdmf3RectilinearGrid::XdmfToVTK(recGrid, dataSet);
+        vtkXdmf3RectilinearGrid::XdmfToVTK(FieldArrays, CellArrays, PointArrays, recGrid, dataSet);
         return dataSet;
         }
       return NULL;
@@ -259,7 +337,7 @@ public:
           (crvGrid->getTime() && crvGrid->getTime()->getValue() == this->time))
         {
         vtkStructuredGrid *dataSet =  vtkStructuredGrid::SafeDownCast(toFill);
-        vtkXdmf3CurvilinearGrid::XdmfToVTK(crvGrid, dataSet);
+        vtkXdmf3CurvilinearGrid::XdmfToVTK(FieldArrays, CellArrays, PointArrays, crvGrid, dataSet);
         return dataSet;
         }
       return NULL;
@@ -275,7 +353,7 @@ public:
           (unsGrid->getTime() && unsGrid->getTime()->getValue() == this->time))
         {
         vtkUnstructuredGrid *dataSet = vtkUnstructuredGrid::SafeDownCast(toFill);
-        vtkXdmf3UnstructuredGrid::XdmfToVTK(unsGrid, dataSet);
+        vtkXdmf3UnstructuredGrid::XdmfToVTK(FieldArrays, CellArrays, PointArrays, unsGrid, dataSet);
         return dataSet;
         }
       return NULL;
@@ -498,8 +576,11 @@ public:
   }
 
 protected:
-  vtkXdmfVisitor_ReadGrids()
+  vtkXdmfVisitor_ReadGrids(vtkXdmf3ArraySelection *f, vtkXdmf3ArraySelection *c, vtkXdmf3ArraySelection *p)
   {
+    this->FieldArrays = f;
+    this->CellArrays = c;
+    this->PointArrays = p;
     this->doTime = false;
   }
   bool ShouldRead(int piece, int npieces, bool splittable)
@@ -551,14 +632,24 @@ protected:
   double time;
   int Rank;
   int NumProcs;
+  vtkXdmf3ArraySelection* FieldArrays;
+  vtkXdmf3ArraySelection* CellArrays;
+  vtkXdmf3ArraySelection* PointArrays;
 };
 
 //=============================================================================
 class vtkXdmf3Reader::Internals {
   //Private implementation details for vtkXdmf3Reader
 public:
-  Internals() {};
-  ~Internals() {};
+  Internals() {
+    this->PointArrays = new vtkXdmf3ArraySelection;
+    this->CellArrays = new vtkXdmf3ArraySelection;
+  };
+  ~Internals() {
+    delete this->PointArrays;
+    delete this->CellArrays;
+  };
+
   //--------------------------------------------------------------------------
   bool PrepareDocument(vtkXdmf3Reader *self, const char *FileName)
   {
@@ -614,6 +705,16 @@ public:
       this->TimeSteps.push_back(*it);
       it++;
       }
+  }
+  //--------------------------------------------------------------------------
+  void GatherArrays()
+  {
+    //ask XDMF for the arrays it has
+    shared_ptr<vtkXdmfVisitor_GatherArrays> visitor =
+      vtkXdmfVisitor_GatherArrays::New();
+    visitor->PointArrays = this->PointArrays;
+    visitor->CellArrays = this->CellArrays;
+    this->Domain->accept(visitor);
   }
   //--------------------------------------------------------------------------
   int GetVTKType()
@@ -696,6 +797,11 @@ public:
   boost::shared_ptr<XdmfItem> TopGrid;
   int VTKType;
   std::vector<double> TimeSteps;
+
+  vtkXdmf3ArraySelection *FieldArrays;
+  vtkXdmf3ArraySelection *CellArrays;
+  vtkXdmf3ArraySelection *PointArrays;
+
   };
 
 //==============================================================================
@@ -706,7 +812,11 @@ vtkStandardNewMacro(vtkXdmf3Reader);
 vtkXdmf3Reader::vtkXdmf3Reader()
 {
   this->FileName = NULL;
+
   this->Internal = new vtkXdmf3Reader::Internals();
+  this->FieldArraysCache = this->Internal->FieldArrays;
+  this->PointArraysCache = this->Internal->PointArrays;
+  this->CellArraysCache = this->Internal->CellArrays;
 }
 
 //----------------------------------------------------------------------------
@@ -817,6 +927,9 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
 
   // Publish the fact that this reader can satisfy any piece request.
   outInfo->Set(vtkStreamingDemandDrivenPipeline::MAXIMUM_NUMBER_OF_PIECES(), -1);
+
+  // Determine and announce what arrays we have to offer.
+  this->Internal->GatherArrays();
 
   // Determine and announce what times we have to offer.
   this->Internal->GatherTimes();
@@ -952,7 +1065,12 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
     }
 
   //traverse the xdmf hierarchy, and convert and return what was requested
-  shared_ptr<vtkXdmfVisitor_ReadGrids> visitor = vtkXdmfVisitor_ReadGrids::New();
+  shared_ptr<vtkXdmfVisitor_ReadGrids> visitor =
+    vtkXdmfVisitor_ReadGrids::New(
+      this->GetFieldArraySelection(),
+      this->GetCellArraySelection(),
+      this->GetPointArraySelection());
+
   vtkDataObject* output = vtkDataObject::GetData(outInfo);
   if (!output)
     {
@@ -996,4 +1114,72 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
   (*logfile).close();
 #endif
   return 1;
+}
+
+//----------------------------------------------------------------------------
+int vtkXdmf3Reader::GetNumberOfPointArrays()
+{
+  return this->GetPointArraySelection()->GetNumberOfArrays();
+}
+
+//----------------------------------------------------------------------------
+void vtkXdmf3Reader::SetPointArrayStatus(const char* arrayname, int status)
+{
+  this->GetPointArraySelection()->SetArrayStatus(arrayname, status != 0);
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+int vtkXdmf3Reader::GetPointArrayStatus(const char* arrayname)
+{
+  return this->GetPointArraySelection()->GetArraySetting(arrayname);
+}
+
+//----------------------------------------------------------------------------
+const char* vtkXdmf3Reader::GetPointArrayName(int index)
+{
+  return this->GetPointArraySelection()->GetArrayName(index);
+}
+
+//----------------------------------------------------------------------------
+int vtkXdmf3Reader::GetNumberOfCellArrays()
+{
+  return this->GetCellArraySelection()->GetNumberOfArrays();
+}
+
+//----------------------------------------------------------------------------
+void vtkXdmf3Reader::SetCellArrayStatus(const char* arrayname, int status)
+{
+  this->GetCellArraySelection()->SetArrayStatus(arrayname, status != 0);
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+int vtkXdmf3Reader::GetCellArrayStatus(const char* arrayname)
+{
+  return this->GetCellArraySelection()->GetArraySetting(arrayname);
+}
+
+//----------------------------------------------------------------------------
+const char* vtkXdmf3Reader::GetCellArrayName(int index)
+{
+  return this->GetCellArraySelection()->GetArrayName(index);
+}
+
+//----------------------------------------------------------------------------
+vtkXdmf3ArraySelection* vtkXdmf3Reader::GetPointArraySelection()
+{
+  return this->PointArraysCache;
+}
+
+//----------------------------------------------------------------------------
+vtkXdmf3ArraySelection* vtkXdmf3Reader::GetCellArraySelection()
+{
+  return this->CellArraysCache;
+}
+
+//----------------------------------------------------------------------------
+vtkXdmf3ArraySelection* vtkXdmf3Reader::GetFieldArraySelection()
+{
+  return this->FieldArraysCache;
 }
