@@ -45,6 +45,8 @@ public:
   // Determine if the file can be read with this reader.
   virtual int CanReadFile(const char* filename);
 
+  //////////////////////////////////////////////////////////
+
   // Description:
   // Get information about point-based arrays. As is typical with readers this
   // in only valid after the filename is set and UpdateInformation() has been
@@ -69,6 +71,54 @@ public:
   const char* GetCellArrayName(int index);
   void SetCellArrayStatus(const char* name, int status);
   int GetCellArrayStatus(const char* name);
+
+  // Description:
+  // Get information about unaligned arrays.  As is typical with readers this
+  // in only valid after the filename is set and UpdateInformation() has been
+  // called.
+  int GetNumberOfFieldArrays();
+  const char* GetFieldArrayName(int index);
+  void SetFieldArrayStatus(const char* name, int status);
+  int GetFieldArrayStatus(const char* name);
+
+  //////////////////////////////////////////////////////////
+
+  // Description:
+  // Get/Set information about grids. As is typical with readers this is valid
+  // only after the filename as been set and UpdateInformation() has been
+  // called.
+  int GetNumberOfGrids();
+  const char* GetGridName(int index);
+  void SetGridStatus(const char* gridname, int status);
+  int GetGridStatus(const char* gridname);
+
+  // Description:
+  // Get/Set information about sets. As is typical with readers this is valid
+  // only after the filename as been set and UpdateInformation() has been
+  // called. Note that sets with non-zero Ghost value are not treated as sets
+  // that the user can select using this API.
+  int GetNumberOfSets();
+  const char* GetSetName(int index);
+  void SetSetStatus(const char* gridname, int status);
+  int GetSetStatus(const char* gridname);
+
+  // Description:
+  // These methods are provided to make it easier to use the Sets in ParaView.
+  int GetNumberOfSetArrays() { return this->GetNumberOfSets(); }
+  const char* GetSetArrayName(int index)
+    { return this->GetSetName(index); }
+  int GetSetArrayStatus(const char* name)
+    { return this->GetSetStatus(name); }
+
+  // Description:
+  // SIL describes organization of/relationships between classifications
+  // eg. blocks/materials/hierarchies.
+  virtual vtkGraph* GetSIL();
+
+  // Description:
+  // Every time the SIL is updated a this will return a different value.
+  int GetSILUpdateStamp();
+
 protected:
   vtkXdmf3Reader();
   ~vtkXdmf3Reader();
@@ -96,9 +146,13 @@ protected:
   vtkXdmf3ArraySelection* GetFieldArraySelection();
   vtkXdmf3ArraySelection* GetCellArraySelection();
   vtkXdmf3ArraySelection* GetPointArraySelection();
+  vtkXdmf3ArraySelection* GetGridsSelection();
+  vtkXdmf3ArraySelection* GetSetsSelection();
   vtkXdmf3ArraySelection* FieldArraysCache;
   vtkXdmf3ArraySelection* CellArraysCache;
   vtkXdmf3ArraySelection* PointArraysCache;
+  vtkXdmf3ArraySelection* GridsCache;
+  vtkXdmf3ArraySelection* SetsCache;
 
 private:
   vtkXdmf3Reader(const vtkXdmf3Reader&); // Not implemented

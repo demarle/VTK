@@ -68,7 +68,6 @@ public:
   void SetArrayStatus(const char* name, bool status);
   const char* GetArrayName(int index);
   int GetNumberOfArrays();
-  std::set<std::string> GetEnabledArrays();
 };
 
 //==============================================================================
@@ -197,6 +196,9 @@ class VTKIOXDMF3_EXPORT vtkXdmf3Graph
 {
 public:
   static void XdmfToVTK(
+    vtkXdmf3ArraySelection *fselection,
+    vtkXdmf3ArraySelection *cselection,
+    vtkXdmf3ArraySelection *pselection,
     XdmfGraph *grid,
     vtkMutableDirectedGraph *dataSet);
 

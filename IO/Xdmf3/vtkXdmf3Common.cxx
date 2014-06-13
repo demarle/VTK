@@ -125,7 +125,8 @@ int vtkXdmf3ArraySelection::GetNumberOfArrays()
 //==============================================================================
 vtkDataArray *vtkXdmf3Common::XdmfToVTKArray(
   XdmfArray* xArray,
-  std::string attrName, //TODO: passing in attrName, because XdmfArray::getName() is oddly not virtual
+  std::string attrName, //TODO: passing in attrName here, because
+                        //XdmfArray::getName() is oddly not virtual
   int preferredComponents
 )
 {
@@ -425,9 +426,12 @@ void vtkXdmf3Common::XdmfToVTKAttributes(
         {
         continue;
         }
+      if (numCells == 0)
+        {
+        continue;
+        }
       fieldData = dataSet->GetCellData();
       ncomp = nvals/numCells;
-      //TODO: if numCells == 0 continue;
       }
     else if (attrCenter == XdmfAttributeCenter::Node())
       {
@@ -435,9 +439,12 @@ void vtkXdmf3Common::XdmfToVTKAttributes(
         {
         continue;
         }
+      if (numPoints == 0)
+        {
+        continue;
+        }
       fieldData = dataSet->GetPointData();
       ncomp = nvals/numPoints;
-      //TODO: if numPoints == 0 continue;
       }
     else
       {
@@ -483,17 +490,19 @@ void vtkXdmf3Common::XdmfToVTKAttributes(
         {
         switch (atype)
           {
+          //TODO: found a case here where setting two different arrays removed first somehow.
+          //track it down if it comes up again
           case SCALAR:
-            //fdAsDSA->SetScalars(array); //TODO: setting two different arrays removes the first?
+            fdAsDSA->SetScalars(array);
             break;
           case VECTOR:
-            //fdAsDSA->SetVectors(array);
+            fdAsDSA->SetVectors(array);
             break;
           case TENSOR:
-            //fdAsDSA->SetTensors(array);
+            fdAsDSA->SetTensors(array);
             break;
           case GLOBALID:
-            //fdAsDSA->SetGlobalIds(array);
+            fdAsDSA->SetGlobalIds(array);
             break;
           }
         }
@@ -1204,7 +1213,7 @@ void vtkXdmf3CurvilinearGrid::CopyShape(
     }
   else
     {
-    //Todo: No X_Y or X_Y_Z anymore?
+    //TODO: No X_Y or X_Y_Z in xdmf anymore
     return;
     }
   vtkPoints *p = vtkPoints::New();
@@ -1349,7 +1358,7 @@ void vtkXdmf3UnstructuredGrid::CopyShape(
     for(vtkIdType cc = 0 ; cc < numCells; cc++ )
       {
       shared_ptr<const XdmfTopologyType> nextCellType =
-        XdmfTopologyType::New(xCells[index++]); //TODO: ICKY
+        XdmfTopologyType::New(xCells[index++]);
       int vtk_cell_typeI = vtkXdmf3Common::GetVTKCellType(nextCellType);
 
       unsigned int numPointsPerCell =
@@ -1408,7 +1417,7 @@ void vtkXdmf3UnstructuredGrid::CopyShape(
     }
   else
     {
-    //Todo: No X_Y or X_Y_Z anymore?
+    //TODO: No X_Y or X_Y_Z in xdmf anymore
     return;
     }
 
@@ -1446,7 +1455,7 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
   shared_ptr<XdmfTopology> xTopology = XdmfTopology::New();
   grid->setTopology(xTopology);
 
-  //TODO: homogeneous case
+  //TODO: homogeneous case in old reader _might_ be faster
   //for simplicity I am treating all dataSets as having mixed cell types
   xTopology->setType(XdmfTopologyType::Mixed());
   vtkIdType numCells = ds->GetNumberOfCells();
@@ -1531,6 +1540,9 @@ void vtkXdmf3UnstructuredGrid::VTKToXdmf(
 //==========================================================================
 
 void vtkXdmf3Graph::XdmfToVTK(
+  vtkXdmf3ArraySelection *fselection,
+  vtkXdmf3ArraySelection *cselection,
+  vtkXdmf3ArraySelection *pselection,
   XdmfGraph *grid,
   vtkMutableDirectedGraph *dataSet)
 {
@@ -1592,18 +1604,29 @@ void vtkXdmf3Graph::XdmfToVTK(
       }
 
     vtkFieldData * fieldData = 0;
-    //TODO: skip disabled arrays.
     shared_ptr<const XdmfAttributeCenter> attrCenter = xmfAttribute->getCenter();
     if (attrCenter == XdmfAttributeCenter::Grid())
       {
+      if (!fselection->ArrayIsEnabled(attrName.c_str()))
+        {
+        continue;
+        }
       fieldData = dataSet->GetFieldData();
       }
     else if (attrCenter == XdmfAttributeCenter::Edge())
       {
+      if (!cselection->ArrayIsEnabled(attrName.c_str()))
+        {
+        continue;
+        }
       fieldData = dataSet->GetEdgeData();
       }
     else if (attrCenter == XdmfAttributeCenter::Node())
       {
+      if (!pselection->ArrayIsEnabled(attrName.c_str()))
+        {
+        continue;
+        }
       fieldData = dataSet->GetVertexData();
       }
     else
