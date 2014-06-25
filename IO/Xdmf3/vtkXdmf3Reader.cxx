@@ -45,6 +45,7 @@
 #include "XdmfGraph.hpp"
 #include "XdmfGridCollection.hpp"
 #include "XdmfGridCollectionType.hpp"
+//#include "XdmfHDF5Controller.hpp"
 #include "XdmfReader.hpp"
 #include "XdmfRectilinearGrid.hpp"
 #include "XdmfRegularGrid.hpp"
@@ -54,12 +55,6 @@
 
 #include <set>
 #include <fstream>
-
-//for debugging
-//#define MAKELOGS
-#ifdef MAKELOGS
-ofstream *logfile;
-#endif
 
 
 //TODO: benchmark and optimize
@@ -272,11 +267,11 @@ public:
       XdmfGraph *graph = dynamic_cast<XdmfGraph *>(&item);
       if (graph)
         {
-        std::string name = grid->getName();
+        std::string name = graph->getName();
         if (name.length() != 0 && parentVertex != -1)
           {
           std::string uName = this->UniqueName(name);
-          grid->setName(uName);
+          graph->setName(uName);
           this->AddNamedBlock(parentVertex, name, uName);
           }
         return;
@@ -403,10 +398,10 @@ public:
       XdmfGraph *graph = dynamic_cast<XdmfGraph *>(&item);
       if (graph)
         {
-        int numAttributes = grid->getNumberAttributes();
+        int numAttributes = graph->getNumberAttributes();
         for (int cc=0; cc < numAttributes; cc++)
           {
-          shared_ptr<XdmfAttribute> xmfAttribute = grid->getAttribute(cc);
+          shared_ptr<XdmfAttribute> xmfAttribute = graph->getAttribute(cc);
           std::string attrName = xmfAttribute->getName();
           if (attrName.length() == 0)
             {
@@ -428,7 +423,7 @@ public:
               this->CellArrays->AddArray(attrName.c_str());
               }
             }
-          else if (attrCenter == XdmfAttributeCenter::Edge())
+          else if (attrCenter == XdmfAttributeCenter::Node())
             {
             if (!this->PointArrays->HasArray(attrName.c_str()))
               {
@@ -877,9 +872,6 @@ protected:
   }
   bool ShouldRead(int piece, int npieces)
   {
-#ifdef MAKELOGS
-    (*logfile) << this->Rank << "?" << piece << "/" << npieces << endl;
-#endif
     if (this->NumProcs<1)
       {
       //no parallel information given to us, assume serial
@@ -900,16 +892,10 @@ protected:
 
     int mystart = this->Rank*npieces/this->NumProcs;
     int myend = (this->Rank+1)*npieces/this->NumProcs;
-#ifdef MAKELOGS
-    (*logfile) << this->Rank << " responsible for [" << mystart << "," << myend << ")" << endl;
-#endif
     if (piece >= mystart)
       {
       if (piece < myend || (this->Rank==this->NumProcs-1))
         {
-#ifdef MAKELOGS
-        (*logfile) << piece << " is for me " << this->Rank << endl;
-#endif
         return true;
         }
       }
@@ -985,47 +971,53 @@ public:
   void Init(const char *filename)
   {
     vtkTimerLog::MarkStartEvent("X3R::Init");
+#if 0
+    vtkTimerLog::MarkStartEvent("X3R::SLURP XML FILE");
+    std::string contents;
+    std::ifstream in(filename, std::ios::in | std::ios::binary);
+    if (in)
+      {
+      in.seekg(0, std::ios::end);
+      contents.resize(in.tellg());
+      in.seekg(0, std::ios::beg);
+      in.read(&contents[0], contents.size());
+      in.close();
+      }
+    else
+      {
+      cerr << "Could not open " << filename << endl;
+      return;
+      }
+    vtkTimerLog::MarkEndEvent("X3R::SLURP FILE");
+
     this->Reader = XdmfReader::New();
+    this->Reader->computeXMLDir(filename);
+
+    //TODO:
+    //Domains are no longer used in practice, and ParaView is not
+    //able to select from them dynamically anyway, so get rid of them
+    cerr << "PARSING" << endl;
+    this->Domain = shared_dynamic_cast<XdmfDomain>(
+      this->Reader->parse(contents)
+      );
+#else
+    //XdmfHDF5Controller::setMaxOpenedFiles(10);
+    this->Reader = XdmfReader::New();
+
     //TODO:
     //Domains are no longer used in practice, and ParaView is not
     //able to select from them dynamically anyway, so get rid of them
     this->Domain = shared_dynamic_cast<XdmfDomain>(
       this->Reader->read(filename)
       );
+#endif
+
     this->VTKType = -1;
+    vtkTimerLog::MarkStartEvent("X3R::learn");
     this->GatherMetaInformation();
+    vtkTimerLog::MarkEndEvent("X3R::learn");
+
     vtkTimerLog::MarkEndEvent("X3R::Init");
-  }
-
-  //--------------------------------------------------------------------------
-  void GatherMetaInformation()
-  {
-    vtkTimerLog::MarkStartEvent("X3R::GatherMetaInfo");
-    shared_ptr<vtkXdmfVisitor_Translator> visitor =
-          vtkXdmfVisitor_Translator::New (
-              this->SILBuilder,
-              this->FieldArrays,
-              this->PointArrays,
-              this->CellArrays,
-              this->GridsCache,
-              this->SetsCache);
-
-    visitor->InspectXDMF(*this->Domain, -1);
-    visitor->ClearGridsIfNeeded(*this->Domain);
-
-    if (this->TimeSteps.size())
-       {
-       this->TimeSteps.erase(this->TimeSteps.begin());
-       }
-     std::set<double> times = visitor->getTimes();
-     std::set<double>::const_iterator it = times.begin();
-     while (it != times.end())
-       {
-       this->TimeSteps.push_back(*it);
-       it++;
-       }
-
-    vtkTimerLog::MarkEndEvent("X3R::GatherMetaInfo");
   }
 
   //--------------------------------------------------------------------------
@@ -1108,6 +1100,24 @@ public:
      return this->VTKType;
   }
 
+  void ReadHeavyData(unsigned int updatePiece, unsigned int updateNumPieces,
+      bool doTime, double time, vtkMultiBlockDataSet* mbds)
+  {
+    //traverse the xdmf hierarchy, and convert and return what was requested
+    shared_ptr<vtkXdmfVisitor_ReadGrids> visitor =
+        vtkXdmfVisitor_ReadGrids::New(
+          this->FieldArrays,
+          this->CellArrays,
+          this->PointArrays,
+          this->GridsCache,
+          this->SetsCache
+          );
+
+      visitor->SetRank(updatePiece, updateNumPieces);
+      visitor->SetTimeRequest(doTime, time);
+      visitor->Populate(*this->Domain, mbds);
+  }
+
   boost::shared_ptr<XdmfReader> Reader;
   boost::shared_ptr<XdmfDomain> Domain;
   boost::shared_ptr<XdmfItem> TopGrid;
@@ -1120,6 +1130,40 @@ public:
   vtkXdmf3ArraySelection *GridsCache;
   vtkXdmf3ArraySelection *SetsCache;
   vtkXdmf3Reader_SILBuilder *SILBuilder;
+private:
+
+  //--------------------------------------------------------------------------
+  void GatherMetaInformation()
+  {
+    vtkTimerLog::MarkStartEvent("X3R::GatherMetaInfo");
+    shared_ptr<vtkXdmfVisitor_Translator> visitor =
+          vtkXdmfVisitor_Translator::New (
+              this->SILBuilder,
+              this->FieldArrays,
+              this->PointArrays,
+              this->CellArrays,
+              this->GridsCache,
+              this->SetsCache);
+
+
+    visitor->InspectXDMF(*this->Domain, -1);
+    visitor->ClearGridsIfNeeded(*this->Domain);
+
+    if (this->TimeSteps.size())
+       {
+       this->TimeSteps.erase(this->TimeSteps.begin());
+       }
+     std::set<double> times = visitor->getTimes();
+     std::set<double>::const_iterator it = times.begin();
+     while (it != times.end())
+       {
+       this->TimeSteps.push_back(*it);
+       it++;
+       }
+
+    vtkTimerLog::MarkEndEvent("X3R::GatherMetaInfo");
+  }
+
   };
 
 //==============================================================================
@@ -1132,6 +1176,7 @@ vtkXdmf3Reader::vtkXdmf3Reader()
   this->FileName = NULL;
 
   this->Internal = new vtkXdmf3Reader::Internals();
+
   this->FieldArraysCache = this->Internal->FieldArrays;
   this->PointArraysCache = this->Internal->PointArrays;
   this->CellArraysCache = this->Internal->CellArrays;
@@ -1142,8 +1187,10 @@ vtkXdmf3Reader::vtkXdmf3Reader()
 //----------------------------------------------------------------------------
 vtkXdmf3Reader::~vtkXdmf3Reader()
 {
+
   this->SetFileName(NULL);
   delete this->Internal;
+  //XdmfHDF5Controller::closeFiles();
 }
 
 //----------------------------------------------------------------------------
@@ -1210,10 +1257,6 @@ int vtkXdmf3Reader::RequestDataObject(vtkInformationVector *outputVector)
   //Determine what vtkDataObject we should produce
   int vtk_type = this->Internal->GetVTKType();
 
-#ifdef MAKELOGS
-  (*logfile) << "vtk type is " << vtk_type << " "
-       << vtkDataObjectTypes::GetClassNameFromTypeId(vtk_type) << endl;
-#endif
   //Make an empty vtkDataObject
   vtkDataObject* output = vtkDataObject::GetData(outputVector, 0);
   if (!output || output->GetDataObjectType() != vtk_type)
@@ -1390,15 +1433,6 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
     time = *it;
     }
 
-  //traverse the xdmf hierarchy, and convert and return what was requested
-  shared_ptr<vtkXdmfVisitor_ReadGrids> visitor =
-    vtkXdmfVisitor_ReadGrids::New(
-      this->GetFieldArraySelection(),
-      this->GetCellArraySelection(),
-      this->GetPointArraySelection(),
-      this->GetGridsSelection(),
-      this->GetSetsSelection());
-
   vtkDataObject* output = vtkDataObject::GetData(outInfo);
   if (!output)
     {
@@ -1409,25 +1443,11 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
     output->GetInformation()->Set(vtkDataObject::DATA_TIME_STEP(), time);
     }
 
-
-#ifdef MAKELOGS
-  //DEBUG CODE
-  char fname[120];
-  sprintf(fname, "/Users/demarle/tmp/log_%d.log", updatePiece);
-  cerr << fname << endl;
-  logfile = new ofstream(fname);
-  (*logfile) << "Hello from " << updatePiece << endl;
-#endif
-
   vtkMultiBlockDataSet *mbds = vtkMultiBlockDataSet::New();
-  visitor->SetRank(updatePiece, updateNumPieces);
-  visitor->SetTimeRequest(doTime, time);
-  visitor->Populate(*(this->Internal->Domain), mbds);
-
-#ifdef MAKELOGS
-  mbds->PrintSelf((*logfile), vtkIndent(0));
-#endif
-
+  this->Internal->ReadHeavyData(
+      updatePiece, updateNumPieces,
+      doTime, time,
+      mbds);
   if (mbds->GetNumberOfBlocks()==1)
     {
     output->ShallowCopy(mbds->GetBlock(0));
@@ -1438,9 +1458,6 @@ int vtkXdmf3Reader::RequestData(vtkInformation *request,
     }
   mbds->Delete();
 
-#ifdef MAKELOGS
-  (*logfile).close();
-#endif
   vtkTimerLog::MarkEndEvent("X3R::RD");
 
   return 1;

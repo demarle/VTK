@@ -219,6 +219,7 @@ vtkDataArray *vtkXdmf3Common::XdmfToVTKArray(
     //TODO: this would be vastly preferable, but with xinclude data, xdmf throws it away before I am done
     vArray->SetVoidArray(xArray->getValuesInternal(), ntuples*ncomp, 1);
 #endif
+    xArray->release();
     }
   return vArray;
 }
@@ -1333,6 +1334,7 @@ void vtkXdmf3UnstructuredGrid::CopyShape(
       }
     dataSet->SetCells(cell_types, vCells);
     vCells->Delete();
+    xTopology->release();
     delete [] cell_types;
     }
   else
@@ -1587,6 +1589,10 @@ void vtkXdmf3Graph::XdmfToVTK(
       }
     }
 
+  mRowPointer->release();
+  mColumnIndex->release();
+  mValues->release();
+
   //Copy over arrays
   vtkDataSetAttributes *edgeData = dataSet->GetEdgeData();
   edgeData->AddArray(wA);
@@ -1746,7 +1752,7 @@ void vtkXdmf3Graph::VTKToXdmf(
       }
     }
 
-  //XdmfGraph has no time
+  //TODO: XdmfGraph has no time
   //vtkXdmf3Common::SetTime(grid, hasTime, time);
 
   domain->insert(grid);
