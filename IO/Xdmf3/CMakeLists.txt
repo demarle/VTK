@@ -9,4 +9,5 @@ set_source_files_properties(
   WRAP_EXCLUDE
 )
 
+include_directories(${XdmfCore_INCLUDE_DIRS} ${XdmfDSM_INCLUDE_DIRS})
 vtk_module_library(vtkIOXdmf3 ${Module_SRCS})
