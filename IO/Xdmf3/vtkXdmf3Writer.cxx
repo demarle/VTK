@@ -19,12 +19,16 @@
 #include "vtkDataObject.h"
 #include "vtkDataSet.h"
 #include "vtkDirectedGraph.h"
+#include "vtkImageData.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMultiBlockDataSet.h"
 #include "vtkObjectFactory.h"
+#include "vtkPointSet.h"
+#include "vtkRectilinearGrid.h"
 #include "vtkSmartPointer.h"
-#include "vtkXdmf3Common.h"
+#include "vtkStructuredGrid.h"
+#include "vtkXdmf3DataSet.h"
 
 #include "XdmfDomain.hpp"
 #include "XdmfGridCollection.hpp"
@@ -90,24 +94,24 @@ public:
       case VTK_IMAGE_DATA:
       case VTK_UNIFORM_GRID:
         {
-        vtkXdmf3RegularGrid::VTKToXdmf(
-          vtkDataSet::SafeDownCast(dataSet),
+        vtkXdmf3DataSet::VTKToXdmf(
+          vtkImageData::SafeDownCast(dataSet),
           this->Destination.get(),
           hasTime, time);
         break;
         }
       case VTK_RECTILINEAR_GRID:
         {
-        vtkXdmf3RectilinearGrid::VTKToXdmf(
-          vtkDataSet::SafeDownCast(dataSet),
+        vtkXdmf3DataSet::VTKToXdmf(
+          vtkRectilinearGrid::SafeDownCast(dataSet),
           this->Destination.get(),
           hasTime, time);
         break;
         }
       case VTK_STRUCTURED_GRID:
         {
-        vtkXdmf3CurvilinearGrid::VTKToXdmf(
-          vtkDataSet::SafeDownCast(dataSet),
+        vtkXdmf3DataSet::VTKToXdmf(
+          vtkStructuredGrid::SafeDownCast(dataSet),
           this->Destination.get(),
           hasTime, time);
         break;
@@ -115,8 +119,8 @@ public:
       case VTK_POLY_DATA:
       case VTK_UNSTRUCTURED_GRID:
         {
-        vtkXdmf3UnstructuredGrid::VTKToXdmf(
-          vtkDataSet::SafeDownCast(dataSet),
+        vtkXdmf3DataSet::VTKToXdmf(
+          vtkPointSet::SafeDownCast(dataSet),
           this->Destination.get(),
           hasTime, time);
         break;
@@ -125,7 +129,7 @@ public:
       case VTK_DIRECTED_GRAPH:
       //case VTK_UNDIRECTED_GRAPH:
         {
-        vtkXdmf3Graph::VTKToXdmf(
+        vtkXdmf3DataSet::VTKToXdmf(
           vtkDirectedGraph::SafeDownCast(dataSet),
           this->Destination.get(),
           hasTime, time);

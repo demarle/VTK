@@ -36,7 +36,8 @@
 #include "vtkUniformGrid.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkXdmf3Common.h"
+#include "vtkXdmf3ArraySelection.h"
+#include "vtkXdmf3DataSet.h"
 
 #include "XdmfAttribute.hpp"
 #include "XdmfAttributeCenter.hpp"
@@ -613,7 +614,7 @@ public:
   {
     if (dataSet && GridEnabled(grid) && ForThisTime(grid))
       {
-      vtkXdmf3UnstructuredGrid::XdmfToVTK(
+      vtkXdmf3DataSet::XdmfToVTK(
         this->FieldArrays, this->CellArrays, this->PointArrays,
         grid, dataSet);
       return dataSet;
@@ -625,7 +626,7 @@ public:
   {
     if (dataSet && GridEnabled(grid) && ForThisTime(grid))
       {
-      vtkXdmf3RectilinearGrid::XdmfToVTK(
+      vtkXdmf3DataSet::XdmfToVTK(
         this->FieldArrays, this->CellArrays, this->PointArrays,
         grid, dataSet);
       return dataSet;
@@ -637,7 +638,7 @@ public:
     {
       if (dataSet && GridEnabled(grid) && ForThisTime(grid))
         {
-        vtkXdmf3CurvilinearGrid::XdmfToVTK(
+        vtkXdmf3DataSet::XdmfToVTK(
           this->FieldArrays, this->CellArrays, this->PointArrays,
           grid, dataSet);
         return dataSet;
@@ -650,7 +651,7 @@ public:
     if (dataSet && GridEnabled(grid) && ForThisTime(grid))
       {
       cerr << "MAKE RG" << endl;
-      vtkXdmf3RegularGrid::XdmfToVTK(
+      vtkXdmf3DataSet::XdmfToVTK(
         this->FieldArrays, this->CellArrays, this->PointArrays,
         grid, dataSet);
       return dataSet;
@@ -663,7 +664,7 @@ public:
     //TODO: XdmfGraph has no time yet
     if (dataSet && this->GridsCache->ArrayIsEnabled(grid->getName().c_str()))
       {
-      vtkXdmf3Graph::XdmfToVTK(
+      vtkXdmf3DataSet::XdmfToVTK(
         this->FieldArrays, this->CellArrays, this->PointArrays,
         grid, dataSet);
       return dataSet;
@@ -1339,7 +1340,7 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
     if (regGrid)
       {
       vtkImageData *dataSet = vtkImageData::New();
-      vtkXdmf3RegularGrid::CopyShape(regGrid.get(), dataSet);
+      vtkXdmf3DataSet::CopyShape(regGrid.get(), dataSet);
       dataSet->GetExtent(whole_extent);
       dataSet->GetOrigin(origin);
       dataSet->GetSpacing(spacing);
@@ -1350,7 +1351,7 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
     if (recGrid)
       {
       vtkRectilinearGrid *dataSet = vtkRectilinearGrid::New();
-      vtkXdmf3RectilinearGrid::CopyShape(recGrid.get(), dataSet);
+      vtkXdmf3DataSet::CopyShape(recGrid.get(), dataSet);
       dataSet->GetExtent(whole_extent);
       dataSet->Delete();
       }
@@ -1359,7 +1360,7 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
     if (crvGrid)
       {
       vtkStructuredGrid *dataSet = vtkStructuredGrid::New();
-      vtkXdmf3CurvilinearGrid::CopyShape(crvGrid.get(), dataSet);
+      vtkXdmf3DataSet::CopyShape(crvGrid.get(), dataSet);
       dataSet->GetExtent(whole_extent);
       dataSet->Delete();
       }

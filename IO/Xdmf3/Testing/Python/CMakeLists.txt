@@ -1,5 +1,4 @@
 vtk_add_test_python(
-  nativexdmftest.py,
   testxdmf.py,
   xdmf3GraphVis.py,
   xdmf3GraphWrite.py,

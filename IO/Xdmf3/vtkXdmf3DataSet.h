@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkXdmf3Common.h
+  Module:    vtkXdmf3DataSet.h
   Language:  C++
   Date:      $Date$
   Version:   $Revision$
@@ -15,26 +15,23 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkXdmf3Common - dataset level translation between xdmf3 and vtk
+// .NAME vtkXdmf3DataSet - dataset level translation between xdmf3 and vtk
 // .SECTION Description
-// The class vtkXdmf3Common has the lowest level, Xdmf2VTKarray and such.
-// From that, we build classes with simple to and from methods that
-// translate individual grids to and from vtkDataSet types.
+// This class holds static methods that translate the five atomic data
+// types between vtk and xdmf3.
+//
+// This file is a helper for the vtkXdmf3Reader and vtkXdmf3Writer and
+// not intended to be part of VTK public API
+// VTK-HeaderTest-Exclude: vtkXdmf3DataSet.h
 
-//=============================================================================
-
-#ifndef __vtkXdmf3Common_h
-#define __vtkXdmf3Common_h
+#ifndef __vtkXdmf3DataSet_h
+#define __vtkXdmf3DataSet_h
 
 #include "vtkIOXdmf3Module.h" // For export macro
-
 #include "XdmfSharedPtr.hpp"
+#include <string> //Needed only for XdmfArray::getName :(
 
-#include <string>
-#include <vector>
-#include <set>
-#include <map>
-
+class vtkXdmf3ArraySelection;
 class XdmfArray;
 class vtkDataArray;
 class XdmfGrid;
@@ -48,65 +45,62 @@ class XdmfCurvilinearGrid;
 class vtkStructuredGrid;
 class XdmfUnstructuredGrid;
 class vtkUnstructuredGrid;
+class vtkPointSet;
 class XdmfGraph;
 class vtkMutableDirectedGraph;
 class vtkDirectedGraph;
 
-class vtkDataSet;
 class XdmfDomain;
 
 //==============================================================================
-
-class vtkXdmf3ArraySelection : public std::map<std::string, bool>
-{
-public:
-  void Merge(const vtkXdmf3ArraySelection& other);
-  void AddArray(const char* name, bool status=true);
-  bool ArrayIsEnabled(const char* name);
-  bool HasArray(const char* name);
-  int GetArraySetting(const char* name);
-  void SetArrayStatus(const char* name, bool status);
-  const char* GetArrayName(int index);
-  int GetNumberOfArrays();
-};
-
-//==============================================================================
-
-class VTKIOXDMF3_EXPORT vtkXdmf3Common
+class VTKIOXDMF3_EXPORT vtkXdmf3DataSet
 {
 public:
 
+  // Common
+
+  // Description:
+  // Returns a VTK array corresponding to the Xdmf array it is given.
   static vtkDataArray *XdmfToVTKArray(
     XdmfArray* xArray,
-    std::string attrName, //TODO: passing in attrName, because XdmfArray::getName() is oddly not virtual
+    std::string attrName,//TODO: needed because XdmfArray::getName() misbehaves
     int preferredComponents = 0);
 
+  // Description:
+  // Populates and Xdmf array corresponding to the VTK array it is given
   static bool VTKToXdmfArray(
     vtkDataArray *vArray,
     XdmfArray* xArray,
     int rank = 0, int *dims = NULL);
 
+  // Description:
+  // Populates the given VTK DataObject's attribute arrays with the selected
+  // arrays from the Xdmf Grid
   static void XdmfToVTKAttributes(
     vtkXdmf3ArraySelection *fselection,
     vtkXdmf3ArraySelection *cselection,
     vtkXdmf3ArraySelection *pselection,
     XdmfGrid *grid, vtkDataObject *dObject);
 
+  // Description:
+  // Populates the given Xdmf Grid's attribute arrays with the selected
+  // arrays from the VTK DataObject
   static void VTKToXdmfAttributes(vtkDataObject *dObject, XdmfGrid *grid);
 
+  // Description:
+  // Helpers for Unstructured Grid translation
   static int GetNumberOfPointsPerCell(int vtk_cell_type);
-
   static int GetVTKCellType(shared_ptr<const XdmfTopologyType> topologyType);
   static int GetXdmfCellType(int vtkType);
 
+  // Description:
+  // Helper used in VTKToXdmf to set the time in a Xdmf grid
   static void SetTime(XdmfGrid *grid, double hasTime, double time);
-};
 
-//==============================================================================
+  //vtkXdmf3RegularGrid
 
-class VTKIOXDMF3_EXPORT vtkXdmf3RegularGrid
-{
-public:
+  // Description:
+  // Populates the VTK data set with the contents of the Xdmf grid
   static void XdmfToVTK(
     vtkXdmf3ArraySelection *fselection,
     vtkXdmf3ArraySelection *cselection,
@@ -114,21 +108,22 @@ public:
     XdmfRegularGrid *grid,
     vtkImageData *dataSet);
 
+  // Description:
+  // Helper that does topology for XdmfToVTK
   static void CopyShape(
     XdmfRegularGrid *grid,
     vtkImageData *dataSet);
 
+  // Description:
+  // Populates the Xdmf Grid with the contents of the VTK data set
   static void VTKToXdmf(
-    vtkDataSet *dataSet,
+    vtkImageData *dataSet,
     XdmfDomain *domain,
     bool hasTime, double time);
-};
 
-//==============================================================================
-
-class VTKIOXDMF3_EXPORT vtkXdmf3RectilinearGrid
-{
-public:
+  //vtkXdmf3RectilinearGrid
+  // Description:
+  // Populates the VTK data set with the contents of the Xdmf grid
   static void XdmfToVTK(
     vtkXdmf3ArraySelection *fselection,
     vtkXdmf3ArraySelection *cselection,
@@ -136,21 +131,22 @@ public:
     XdmfRectilinearGrid *grid,
     vtkRectilinearGrid *dataSet);
 
+  // Description:
+  // Helper that does topology for XdmfToVTK
   static void CopyShape(
     XdmfRectilinearGrid *grid,
     vtkRectilinearGrid *dataSet);
 
+  // Description:
+  // Populates the Xdmf Grid with the contents of the VTK data set
   static void VTKToXdmf(
-    vtkDataSet *dataSet,
+    vtkRectilinearGrid *dataSet,
     XdmfDomain *domain,
     bool hasTime, double time);
-};
 
-//==============================================================================
-
-class VTKIOXDMF3_EXPORT vtkXdmf3CurvilinearGrid
-{
-public:
+  //vtkXdmf3CurvilinearGrid
+  // Description:
+  // Populates the VTK data set with the contents of the Xdmf grid
   static void XdmfToVTK(
     vtkXdmf3ArraySelection *fselection,
     vtkXdmf3ArraySelection *cselection,
@@ -158,21 +154,22 @@ public:
     XdmfCurvilinearGrid *grid,
     vtkStructuredGrid *dataSet);
 
+  // Description:
+  // Helper that does topology for XdmfToVTK
   static void CopyShape(
     XdmfCurvilinearGrid *grid,
     vtkStructuredGrid *dataSet);
 
+  // Description:
+  // Populates the Xdmf Grid with the contents of the VTK data set
   static void VTKToXdmf(
-    vtkDataSet *dataSet,
+    vtkStructuredGrid *dataSet,
     XdmfDomain *domain,
     bool hasTime, double time);
-};
 
-//==============================================================================
-
-class VTKIOXDMF3_EXPORT vtkXdmf3UnstructuredGrid
-{
-public:
+  //vtkXdmf3UnstructuredGrid
+  // Description:
+  // Populates the VTK data set with the contents of the Xdmf grid
   static void XdmfToVTK(
     vtkXdmf3ArraySelection *fselection,
     vtkXdmf3ArraySelection *cselection,
@@ -180,21 +177,22 @@ public:
     XdmfUnstructuredGrid *grid,
     vtkUnstructuredGrid *dataSet);
 
+  // Description:
+  // Helper that does topology for XdmfToVTK
   static void CopyShape(
     XdmfUnstructuredGrid *grid,
     vtkUnstructuredGrid *dataSet);
 
+  // Description:
+  // Populates the Xdmf Grid with the contents of the VTK data set
   static void VTKToXdmf(
-    vtkDataSet *dataSet,
+    vtkPointSet *dataSet,
     XdmfDomain *domain,
     bool hasTime, double time);
-};
 
-//==============================================================================
-
-class VTKIOXDMF3_EXPORT vtkXdmf3Graph
-{
-public:
+  //vtkXdmf3Graph
+  // Description:
+  // Populates the VTK graph with the contents of the Xdmf grid
   static void XdmfToVTK(
     vtkXdmf3ArraySelection *fselection,
     vtkXdmf3ArraySelection *cselection,
@@ -202,6 +200,8 @@ public:
     XdmfGraph *grid,
     vtkMutableDirectedGraph *dataSet);
 
+  // Description:
+  // Populates the Xdmf Grid with the contents of the VTK data set
   static void VTKToXdmf(
     vtkDirectedGraph *dataSet,
     XdmfDomain *domain,
