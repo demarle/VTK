@@ -14,7 +14,14 @@ if(VERSION_CONTROL_AUTOUPDATE OR
 endif(VERSION_CONTROL_AUTOUPDATE OR 
     NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/XdmfVersion.hpp)
 
-set(BUILD_SHARED_LIBS true)
+if(BUILD_SHARED)
+  set(LIBTYPE SHARED)
+else()
+  set(LIBTYPE STATIC)
+endif()
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/XdmfConfig.hpp.in
+               ${CMAKE_CURRENT_BINARY_DIR}/XdmfConfig.hpp)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
@@ -70,6 +77,7 @@ if(HDF5_FOUND)
   set(XDMF_HDF5_BINARY_DIRS ${HDF5_BINARY_DIRS} PARENT_SCOPE)
   set(XDMF_BINARIES ${XDMF_BINARIES} ${HDF5_BINARY_DIRS})
 endif(HDF5_FOUND)
+
 
 set(LIBXML2_LIBRARIES ${vtklibxml2_LIBRARIES})
 set(LIBXML2_INCLUDE_DIR ${vtklibxml2_INCLUDE_DIRS})
@@ -129,15 +137,18 @@ set(XdmfCoreSources
   XdmfVisitor
   XdmfWriter)
 
-add_library(XdmfCore ${XdmfCoreSources})
+add_library(XdmfCore ${LIBTYPE} ${XdmfCoreSources})
 link_directories(${XDMF_LIBRARY_DIRS})
+
 target_link_libraries(XdmfCore ${XDMF_LIBRARIES} ${vtkxdmf3_LINK_DEPENDS})
 vtk_target_install(XdmfCore)
 
 if(WIN32)
   add_definitions(-D_HDF5USEDLL_ -D_HDF5USEHLDLL_)
-  set_target_properties(XdmfCore PROPERTIES 
-      DEFINE_SYMBOL XdmfCore_EXPORTS)
+  if (BUILD_SHARED)
+    set_target_properties(XdmfCore PROPERTIES
+        DEFINE_SYMBOL XdmfCore_EXPORTS)
+  endif()
   if(NOT MSVC10)
 	set_target_properties(XdmfCore PROPERTIES
       PREFIX ../

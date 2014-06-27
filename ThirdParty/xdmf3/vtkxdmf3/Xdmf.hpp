@@ -125,28 +125,38 @@
 * \include XdmfExampleEdit.py
 */
 
+#include "XdmfConfig.hpp"
 
 
 /* Keep all our Win32 Conversions here */
 #ifdef _WIN32
+#ifdef XDMFSTATIC
+# define XDMFCORE_EXPORT
+# define XDMFDSM_EXPORT
+# define XDMF_EXPORT
+# define XDMFCORE_TEMPLATE
+# define XDMFDSM_TEMPLATE
+# define XDMF_TEMPLATE
+#else
 /* Used to export/import from the dlls */
-#undef XDMFCORE_EXPORT
-#define XDMFCORE_EXPORT __declspec(dllimport)
-#undef XDMFCORE_TEMPLATE
-#define XDMFCORE_TEMPLATE extern
+# undef XDMFCORE_EXPORT
+# define XDMFCORE_EXPORT __declspec(dllimport)
+# undef XDMFCORE_TEMPLATE
+# define XDMFCORE_TEMPLATE extern
 
-#undef XDMFDSM_EXPORT
-#define XDMFDSM_EXPORT __declspec(dllimport)
-#undef XDMFDSM_TEMPLATE
-#define XDMFDSM_TEMPLATE extern
+# undef XDMFDSM_EXPORT
+# define XDMFDSM_EXPORT __declspec(dllimport)
+# undef XDMFDSM_TEMPLATE
+# define XDMFDSM_TEMPLATE extern
 
-#ifdef vtkxdmf3_EXPORTS
-#define XDMF_EXPORT __declspec(dllexport)
-#define XDMF_TEMPLATE
-#else /* vtkxdmf3_EXPORTS */
-#define XDMF_EXPORT __declspec(dllimport)
-#define XDMF_TEMPLATE extern
-#endif /* vtkxdmf3_EXPORTS */
+# ifdef vtkxdmf3_EXPORTS
+# define XDMF_EXPORT __declspec(dllexport)
+# define XDMF_TEMPLATE
+# else /* vtkxdmf3_EXPORTS */
+# define XDMF_EXPORT __declspec(dllimport)
+# define XDMF_TEMPLATE extern
+# endif /* vtkxdmf3_EXPORTS */
+#endif
 
 /* Compiler Warnings */
 #ifndef XDMF_DEBUG

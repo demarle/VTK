@@ -24,12 +24,9 @@
 #ifndef XDMFCONFIG_HPP_
 #define XDMFCONFIG_HPP_
 
-#cmakedefine HAVE_BOOST_SHARED_DYNAMIC_CAST
-#cmakedefine XDMF_BIG_ENDIAN
-
 #cmakedefine BUILD_SHARED
 #ifndef BUILD_SHARED
 #  define XDMFSTATIC
 #endif
 
-#endif /* XDMFSHAREDPTR_HPP_ */
+#endif

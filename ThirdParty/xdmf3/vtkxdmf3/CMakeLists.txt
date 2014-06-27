@@ -12,7 +12,15 @@ if(MSVC10)
 	SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
 endif(MSVC10)
 
-#set(BUILD_SHARED_LIBS true)
+if(BUILD_SHARED)
+  set(LIBTYPE SHARED)
+else()
+  set(LIBTYPE STATIC)
+endif()
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/XdmfConfig.hpp.in
+               ${CMAKE_CURRENT_BINARY_DIR}/XdmfConfig.hpp)
+
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -251,7 +259,7 @@ if(NOT XDMF_BUILD_CORE_ONLY)
     XdmfTopologyType
     XdmfUnstructuredGrid)
 
-  add_library(vtkxdmf3 ${XdmfSources})
+  add_library(vtkxdmf3 ${LIBTYPE} ${XdmfSources})
   if(XDMF_BUILD_DSM)
     target_link_libraries(vtkxdmf3 XdmfCore XdmfDSM)
   else(XDMF_BUILD_DSM)
@@ -260,8 +268,11 @@ if(NOT XDMF_BUILD_CORE_ONLY)
   vtk_target_install(vtkxdmf3)
 
   if(WIN32)
-    set_target_properties(vtkxdmf3 PROPERTIES
-        DEFINE_SYMBOL vtkxdmf3_EXPORTS)
+    if (BUILD_SHARED)
+      set_target_properties(vtkxdmf3 PROPERTIES
+          DEFINE_SYMBOL vtkxdmf3_EXPORTS)
+    endif()
+
     if(NOT MSVC10)
         set_target_properties(vtkxdmf3 PROPERTIES
         PREFIX ../
