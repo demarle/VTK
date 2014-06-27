@@ -25,7 +25,7 @@
 #ifndef _XDMFCORE_HPP
 #define _XDMFCORE_HPP
 
-#include "XdmfConfig.hpp"
+#include "XdmfCoreConfig.hpp"
 
 /* Keep all our Win32 Conversions here */
 #ifdef _WIN32
@@ -71,4 +71,3 @@
 
 #endif /* _XDMFCORE_HPP */
 #endif /*_XDMF_HPP */
-

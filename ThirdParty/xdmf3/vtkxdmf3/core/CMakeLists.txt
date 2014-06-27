@@ -19,8 +19,6 @@ if(BUILD_SHARED)
 else()
   set(LIBTYPE STATIC)
 endif()
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/XdmfConfig.hpp.in
-               ${CMAKE_CURRENT_BINARY_DIR}/XdmfConfig.hpp)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -92,7 +90,7 @@ if(LIBXML2_FOUND)
   set(XDMF_BINARIES ${XDMF_BINARIES} ${LIBXML2_BINARY_DIRS})
 endif(LIBXML2_FOUND)
 
-# Perform compile-time checks and generate XdmfConfig.hpp
+# Perform compile-time checks and generate XdmfCoreConfig.hpp
 
 TEST_BIG_ENDIAN(XDMF_BIG_ENDIAN)
 
@@ -111,8 +109,8 @@ int main(int ac, char * av[])
 }
 "
 HAVE_BOOST_SHARED_DYNAMIC_CAST)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/XdmfConfig.hpp.in 
-               ${CMAKE_CURRENT_BINARY_DIR}/XdmfConfig.hpp)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/XdmfCoreConfig.hpp.in
+               ${CMAKE_CURRENT_BINARY_DIR}/XdmfCoreConfig.hpp)
 
 set(XdmfCoreSources
   XdmfArray

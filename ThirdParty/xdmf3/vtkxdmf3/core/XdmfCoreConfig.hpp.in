@@ -2,7 +2,7 @@
 /*                                    XDMF                                   */
 /*                       eXtensible Data Model and Format                    */
 /*                                                                           */
-/*  Id : XdmfConfig.hpp                                                      */
+/*  Id : XdmfCoreConfig.hpp                                                  */
 /*                                                                           */
 /*  Author:                                                                  */
 /*     Kenneth Leiter                                                        */
@@ -21,8 +21,8 @@
 /*                                                                           */
 /*****************************************************************************/
 
-#ifndef XDMFCONFIG_HPP_
-#define XDMFCONFIG_HPP_
+#ifndef XDMFCORECONFIG_HPP_
+#define XDMFCORECONFIG_HPP_
 
 #cmakedefine HAVE_BOOST_SHARED_DYNAMIC_CAST
 #cmakedefine XDMF_BIG_ENDIAN
@@ -32,4 +32,4 @@
 #  define XDMFSTATIC
 #endif
 
-#endif /* XDMFSHAREDPTR_HPP_ */
+#endif /* XDMFCORECONFIG_HPP_ */
