@@ -20,7 +20,6 @@
 #include "vtkXdmf3Reader.h"
 
 #include "vtksys/SystemTools.hxx"
-#include "vtkCompositeDataPipeline.h"
 #include "vtkDataObjectTypes.h"
 #include "vtkDataSetAttributes.h"
 #include "vtkInformation.h"
@@ -30,6 +29,7 @@
 #include "vtkMutableDirectedGraph.h"
 #include "vtkObjectFactory.h"
 #include "vtkRectilinearGrid.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkStringArray.h"
 #include "vtkStructuredGrid.h"
 #include "vtkTimerLog.h"
@@ -46,17 +46,14 @@
 #include "XdmfGraph.hpp"
 #include "XdmfGridCollection.hpp"
 #include "XdmfGridCollectionType.hpp"
-//#include "XdmfHDF5Controller.hpp"
 #include "XdmfReader.hpp"
 #include "XdmfRectilinearGrid.hpp"
 #include "XdmfRegularGrid.hpp"
 #include "XdmfUnstructuredGrid.hpp"
 #include "XdmfTime.hpp"
-#include "XdmfVisitor.hpp"
 
 #include <set>
 #include <fstream>
-
 
 //TODO: benchmark and optimize
 //TODO: implement can read file

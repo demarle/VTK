@@ -15,9 +15,7 @@
 
 #include "vtkXdmf3Writer.h"
 
-#include "vtkCompositeDataPipeline.h"
 #include "vtkDataObject.h"
-#include "vtkDataSet.h"
 #include "vtkDirectedGraph.h"
 #include "vtkImageData.h"
 #include "vtkInformation.h"
@@ -26,16 +24,13 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointSet.h"
 #include "vtkRectilinearGrid.h"
-#include "vtkSmartPointer.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkStructuredGrid.h"
 #include "vtkXdmf3DataSet.h"
 
 #include "XdmfDomain.hpp"
 #include "XdmfGridCollection.hpp"
 #include "XdmfGridCollectionType.hpp"
-#include "XdmfRectilinearGrid.hpp"
-#include "XdmfRegularGrid.hpp"
-#include "XdmfTime.hpp"
 #include "XdmfWriter.hpp"
 #include <stack>
 
@@ -161,6 +156,7 @@ vtkXdmf3Writer::vtkXdmf3Writer()
   this->LightDataLimit = 100;
   this->WriteAllTimeSteps = false;
   this->Internal = new Internals();
+  this->SetNumberOfOutputPorts(0);
 }
 
 //----------------------------------------------------------------------------
