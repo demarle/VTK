@@ -991,8 +991,8 @@ void vtkXdmf3DataSet::CopyShape(
 
   shared_ptr<XdmfArray> xdims;
   xdims = grid->getDimensions();
-  //XDMF RECTMESH is apparently inconsistent with SMESH and CORECTMESH
-  //it is ijk in VTK terms and they are kji
+  //Note: XDMF standard for RECTMESH is inconsistent with SMESH and CORECTMESH
+  //it is ijk in VTK terms and they are kji.
   if (xdims)
     {
     for (unsigned int i = 0; (i < 3 && i < xdims->getSize()); i++)
