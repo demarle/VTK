@@ -331,16 +331,15 @@ if __name__ == "__main__":
       xReader.GetExecutive().SetUpdateTimeStep(0, timerange[x])
       xReader.Update()
       obds = xReader.GetOutputDataObject(0).GetBounds()
-      tsrc.GetExecutive().SetUpdateTimeStep(0, timerange[x])
+      tsrc.GetExecutive().SetUpdateTimeStep(0, timerange[x]+0.0001) #workaround a precision bug in TSE
       tsrc.Update()
       ibds = tsrc.GetOutputDataObject(0).GetBounds()
       print timerange[x], obds
-      #TODO: writeall is corrupting it
-      #for i in (0,1,2,3,4,5):
-      #  if abs(abs(obds[i])-abs(ibds[i])) > 0.000001:
-      #    print "time result failed"
-      #    print obds, "!=", ibds
-      #    raiseErrorAndExit("Failed to get same data for this timestep")
+      for i in (0,1,2,3,4,5):
+        if abs(abs(obds[i])-abs(ibds[i])) > 0.000001:
+          print "time result failed"
+          print obds, "!=", ibds
+          raiseErrorAndExit("Failed to get same data for this timestep")
 
   fail = DoFilesExist(tFileName, thFileName, None, CleanUpGood)
   if not fail:

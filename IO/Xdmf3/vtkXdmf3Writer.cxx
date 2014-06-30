@@ -78,7 +78,6 @@ public:
         for (unsigned int i = 0; i< mbds->GetNumberOfBlocks(); i++)
           {
           vtkDataObject *next = mbds->GetBlock(i);
-          //cerr << "WRITING["<<i<<"] " << next << endl;
           this->WriteDataObject(next, hasTime, time);
           }
         this->DestinationGroups.pop();
@@ -134,6 +133,8 @@ public:
         {
         }
       }
+
+    this->Domain->accept(this->Writer);
   }
   boost::shared_ptr<XdmfDomain> Domain;
   boost::shared_ptr<XdmfDomain> Destination;
@@ -204,7 +205,7 @@ int vtkXdmf3Writer::Write()
 
   this->Update();
 
-  this->Internal->Domain->accept(this->Internal->Writer);
+  //this->Internal->Domain->accept(this->Internal->Writer);
 
   delete this->Internal;
   this->Internal = NULL;

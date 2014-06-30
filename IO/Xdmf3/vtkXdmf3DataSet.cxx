@@ -135,7 +135,8 @@ vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
     vArray->SetNumberOfComponents(ncomp);
     vArray->SetNumberOfTuples(ntuples);
     xArray->read();
-#if 1
+#define DO_DEEPREAD 1
+#if DO_DEEPREAD
     //deepcopy
     switch(vArray->GetDataType())
       {
@@ -187,6 +188,7 @@ bool vtkXdmf3DataSet::VTKToXdmfArray(
     xArray->setName(vArray->GetName());
     }
 
+#define DO_DEEPWRITE 1
   //TODO: verify the 32/64 choices are correct in all configurations
   switch(vArray->GetDataType())
     {
@@ -197,86 +199,154 @@ bool vtkXdmf3DataSet::VTKToXdmfArray(
     case VTK_CHAR:
     case VTK_SIGNED_CHAR:
       xArray->initialize(XdmfArrayType::Int8(), xdims);
+#if DO_DEEPWRITE
+      //deepcopy
+      xArray->insert(0,
+        static_cast<char *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
+      //shallowcopy
       xArray->setValuesInternal(
         static_cast<char *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_UNSIGNED_CHAR:
       xArray->initialize(XdmfArrayType::UInt8(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+        static_cast<unsigned char *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
       xArray->setValuesInternal(
         static_cast<unsigned char *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_SHORT:
       xArray->initialize(XdmfArrayType::Int16(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+        static_cast<short *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
       xArray->setValuesInternal(
         static_cast<short *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_UNSIGNED_SHORT:
       xArray->initialize(XdmfArrayType::UInt16(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+        static_cast<unsigned short *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
       xArray->setValuesInternal(
         static_cast<unsigned short *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_INT:
       xArray->initialize(XdmfArrayType::Int32(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+        static_cast<int *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
       xArray->setValuesInternal(
         static_cast<int *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_UNSIGNED_INT:
       xArray->initialize(XdmfArrayType::UInt32(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+        static_cast<unsigned int *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
       xArray->setValuesInternal(
         static_cast<unsigned int *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_LONG:
       xArray->initialize(XdmfArrayType::Int64(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+        static_cast<long *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
       xArray->setValuesInternal(
         static_cast<long *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_UNSIGNED_LONG:
       //  arrayType = XdmfArrayType::UInt64(); UInt64 does not exist
       return false;
     case VTK_FLOAT:
       xArray->initialize(XdmfArrayType::Float32(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+        static_cast<float *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
       xArray->setValuesInternal(
         static_cast<float *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_DOUBLE:
       xArray->initialize(XdmfArrayType::Float64(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+        static_cast<double *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
       xArray->setValuesInternal(
         static_cast<double *>(vArray->GetVoidPointer(0)),
         vArray->GetDataSize(),
         false);
+#endif
       break;
     case VTK_ID_TYPE:
       if (VTK_SIZEOF_ID_TYPE == XdmfArrayType::Int64()->getElementSize())
         {
         xArray->initialize(XdmfArrayType::Int64(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+          static_cast<long *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
         xArray->setValuesInternal(
           static_cast<long *>(vArray->GetVoidPointer(0)),
           vArray->GetDataSize(),
           false);
+#endif
         }
       else
         {
         xArray->initialize(XdmfArrayType::Int32(), xdims);
+#if DO_DEEPWRITE
+      xArray->insert(0,
+          static_cast<int *>(vArray->GetVoidPointer(0)),
+        vArray->GetDataSize());
+#else
         xArray->setValuesInternal(
           static_cast<int *>(vArray->GetVoidPointer(0)),
           vArray->GetDataSize(),
           false);
+#endif
         }
       break;
     case VTK_STRING:
@@ -1239,7 +1309,6 @@ void vtkXdmf3DataSet::CopyShape(
 
     int *cell_types = new int[numCells];
     xTopology->read();
-    const unsigned int *xCells =  (const unsigned int*)xTopology->getValuesInternal();
 
     vtkCellArray* vCells = vtkCellArray::New();
     // Get the pointer
@@ -1255,7 +1324,7 @@ void vtkXdmf3DataSet::CopyShape(
       *cells_ptr++ = numPointsPerCell;
       for (vtkIdType i = 0 ; i < numPointsPerCell; i++ )
         {
-        *cells_ptr++ = xCells[index++];
+        *cells_ptr++ = xTopology->getValue<vtkIdType>(index++);
         }
       }
     dataSet->SetCells(cell_types, vCells);
@@ -1269,8 +1338,6 @@ void vtkXdmf3DataSet::CopyShape(
     unsigned int conn_length = xTopology->getSize();
     vtkIdType numCells = xTopology->getNumberElements();
 
-    const unsigned int *xCells =
-      (const unsigned int*)xTopology->getValuesInternal();
     int *cell_types = new int[numCells];
 
     /* Create Cell Array */
@@ -1286,7 +1353,7 @@ void vtkXdmf3DataSet::CopyShape(
     for(vtkIdType cc = 0 ; cc < numCells; cc++ )
       {
       shared_ptr<const XdmfTopologyType> nextCellType =
-        XdmfTopologyType::New(xCells[index++]);
+        XdmfTopologyType::New(xTopology->getValue<vtkIdType>(index++));
       int vtk_cell_typeI = vtkXdmf3DataSet::GetVTKCellType(nextCellType);
 
       unsigned int numPointsPerCell =
@@ -1305,7 +1372,7 @@ void vtkXdmf3DataSet::CopyShape(
         {
         // cell type does not have a fixed number of points in which case the
         // next entry in xmfConnections tells us the number of points.
-        numPointsPerCell = xCells[index++];
+        numPointsPerCell = xTopology->getValue<unsigned int>(index++);
         sub++; // used to shrink the cells array at the end.
         }
 
@@ -1313,7 +1380,7 @@ void vtkXdmf3DataSet::CopyShape(
       *cells_ptr++ = numPointsPerCell;
       for(vtkIdType i = 0 ; i < numPointsPerCell; i++ )
         {
-        *cells_ptr++ = xCells[index++];
+        *cells_ptr++ = xTopology->getValue<vtkIdType>(index++);
         }
       }
     // Resize the Array to the Proper Size
