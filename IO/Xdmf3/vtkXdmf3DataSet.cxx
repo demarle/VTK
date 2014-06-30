@@ -111,7 +111,7 @@ vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
     }
   else
     {
-    cerr << "Skipping unrecognized array type" << endl;
+    cerr << "Skipping unrecognized array type [" << arrayType->getName() << "]" << endl;
     return NULL;
     }
   vArray = vtkDataArray::CreateDataArray(vtk_type);

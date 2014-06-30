@@ -650,7 +650,6 @@ public:
   {
     if (dataSet && GridEnabled(grid) && ForThisTime(grid))
       {
-      cerr << "MAKE RG" << endl;
       vtkXdmf3DataSet::XdmfToVTK(
         this->FieldArrays, this->CellArrays, this->PointArrays,
         grid, dataSet);
@@ -765,7 +764,7 @@ public:
         unsigned int nSets = cGrid->getNumberSets();
         if (nSets > 0)
           {
-          cerr << "FOUND A SET" << endl;
+          //TODO: create subsets in multiblock
           }
         vtkUnstructuredGrid *child = vtkUnstructuredGrid::New();
         result = this->Populate(*(group->getUnstructuredGrid(i)), child);
@@ -778,7 +777,7 @@ public:
       unsigned int nRectilinearGrids = group->getNumberRectilinearGrids();
       for (unsigned int i = 0; i < nRectilinearGrids; i++)
         {
-        if (!isTemporal && this->ShouldRead(i,nRectilinearGrids))
+        if (!isTemporal && !this->ShouldRead(i,nRectilinearGrids))
           {
           continue;
           }
@@ -997,7 +996,6 @@ public:
     //TODO:
     //Domains are no longer used in practice, and ParaView is not
     //able to select from them dynamically anyway, so get rid of them
-    cerr << "PARSING" << endl;
     this->Domain = shared_dynamic_cast<XdmfDomain>(
       this->Reader->parse(contents)
       );

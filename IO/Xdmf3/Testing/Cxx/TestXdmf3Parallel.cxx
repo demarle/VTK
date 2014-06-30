@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-//This test demonstrates xdmf3 reading and writing in parallel.
+// This test exercises xdmf3 reading in parallel.
 //
 
 #include <mpi.h>
@@ -21,9 +21,9 @@
 #include "vtkMPIController.h"
 #include "vtkObjectFactory.h"
 #include "vtkProcess.h"
-//#include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkSmartPointer.h"
 #include "vtkTestUtilities.h"
+#include "vtkTesting.h"
 #include "vtkXdmf3Reader.h"
 
 class MyProcess : public vtkProcess
@@ -68,19 +68,16 @@ void MyProcess::Execute()
   int numprocs = this->Controller->GetNumberOfProcesses();
 
   this->Controller->Barrier();
-  cerr << "SETUP" << endl;
   this->CreatePipeline();
   this->Controller->Barrier();
-  cerr << "READ" << endl;
   this->Reader->SetUpdateExtent(proc, numprocs, 0);
   this->Reader->Update();
-  cerr << "DONE" << endl;
   this->Reader->Delete();
   this->ReturnValue = 1;
 }
 
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
   // This is here to avoid false leak messages from vtkDebugLeaks when
   // using mpich. It appears that the root process which spawns all the
@@ -107,17 +104,23 @@ int main(int argc, char **argv)
 
   vtkMultiProcessController::SetGlobalController(contr);
 
-  std::string filename("/Users/demarle/tmp/tmp.xmf");
+  vtkTesting *testHelper = vtkTesting::New();
+  testHelper->AddArguments(argc,const_cast<const char **>(argv));
+  std::string datadir = testHelper->GetDataRoot();
+  std::string file = datadir + "/Data/XDMF/Iron/Iron_Protein.ImageData.xmf";
+  cerr << file << endl;
+  testHelper->Delete();
 
+  //allow caller to use something else
   for (int i = 0; i<argc; i++)
     {
-    if (!strncmp(argv[i], "--filename=", 11))
+    if (!strncmp(argv[i], "--file=", 11))
       {
-      filename=argv[i]+11;
+      file=argv[i]+11;
       }
     }
   MyProcess *p = MyProcess::New();
-  p->SetArgs(argc, argv, filename.c_str());
+  p->SetArgs(argc, argv, file.c_str());
 
   contr->SetSingleProcessObject(p);
   contr->SingleMethodExecute();
