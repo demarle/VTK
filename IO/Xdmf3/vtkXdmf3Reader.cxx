@@ -1205,17 +1205,18 @@ int vtkXdmf3Reader::CanReadFile(const char* filename)
     return 0;
     }
 
-  //TODO: see below
   return 1;
+ /*
+  TODO: this, but has to check without taking much time
   shared_ptr<XdmfReader> tester = XdmfReader::New();
   try {
     shared_ptr<XdmfItem> item = tester->read(filename);
-  } catch (...) {
-    //TODO: xdmf crashes when I give it something it can't handle and we never get here.
+  } catch (XdmfError & e) {
     return 0;
   }
 
   return 1;
+ */
 }
 
 //----------------------------------------------------------------------------
@@ -1371,8 +1372,8 @@ int vtkXdmf3Reader::RequestInformation(vtkInformation *,
 }
 
 //----------------------------------------------------------------------------
-int vtkXdmf3Reader::RequestData(vtkInformation *request,
-  vtkInformationVector **inputVector,
+int vtkXdmf3Reader::RequestData(vtkInformation *,
+  vtkInformationVector **,
   vtkInformationVector *outputVector)
 {
   vtkTimerLog::MarkStartEvent("X3R::RD");

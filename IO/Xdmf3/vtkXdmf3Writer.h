@@ -52,8 +52,8 @@ public:
   // Description:
   // Topology Geometry and Attribute arrays smaller than this are written in line into the XML.
   // Default is 100.
-  vtkSetMacro(LightDataLimit, int);
-  vtkGetMacro(LightDataLimit, int);
+  vtkSetMacro(LightDataLimit, unsigned int);
+  vtkGetMacro(LightDataLimit, unsigned int);
 
   //Description:
   //Controls whether writer automatically writes all input time steps, or
@@ -81,7 +81,7 @@ protected:
                           vtkInformationVector*);
 
   char *FileName;
-  int LightDataLimit;
+  unsigned int LightDataLimit;
   bool WriteAllTimeSteps;
 
 private:

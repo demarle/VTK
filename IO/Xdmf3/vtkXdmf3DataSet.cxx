@@ -120,8 +120,8 @@ vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
     vArray->SetName(attrName.c_str());
 
     std::vector<unsigned int> dims = xArray->getDimensions();
-    int ndims = dims.size();
-    int ncomp = preferredComponents;
+    unsigned int ndims = dims.size();
+    unsigned int ncomp = preferredComponents;
     if (preferredComponents == 0) //caller doesn't know what to expect,
       {
       ncomp = 1; //1 is a safe bet
@@ -351,6 +351,7 @@ bool vtkXdmf3DataSet::VTKToXdmfArray(
       break;
     case VTK_STRING:
       return false;
+      //TODO: what is correct syntax here?
       //xArray->initialize(XdmfArrayType::String(), xdims);
       //xArray->setValuesInternal(
       //  static_cast<std::string>(vArray->GetVoidPointer(0)),
@@ -403,7 +404,7 @@ void vtkXdmf3DataSet::XdmfToVTKAttributes(
     std::vector<unsigned int> dims = xmfAttribute->getDimensions();
     int ndims = dims.size();
     int nvals = 1;
-    for (int i = 0; i < dims.size(); i++)
+    for (unsigned int i = 0; i < dims.size(); i++)
       {
       nvals = nvals * dims[i];
       }
@@ -1485,7 +1486,7 @@ void vtkXdmf3DataSet::VTKToXdmf(
       case VTK_LINE :
       case VTK_POLY_LINE :
       case VTK_POLYGON :
-        xTopology->insert(cntr++, (int)numPts); ////TODO: why can't push long long?
+        xTopology->insert(cntr++,static_cast<long>(numPts));
         tcount +=1;
         break;
       default:
