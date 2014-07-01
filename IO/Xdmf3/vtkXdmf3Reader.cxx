@@ -352,8 +352,8 @@ public:
     XdmfGrid *grid = dynamic_cast<XdmfGrid *>(&item);
     if (grid)
       {
-      int numAttributes = grid->getNumberAttributes();
-      for (int cc=0; cc < numAttributes; cc++)
+      unsigned int numAttributes = grid->getNumberAttributes();
+      for (unsigned int cc=0; cc < numAttributes; cc++)
         {
         shared_ptr<XdmfAttribute> xmfAttribute = grid->getAttribute(cc);
         std::string attrName = xmfAttribute->getName();
@@ -396,8 +396,8 @@ public:
       XdmfGraph *graph = dynamic_cast<XdmfGraph *>(&item);
       if (graph)
         {
-        int numAttributes = graph->getNumberAttributes();
-        for (int cc=0; cc < numAttributes; cc++)
+        unsigned int numAttributes = graph->getNumberAttributes();
+        for (unsigned int cc=0; cc < numAttributes; cc++)
           {
           shared_ptr<XdmfAttribute> xmfAttribute = graph->getAttribute(cc);
           std::string attrName = xmfAttribute->getName();
@@ -736,7 +736,7 @@ public:
 
       vtkMultiBlockDataSet *top = vtkMultiBlockDataSet::SafeDownCast(toFill);
       vtkDataObject *result;
-      int cnt = 0;
+      unsigned int cnt = 0;
 
       unsigned int nGridCollections = group->getNumberGridCollections();
       for (unsigned int i = 0; i < nGridCollections; i++)
@@ -857,7 +857,7 @@ public:
     this->time = t;
   }
 
-  void SetRank(int processor, int nprocessors)
+  void SetRank(unsigned int processor, unsigned int nprocessors)
   {
     this->Rank = processor;
     this->NumProcs = nprocessors;
@@ -867,7 +867,7 @@ protected:
   vtkXdmfVisitor_ReadGrids()
   {
   }
-  bool ShouldRead(int piece, int npieces)
+  bool ShouldRead(unsigned int piece, unsigned int npieces)
   {
     if (this->NumProcs<1)
       {
@@ -887,8 +887,8 @@ protected:
       return false;
       }
 
-    int mystart = this->Rank*npieces/this->NumProcs;
-    int myend = (this->Rank+1)*npieces/this->NumProcs;
+    unsigned int mystart = this->Rank*npieces/this->NumProcs;
+    unsigned int myend = (this->Rank+1)*npieces/this->NumProcs;
     if (piece >= mystart)
       {
       if (piece < myend || (this->Rank==this->NumProcs-1))
@@ -901,8 +901,8 @@ protected:
 
   bool doTime;
   double time;
-  int Rank;
-  int NumProcs;
+  unsigned int Rank;
+  unsigned int NumProcs;
   vtkXdmf3ArraySelection* FieldArrays;
   vtkXdmf3ArraySelection* CellArrays;
   vtkXdmf3ArraySelection* PointArrays;

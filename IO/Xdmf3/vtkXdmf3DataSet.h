@@ -64,14 +64,14 @@ public:
   static vtkDataArray *XdmfToVTKArray(
     XdmfArray* xArray,
     std::string attrName,//TODO: needed because XdmfArray::getName() misbehaves
-    int preferredComponents = 0);
+    unsigned int preferredComponents = 0);
 
   // Description:
   // Populates and Xdmf array corresponding to the VTK array it is given
   static bool VTKToXdmfArray(
     vtkDataArray *vArray,
     XdmfArray* xArray,
-    int rank = 0, int *dims = NULL);
+    unsigned int rank = 0, unsigned int *dims = NULL);
 
   // Description:
   // Populates the given VTK DataObject's attribute arrays with the selected
@@ -89,7 +89,7 @@ public:
 
   // Description:
   // Helpers for Unstructured Grid translation
-  static int GetNumberOfPointsPerCell(int vtk_cell_type);
+  static unsigned int GetNumberOfPointsPerCell(int vtk_cell_type, bool &fail);
   static int GetVTKCellType(shared_ptr<const XdmfTopologyType> topologyType);
   static int GetXdmfCellType(int vtkType);
 

@@ -58,7 +58,7 @@ vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
   XdmfArray* xArray,
   std::string attrName, //TODO: passing in attrName here, because
                         //XdmfArray::getName() is oddly not virtual
-  int preferredComponents
+  unsigned int preferredComponents
 )
 {
   //TODO: verify the 32/64 choices are correct in all configurations
@@ -131,8 +131,8 @@ vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
         ncomp = dims[ndims-1];
         }
       }
-    int ntuples = xArray->getSize() / ncomp;
-    vArray->SetNumberOfComponents(ncomp);
+    unsigned int ntuples = xArray->getSize() / ncomp;
+    vArray->SetNumberOfComponents(static_cast<int>(ncomp));
     vArray->SetNumberOfTuples(ntuples);
     xArray->read();
 #define DO_DEEPREAD 1
@@ -160,7 +160,7 @@ vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
 bool vtkXdmf3DataSet::VTKToXdmfArray(
   vtkDataArray *vArray,
   XdmfArray* xArray,
-  int rank, int *dims
+  unsigned int rank, unsigned int *dims
 )
 {
   std::vector<unsigned int> xdims;
@@ -170,14 +170,14 @@ bool vtkXdmf3DataSet::VTKToXdmfArray(
     }
   else
     {
-    for (int i = 0; i < rank; i++)
+    for (unsigned int i = 0; i < rank; i++)
       {
       xdims.push_back(dims[i]);
       }
     }
   //add additional dimension to the xdmf array to match the vtk array's width,
   //ex coordinate arrays have xyz, so add [3]
-  int ncomp = vArray->GetNumberOfComponents();
+  unsigned int ncomp = static_cast<unsigned int>(vArray->GetNumberOfComponents());
   if (ncomp != 1)
     {
     xdims.push_back(ncomp);
@@ -387,10 +387,10 @@ void vtkXdmf3DataSet::XdmfToVTKAttributes(
     {
     return;
     }
-  int numCells = dataSet->GetNumberOfCells();
-  int numPoints = dataSet->GetNumberOfPoints();
-  int numAttributes = grid->getNumberAttributes();
-  for (int cc=0; cc < numAttributes; cc++)
+  unsigned int numCells = dataSet->GetNumberOfCells();
+  unsigned int numPoints = dataSet->GetNumberOfPoints();
+  unsigned int numAttributes = grid->getNumberAttributes();
+  for (unsigned int cc=0; cc < numAttributes; cc++)
     {
     shared_ptr<XdmfAttribute> xmfAttribute = grid->getAttribute(cc);
     std::string attrName = xmfAttribute->getName();
@@ -402,14 +402,14 @@ void vtkXdmf3DataSet::XdmfToVTKAttributes(
 
     //figure out how many components in this array
     std::vector<unsigned int> dims = xmfAttribute->getDimensions();
-    int ndims = dims.size();
-    int nvals = 1;
+    unsigned int ndims = dims.size();
+    unsigned int nvals = 1;
     for (unsigned int i = 0; i < dims.size(); i++)
       {
       nvals = nvals * dims[i];
       }
 
-    int ncomp = 1;
+    unsigned int ncomp = 1;
 
     vtkFieldData * fieldData = 0;
 
@@ -525,14 +525,13 @@ void vtkXdmf3DataSet::VTKToXdmfAttributes(
     return;
     }
 
-  int FRank = 1;
-  int FDims[1];
+  unsigned int FDims[1];
   FDims[0] = dataSet->GetFieldData()->GetNumberOfTuples();
-  int CRank = 3;
-  int CDims[3];
-  int PRank = 3;
-  int PDims[3];
-  int Dims[3];
+  unsigned int CRank = 3;
+  unsigned int CDims[3];
+  unsigned int PRank = 3;
+  unsigned int PDims[3];
+  unsigned int Dims[3];
   int wExtent[6];
   wExtent[0] = 0;
   wExtent[1] = -1;
@@ -559,9 +558,9 @@ void vtkXdmf3DataSet::VTKToXdmfAttributes(
     }
   if (wExtent[1] > wExtent[0])
     {
-    Dims[2] = wExtent[1] - wExtent[0] + 1;
-    Dims[1] = wExtent[3] - wExtent[2] + 1;
-    Dims[0] = wExtent[5] - wExtent[4] + 1;
+    Dims[2] = static_cast<unsigned int>(wExtent[1] - wExtent[0] + 1);
+    Dims[1] = static_cast<unsigned int>(wExtent[3] - wExtent[2] + 1);
+    Dims[0] = static_cast<unsigned int>(wExtent[5] - wExtent[4] + 1);
     PDims[0] = Dims[0];
     PDims[1] = Dims[1];
     PDims[2] = Dims[2];
@@ -632,8 +631,8 @@ void vtkXdmf3DataSet::VTKToXdmfAttributes(
           }
         }
 
-      int rank = FRank;
-      int *dims = FDims;
+      unsigned int rank = 1;
+      unsigned int *dims = FDims;
       if (fa == 1)
         {
         rank = PRank;
@@ -654,8 +653,9 @@ void vtkXdmf3DataSet::VTKToXdmfAttributes(
 }
 
 //----------------------------------------------------------------------------
-int vtkXdmf3DataSet::GetNumberOfPointsPerCell(int vtk_cell_type)
+unsigned int vtkXdmf3DataSet::GetNumberOfPointsPerCell(int vtk_cell_type, bool &fail)
 {
+  fail = false;
   switch (vtk_cell_type)
     {
   case VTK_POLY_VERTEX:
@@ -699,7 +699,8 @@ int vtkXdmf3DataSet::GetNumberOfPointsPerCell(int vtk_cell_type)
   case VTK_TRIQUADRATIC_HEXAHEDRON:
     return 24;
     }
-  return -1;
+  fail = true;
+  return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -1013,10 +1014,10 @@ void vtkXdmf3DataSet::VTKToXdmf(
   dataSet->GetOrigin(origin);
   double spacing[3];
   dataSet->GetSpacing(spacing);
-  int dims[3];
-  dims[0] = whole_extent[1] - whole_extent[0] + 1;
-  dims[1] = whole_extent[3] - whole_extent[2] + 1;
-  dims[2] = whole_extent[5] - whole_extent[4] + 1;
+  unsigned int dims[3];
+  dims[0] = static_cast<unsigned int>(whole_extent[1] - whole_extent[0] + 1);
+  dims[1] = static_cast<unsigned int>(whole_extent[3] - whole_extent[2] + 1);
+  dims[2] = static_cast<unsigned int>(whole_extent[5] - whole_extent[4] + 1);
   shared_ptr<XdmfRegularGrid> grid = XdmfRegularGrid::New(
     spacing[2], spacing[1], spacing[0],
     dims[2], dims[1], dims[0],
@@ -1357,10 +1358,11 @@ void vtkXdmf3DataSet::CopyShape(
         XdmfTopologyType::New(xTopology->getValue<vtkIdType>(index++));
       int vtk_cell_typeI = vtkXdmf3DataSet::GetVTKCellType(nextCellType);
 
+      bool unknownCell;
       unsigned int numPointsPerCell =
-        vtkXdmf3DataSet::GetNumberOfPointsPerCell(vtk_cell_typeI);
+        vtkXdmf3DataSet::GetNumberOfPointsPerCell(vtk_cell_typeI, unknownCell);
 
-      if (numPointsPerCell==-1)
+      if (unknownCell)
         {
         // encountered an unknown cell.
         cerr << "strange cell" << endl;
@@ -1590,8 +1592,8 @@ void vtkXdmf3DataSet::XdmfToVTK(
   edgeData->AddArray(wA);
 
   //Next the optional arrays
-  int numAttributes = grid->getNumberAttributes();
-  for (int cc=0; cc < numAttributes; cc++)
+  unsigned int numAttributes = grid->getNumberAttributes();
+  for (unsigned int cc=0; cc < numAttributes; cc++)
     {
     shared_ptr<XdmfAttribute> xmfAttribute = grid->getAttribute(cc);
     std::string attrName = xmfAttribute->getName();
