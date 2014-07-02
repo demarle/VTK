@@ -53,6 +53,27 @@
 #include "XdmfTopologyType.hpp"
 
 
+bool vtkXdmf3DataSet_ReadIfNeeded(XdmfArray *array)
+{
+  if (!array->isInitialized())
+    {
+    array->read();
+    return true;
+    }
+  return false;
+}
+void vtkXdmf3DataSet_ReleaseIfNeeded(XdmfArray *array, bool MyInit, bool dbg=false)
+{
+  if (MyInit)
+    {
+    if (dbg)
+      {
+      cerr << "RELEASE " << array << endl;
+      }
+    array->release();
+    }
+}
+
 //==============================================================================
 vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
   XdmfArray* xArray,
@@ -132,9 +153,10 @@ vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
         }
       }
     unsigned int ntuples = xArray->getSize() / ncomp;
+
     vArray->SetNumberOfComponents(static_cast<int>(ncomp));
     vArray->SetNumberOfTuples(ntuples);
-    xArray->read();
+    bool freeMe = vtkXdmf3DataSet_ReadIfNeeded(xArray);
 #define DO_DEEPREAD 1
 #if DO_DEEPREAD
     //deepcopy
@@ -151,7 +173,8 @@ vtkDataArray *vtkXdmf3DataSet::XdmfToVTKArray(
     //TODO: this would be vastly preferable, but with xinclude data, xdmf throws it away before I am done
     vArray->SetVoidArray(xArray->getValuesInternal(), ntuples*ncomp, 1);
 #endif
-    xArray->release();
+
+    vtkXdmf3DataSet_ReleaseIfNeeded(xArray, freeMe);
     }
   return vArray;
 }
@@ -521,7 +544,6 @@ void vtkXdmf3DataSet::VTKToXdmfAttributes(
   vtkDataSet *dataSet = vtkDataSet::SafeDownCast(dObject);
   if (!dataSet)
     {
-    cerr << "NO DS" << endl;
     return;
     }
 
@@ -956,18 +978,20 @@ void vtkXdmf3DataSet::CopyShape(
   whole_extent[3] = -1;
   whole_extent[4] = 0;
   whole_extent[5] = -1;
-  shared_ptr<XdmfArray> xdims;
-  xdims = grid->getDimensions();
+
+  shared_ptr<XdmfArray> xdims = grid->getDimensions();
   if (xdims)
     {
+    bool freeMe = vtkXdmf3DataSet_ReadIfNeeded(xdims.get());
     for (unsigned int i = 0; (i < 3 && i < xdims->getSize()); i++)
       {
       whole_extent[(2-i)*2+1] = xdims->getValue<int>(i)-1;
       }
-    }
   if (xdims->getSize() == 2)
     {
     whole_extent[1] = whole_extent[0];
+    }
+    vtkXdmf3DataSet_ReleaseIfNeeded(xdims.get(), freeMe);
     }
   dataSet->SetExtent(whole_extent);
 
@@ -975,14 +999,15 @@ void vtkXdmf3DataSet::CopyShape(
   origin[0] = 0.0;
   origin[1] = 0.0;
   origin[2] = 0.0;
-  shared_ptr<XdmfArray> xorigin;
-  xorigin = grid->getOrigin();
+  shared_ptr<XdmfArray> xorigin = grid->getOrigin();
   if (xorigin)
     {
+    bool freeMe = vtkXdmf3DataSet_ReadIfNeeded(xorigin.get());
     for (unsigned int i = 0; (i< 3 && i < xorigin->getSize()); i++)
       {
       origin[2-i] = xorigin->getValue<double>(i);
       }
+    vtkXdmf3DataSet_ReleaseIfNeeded(xorigin.get(), freeMe);
     }
   dataSet->SetOrigin(origin);
 
@@ -994,11 +1019,14 @@ void vtkXdmf3DataSet::CopyShape(
   xspacing = grid->getBrickSize();
   if (xspacing)
     {
+    bool freeMe = vtkXdmf3DataSet_ReadIfNeeded(xspacing.get());
     for (unsigned int i = 0; (i < 3 && i < xspacing->getSize()); i++)
       {
       spacing[2-i] = xspacing->getValue<double>(i);
       }
+    vtkXdmf3DataSet_ReleaseIfNeeded(xspacing.get(), freeMe);
     }
+
   dataSet->SetSpacing(spacing);
 }
 
@@ -1067,14 +1095,16 @@ void vtkXdmf3DataSet::CopyShape(
   //it is ijk in VTK terms and they are kji.
   if (xdims)
     {
+    bool freeMe = vtkXdmf3DataSet_ReadIfNeeded(xdims.get());
     for (unsigned int i = 0; (i < 3 && i < xdims->getSize()); i++)
       {
       whole_extent[i*2+1] = xdims->getValue<int>(i)-1;
       }
-    }
   if (xdims->getSize() == 2)
     {
     whole_extent[5] = whole_extent[4];
+    }
+    vtkXdmf3DataSet_ReleaseIfNeeded(xdims.get(), freeMe);
     }
   dataSet->SetExtent(whole_extent);
 
@@ -1301,6 +1331,8 @@ void vtkXdmf3DataSet::CopyShape(
     return;
     }
 
+  bool freeMe = vtkXdmf3DataSet_ReadIfNeeded(xTopology.get());
+
   if (xCellType != XdmfTopologyType::Mixed())
     {
     // all cells are of the same type.
@@ -1310,7 +1342,6 @@ void vtkXdmf3DataSet::CopyShape(
     unsigned int numCells = xTopology->getNumberElements();
 
     int *cell_types = new int[numCells];
-    xTopology->read();
 
     vtkCellArray* vCells = vtkCellArray::New();
     // Get the pointer
@@ -1331,7 +1362,7 @@ void vtkXdmf3DataSet::CopyShape(
       }
     dataSet->SetCells(cell_types, vCells);
     vCells->Delete();
-    xTopology->release();
+    vtkXdmf3DataSet_ReleaseIfNeeded(xTopology.get(), freeMe);
     delete [] cell_types;
     }
   else
@@ -1365,9 +1396,10 @@ void vtkXdmf3DataSet::CopyShape(
       if (unknownCell)
         {
         // encountered an unknown cell.
-        cerr << "strange cell" << endl;
+        cerr << "Unkown cell type." << endl;
         vCells->Delete();
         delete [] cell_types;
+        vtkXdmf3DataSet_ReleaseIfNeeded(xTopology.get(), freeMe);
         return;
         }
 
@@ -1391,6 +1423,7 @@ void vtkXdmf3DataSet::CopyShape(
     dataSet->SetCells(cell_types, vCells);
     vCells->Delete();
     delete [] cell_types;
+    vtkXdmf3DataSet_ReleaseIfNeeded(xTopology.get(), freeMe);
     }
 
   //copy geometry
@@ -1551,10 +1584,9 @@ void vtkXdmf3DataSet::XdmfToVTK(
   shared_ptr<XdmfArray> mRowPointer = grid->getRowPointer();
   shared_ptr<XdmfArray> mColumnIndex = grid->getColumnIndex();
   shared_ptr<XdmfArray> mValues = grid->getValues();
-  mRowPointer->read();
-  mColumnIndex->read();
-  mValues->read();
-
+  bool freeRow = vtkXdmf3DataSet_ReadIfNeeded(mRowPointer.get());
+  bool freeColumn = vtkXdmf3DataSet_ReadIfNeeded(mColumnIndex.get());
+  bool freeValues = vtkXdmf3DataSet_ReadIfNeeded(mValues.get());
   //unpack the compressed row storage format graph into nodes and edges
 
   vtkSmartPointer<vtkDoubleArray> wA = vtkSmartPointer<vtkDoubleArray>::New();
@@ -1583,9 +1615,9 @@ void vtkXdmf3DataSet::XdmfToVTK(
       }
     }
 
-  mRowPointer->release();
-  mColumnIndex->release();
-  mValues->release();
+  vtkXdmf3DataSet_ReleaseIfNeeded(mRowPointer.get(), freeRow);
+  vtkXdmf3DataSet_ReleaseIfNeeded(mColumnIndex.get(), freeColumn);
+  vtkXdmf3DataSet_ReleaseIfNeeded(mValues.get(), freeValues);
 
   //Copy over arrays
   vtkDataSetAttributes *edgeData = dataSet->GetEdgeData();
