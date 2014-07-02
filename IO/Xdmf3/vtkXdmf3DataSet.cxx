@@ -1351,11 +1351,11 @@ void vtkXdmf3DataSet::CopyShape(
     // xmfConnections: N p1 p2 ... pN
     // i.e. Triangles : 3 0 1 2    3 3 4 5   3 6 7 8
     vtkIdType index = 0;
-    for(vtkIdType cc = 0 ; cc < numCells; cc++ )
+    for(vtkIdType cc = 0 ; cc < static_cast<vtkIdType>(numCells); cc++ )
       {
       cell_types[cc] = vCellType;
       *cells_ptr++ = numPointsPerCell;
-      for (vtkIdType i = 0 ; i < numPointsPerCell; i++ )
+      for (vtkIdType i = 0 ; i < static_cast<vtkIdType>(numPointsPerCell); i++ )
         {
         *cells_ptr++ = xTopology->getValue<vtkIdType>(index++);
         }
@@ -1413,7 +1413,7 @@ void vtkXdmf3DataSet::CopyShape(
 
       cell_types[cc] = vtk_cell_typeI;
       *cells_ptr++ = numPointsPerCell;
-      for(vtkIdType i = 0 ; i < numPointsPerCell; i++ )
+      for(vtkIdType i = 0 ; i < static_cast<vtkIdType>(numPointsPerCell); i++ )
         {
         *cells_ptr++ = xTopology->getValue<vtkIdType>(index++);
         }

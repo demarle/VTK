@@ -708,147 +708,141 @@ public:
 
       return NULL; //already spit a warning out before this
       }
-    else
+
+    shared_ptr<XdmfGridCollection> asGC = shared_dynamic_cast<XdmfGridCollection>(item);
+    bool isDomain = asGC?false:true;
+    bool isTemporal = false;
+    if (asGC && asGC->getType() == XdmfGridCollectionType::Temporal())
       {
-
-      shared_ptr<XdmfGridCollection> asGC = shared_dynamic_cast<XdmfGridCollection>(item);
-      bool isDomain = asGC?false:true;
-      bool isTemporal = false;
-      if (asGC && asGC->getType() == XdmfGridCollectionType::Temporal())
-        {
-        isTemporal = true;
-        }
-
-      //ignore groups that are not in timestep we were asked for
-      //but be sure to return everything within them
-      bool lastTime = this->doTime;
-      if (this->doTime && !(isDomain || isTemporal) && asGC->getTime())
-        {
-        if (asGC->getTime()->getValue() != this->time)
-          {
-          //don't return MB that doesn't match the requested time
-          return NULL;
-          }
-
-        //inside a match, make sure we get everything underneath
-        this->doTime = false;
-        }
-
-      vtkMultiBlockDataSet *top = vtkMultiBlockDataSet::SafeDownCast(toFill);
-      vtkDataObject *result;
-      unsigned int cnt = 0;
-
-      unsigned int nGridCollections = group->getNumberGridCollections();
-      for (unsigned int i = 0; i < nGridCollections; i++)
-        {
-        vtkMultiBlockDataSet *child = vtkMultiBlockDataSet::New();
-        result = this->Populate(group->getGridCollection(i), child);
-        if (result)
-          {
-          top->SetBlock(cnt++, result);
-          }
-        child->Delete();
-        }
-      unsigned int nUnstructuredGrids = group->getNumberUnstructuredGrids();
-      for (unsigned int i = 0; i < nUnstructuredGrids; i++)
-        {
-        if (!isTemporal && !this->ShouldRead(i,nUnstructuredGrids))
-          {
-          continue;
-          }
-
-        shared_ptr<XdmfUnstructuredGrid> cGrid = group->getUnstructuredGrid(i);
-        unsigned int nSets = cGrid->getNumberSets();
-        if (nSets > 0)
-          {
-          //TODO: create subsets in multiblock
-          }
-        vtkUnstructuredGrid *child = vtkUnstructuredGrid::New();
-        result = this->Populate(group->getUnstructuredGrid(i), child);
-        if (result)
-          {
-          top->SetBlock(cnt++, result);
-          }
-        child->Delete();
-        }
-      unsigned int nRectilinearGrids = group->getNumberRectilinearGrids();
-      for (unsigned int i = 0; i < nRectilinearGrids; i++)
-        {
-        if (!isTemporal && !this->ShouldRead(i,nRectilinearGrids))
-          {
-          continue;
-          }
-        vtkRectilinearGrid *child = vtkRectilinearGrid::New();
-        result = this->Populate(group->getRectilinearGrid(i), child);
-        if (result)
-          {
-          top->SetBlock(cnt++, result);
-          }
-        child->Delete();
-        }
-      unsigned int nCurvilinearGrids= group->getNumberCurvilinearGrids();
-      for (unsigned int i = 0; i < nCurvilinearGrids; i++)
-        {
-        if (!isTemporal && !this->ShouldRead(i,nCurvilinearGrids))
-          {
-          continue;
-          }
-        vtkStructuredGrid *child = vtkStructuredGrid::New();
-        result = this->Populate(group->getCurvilinearGrid(i), child);
-        if (result)
-          {
-          top->SetBlock(cnt++, result);
-          }
-        child->Delete();
-        }
-      unsigned int nRegularGrids = group->getNumberRegularGrids();
-      for (unsigned int i = 0; i < nRegularGrids; i++)
-        {
-        if (!isTemporal && !this->ShouldRead(i,nRegularGrids))
-          {
-          continue;
-          }
-        vtkUniformGrid *child = vtkUniformGrid::New();
-        result = this->Populate(group->getRegularGrid(i), child);
-        if (result)
-          {
-          top->SetBlock(cnt++, result);
-          }
-        child->Delete();
-        }
-      unsigned int nGraphs = group->getNumberGraphs();
-      for (unsigned int i = 0; i < nGraphs; i++)
-        {
-        if (!isTemporal && !this->ShouldRead(i,nGraphs))
-          {
-          continue;
-          }
-        vtkMutableDirectedGraph *child = vtkMutableDirectedGraph::New();
-        result = this->Populate(group->getGraph(i), child);
-        if (result)
-          {
-          top->SetBlock(cnt++, result);
-          }
-        child->Delete();
-        }
-
-      if (lastTime)
-        {
-        //restore time search now that we've done the group contents
-        this->doTime = true;
-        }
-
-      if (isTemporal && top->GetNumberOfBlocks()==1)
-        {
-        //temporal collection is just a place holder for its content
-        return top->GetBlock(0);
-        }
-
-      return top;
+      isTemporal = true;
       }
 
-    cerr << "Something is wrong, we saw something that is neither grid nor collection" << endl;
-    return NULL;
+    //ignore groups that are not in timestep we were asked for
+    //but be sure to return everything within them
+    bool lastTime = this->doTime;
+    if (this->doTime && !(isDomain || isTemporal) && asGC->getTime())
+      {
+      if (asGC->getTime()->getValue() != this->time)
+        {
+        //don't return MB that doesn't match the requested time
+        return NULL;
+        }
+
+      //inside a match, make sure we get everything underneath
+      this->doTime = false;
+      }
+
+    vtkMultiBlockDataSet *top = vtkMultiBlockDataSet::SafeDownCast(toFill);
+    vtkDataObject *result;
+    unsigned int cnt = 0;
+    unsigned int nGridCollections = group->getNumberGridCollections();
+
+	for (unsigned int i = 0; i < nGridCollections; i++)
+      {
+      vtkMultiBlockDataSet *child = vtkMultiBlockDataSet::New();
+      result = this->Populate(group->getGridCollection(i), child);
+      if (result)
+        {
+        top->SetBlock(cnt++, result);
+        }
+      child->Delete();
+      }
+    unsigned int nUnstructuredGrids = group->getNumberUnstructuredGrids();
+    for (unsigned int i = 0; i < nUnstructuredGrids; i++)
+      {
+      if (!isTemporal && !this->ShouldRead(i,nUnstructuredGrids))
+        {
+        continue;
+        }
+
+      shared_ptr<XdmfUnstructuredGrid> cGrid = group->getUnstructuredGrid(i);
+      unsigned int nSets = cGrid->getNumberSets();
+      if (nSets > 0)
+        {
+        //TODO: create subsets in multiblock
+        }
+      vtkUnstructuredGrid *child = vtkUnstructuredGrid::New();
+      result = this->Populate(group->getUnstructuredGrid(i), child);
+      if (result)
+        {
+        top->SetBlock(cnt++, result);
+        }
+      child->Delete();
+      }
+    unsigned int nRectilinearGrids = group->getNumberRectilinearGrids();
+    for (unsigned int i = 0; i < nRectilinearGrids; i++)
+      {
+      if (!isTemporal && !this->ShouldRead(i,nRectilinearGrids))
+        {
+        continue;
+        }
+      vtkRectilinearGrid *child = vtkRectilinearGrid::New();
+      result = this->Populate(group->getRectilinearGrid(i), child);
+      if (result)
+        {
+        top->SetBlock(cnt++, result);
+        }
+      child->Delete();
+      }
+    unsigned int nCurvilinearGrids= group->getNumberCurvilinearGrids();
+    for (unsigned int i = 0; i < nCurvilinearGrids; i++)
+      {
+      if (!isTemporal && !this->ShouldRead(i,nCurvilinearGrids))
+        {
+        continue;
+        }
+      vtkStructuredGrid *child = vtkStructuredGrid::New();
+      result = this->Populate(group->getCurvilinearGrid(i), child);
+      if (result)
+        {
+        top->SetBlock(cnt++, result);
+        }
+      child->Delete();
+      }
+    unsigned int nRegularGrids = group->getNumberRegularGrids();
+    for (unsigned int i = 0; i < nRegularGrids; i++)
+      {
+      if (!isTemporal && !this->ShouldRead(i,nRegularGrids))
+        {
+        continue;
+        }
+      vtkUniformGrid *child = vtkUniformGrid::New();
+      result = this->Populate(group->getRegularGrid(i), child);
+      if (result)
+        {
+        top->SetBlock(cnt++, result);
+        }
+      child->Delete();
+      }
+    unsigned int nGraphs = group->getNumberGraphs();
+    for (unsigned int i = 0; i < nGraphs; i++)
+      {
+      if (!isTemporal && !this->ShouldRead(i,nGraphs))
+        {
+        continue;
+        }
+      vtkMutableDirectedGraph *child = vtkMutableDirectedGraph::New();
+      result = this->Populate(group->getGraph(i), child);
+      if (result)
+        {
+        top->SetBlock(cnt++, result);
+        }
+      child->Delete();
+      }
+
+    if (lastTime)
+      {
+      //restore time search now that we've done the group contents
+      this->doTime = true;
+      }
+
+    if (isTemporal && top->GetNumberOfBlocks()==1)
+      {
+      //temporal collection is just a place holder for its content
+      return top->GetBlock(0);
+      }
+
+    return top;
   }
 
   void SetTimeRequest(bool dt, double t)
