@@ -26,6 +26,8 @@ except ImportError:
 from vtk.test import Testing
 
 CleanUpGood = True
+LightDataLimit = 10000
+
 timer = vtk.vtkTimerLog()
 
 testObjects = [
@@ -149,6 +151,9 @@ def DoDataObjectsDiffer(dobj1, dobj2):
        (bds1[3]!=bds2[3]) or\
        (bds1[4]!=bds2[4]) or\
        (bds1[5]!=bds2[5]):
+      for x in range(0,6):
+        print bds1[x], " ", bds2[x], ",",
+      print
       raiseErrorAndExit("Bounds test failed")
 
     if (ds1.GetPointData().GetNumberOfArrays() !=\
@@ -194,7 +199,7 @@ def TestXdmfConversion(dataInput, fileName):
   vtkFile = fileName + ".vtk"
 
   xWriter = vtk.vtkXdmf3Writer()
-  xWriter.SetLightDataLimit(10000)
+  xWriter.SetLightDataLimit(LightDataLimit)
   xWriter.WriteAllTimeStepsOn()
   xWriter.SetFileName(xdmfFile)
   xWriter.SetInputData(dataInput)
@@ -242,9 +247,12 @@ if __name__ == "__main__":
                       after testing complete (Default = False)",\
                       action="store_true")
   parser.add_argument("-D", nargs=1, help="test takes not input -D ignored")
+  parser.add_argument("-ldl", nargs=1, dest="lightDataLimit")
   args = parser.parse_args()
   if args.dontClean:
     CleanUpGood = False
+  if args.lightDataLimit:
+    LightDataLimit = int(args.lightDataLimit[0])
 
   fail = False
 
@@ -270,7 +278,7 @@ if __name__ == "__main__":
   gFileName = gFilePrefix + ".xdmf"
   ghFileName = gFilePrefix + ".h5"
   xWriter = vtk.vtkXdmf3Writer()
-  xWriter.SetLightDataLimit(0)
+  xWriter.SetLightDataLimit(LightDataLimit)
   xWriter.SetFileName(gFileName)
   xWriter.SetInputConnection(0, gsrc.GetOutputPort(0))
   timer.StartTimer()
@@ -298,7 +306,7 @@ if __name__ == "__main__":
   tFileName = tFilePrefix + ".xdmf"
   thFileName = tFilePrefix + ".h5"
   xWriter = vtk.vtkXdmf3Writer()
-  xWriter.SetLightDataLimit(10000)
+  xWriter.SetLightDataLimit(LightDataLimit)
   xWriter.WriteAllTimeStepsOn()
   xWriter.SetFileName(tFileName)
   xWriter.SetInputConnection(0, tsrc.GetOutputPort(0))
@@ -327,7 +335,8 @@ if __name__ == "__main__":
       raiseErrorAndExit("Failed to get same times")
 
   #exercise temporal processing and compare geometric bounds at each tstep
-  for x in xrange(0,len(timerange)):
+  indices = range(0,len(timerange)) + range(len(timerange)-2,-1,-1)
+  for x in indices:
       xReader.GetExecutive().SetUpdateTimeStep(0, timerange[x])
       xReader.Update()
       obds = xReader.GetOutputDataObject(0).GetBounds()
@@ -340,7 +349,6 @@ if __name__ == "__main__":
           print "time result failed"
           print obds, "!=", ibds
           raiseErrorAndExit("Failed to get same data for this timestep")
-
   fail = DoFilesExist(tFileName, thFileName, None, CleanUpGood)
   if not fail:
     raiseErrorAndExit("Failed Temporal Test")
