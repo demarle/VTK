@@ -1,4 +1,5 @@
 set(Module_SRCS
+  vtkDDMPass.cxx
   vtkAbstractMapper3D.cxx
   vtkAbstractMapper.cxx
   vtkAbstractPicker.cxx
@@ -23,6 +24,7 @@ set(Module_SRCS
   vtkDiscretizableColorTransferFunction.cxx
   vtkDistanceToCamera.cxx
   vtkFollower.cxx
+  vtkFrameBufferObjectBase.cxx
   vtkFrustumCoverageCuller.cxx
   vtkGenericRenderWindowInteractor.cxx
   vtkGenericVertexAttributeMapping.cxx
@@ -68,6 +70,8 @@ set(Module_SRCS
   vtkRenderer.cxx
   vtkRendererDelegate.cxx
   vtkRendererSource.cxx
+  vtkRenderPass.cxx
+  vtkRenderState.cxx
   vtkRenderWindowCollection.cxx
   vtkRenderWindow.cxx
   vtkRenderWindowInteractor.cxx
@@ -164,6 +168,7 @@ set_source_files_properties(
   vtkAbstractPicker
   vtkAbstractPropPicker
   vtkCuller
+  vtkFrameBufferObjectBase
   vtkGPUInfoList.cxx
   vtkHardwareSelector
   vtkImageMapper3D
@@ -173,6 +178,8 @@ set_source_files_properties(
   vtkProp
   vtkProp3D
   vtkRendererDelegate
+  vtkRenderPass
+  vtkRenderState
   vtkShader
   vtkShaderDeviceAdapter
   vtkShaderDeviceAdapter2
@@ -188,6 +195,7 @@ set_source_files_properties(
 set_source_files_properties(
   vtkAbstractInteractionDevice
   vtkAbstractRenderDevice
+  vtkRenderState
   vtkRenderWidget
   WRAP_EXCLUDE
   )

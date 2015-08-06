@@ -15,7 +15,7 @@
 
 #include "vtkRenderPass.h"
 #include <cassert>
-#include "vtkOpenGLRenderer.h"
+#include "vtkRenderer.h"
 
 // ----------------------------------------------------------------------------
 // Description:

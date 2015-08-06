@@ -61,12 +61,6 @@ public:
   // (Used by vtkOpenGLProperty or vtkOpenGLTexture)
   int GetDepthPeelingHigherLayer();
 
-  // Description:
-  // Set/Get a custom render pass.
-  // Initial value is NULL.
-  void SetPass(vtkRenderPass *p);
-  vtkGetObjectMacro(Pass, vtkRenderPass);
-
 protected:
   vtkOpenGLRenderer();
   ~vtkOpenGLRenderer();
@@ -119,7 +113,6 @@ protected:
   int DepthPeelingHigherLayer;
 
   friend class vtkRenderPass;
-  vtkRenderPass *Pass;
 
 private:
   vtkOpenGLRenderer(const vtkOpenGLRenderer&);  // Not implemented.

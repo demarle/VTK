@@ -46,6 +46,7 @@ class vtkCullerCollection;
 class vtkLight;
 class vtkHardwareSelector;
 class vtkRendererDelegate;
+class vtkRenderPass;
 class vtkTexture;
 
 class VTKRENDERINGCORE_EXPORT vtkRenderer : public vtkViewport
@@ -514,6 +515,11 @@ public:
   vtkGetMacro(UseShadows,int);
   vtkBooleanMacro(UseShadows,int);
 
+  // Set/Get a custom render pass.
+  // Initial value is NULL.
+  void SetPass(vtkRenderPass *p);
+  vtkGetObjectMacro(Pass, vtkRenderPass);
+
 //BTX
 protected:
   vtkRenderer();
@@ -697,6 +703,9 @@ protected:
 
   bool TexturedBackground;
   vtkTexture* BackgroundTexture;
+
+  friend class vtkRenderPass;
+  vtkRenderPass *Pass;
 
 private:
   vtkRenderer(const vtkRenderer&);  // Not implemented.
