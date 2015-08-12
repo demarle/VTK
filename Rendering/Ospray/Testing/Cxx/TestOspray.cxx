@@ -18,5 +18,9 @@
 
 int TestOspray( int argc, char *argv[] )
 {
+  vtkOsprayWindowViewNode *owvn = vtkOsprayWindowViewNode::New();
+  cerr << "owvn [" << owvn << "]" << endl;
+  owvn->PrintSelf(cerr, vtkIndent(0));
+  owvn->Delete();
   return 0;
 }

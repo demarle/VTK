@@ -19,12 +19,19 @@
 #include "vtkRenderWindow.h"
 #include "vtkViewNodeCollection.h"
 
+#include "ospray/ospray.h"
+
 //============================================================================
 vtkStandardNewMacro(vtkOsprayWindowViewNode);
 
 //----------------------------------------------------------------------------
 vtkOsprayWindowViewNode::vtkOsprayWindowViewNode()
 {
+  cerr << "HELLO OSPRAY" << endl;
+  int ac = 2;
+  const char* av[] = {"pvOSPRay\0","--osp:verbose\0"};
+  ospInit(&ac, av);
+  cerr << "YEAH" << endl;
 }
 
 //----------------------------------------------------------------------------
