@@ -1,0 +1,10 @@
+vtk_module(vtkRenderingSceneGraph
+  GROUPS
+    Rendering
+  DEPENDS
+    vtkRenderingCore
+  TEST_DEPENDS
+    vtkTestingCore
+  KIT
+    vtkRendering
+  )
