@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkXXX.h
+  Module:    vtkWindowViewNode.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -22,6 +22,7 @@
 #include "vtkRenderingSceneGraphModule.h" // For export macro
 #include "vtkViewNode.h"
 
+class vtkRenderWindow;
 
 class VTKRENDERINGSCENEGRAPH_EXPORT vtkWindowViewNode :
   public vtkViewNode
@@ -31,16 +32,21 @@ public:
   vtkTypeMacro(vtkWindowViewNode, vtkViewNode);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //Description:
+  //...
+  virtual void Traverse(vtkRenderWindow *);
+
 protected:
   vtkWindowViewNode();
   ~vtkWindowViewNode();
 
+  //Description:
+  //...
+  virtual void UpdateChildren();
+
 private:
   vtkWindowViewNode(const vtkWindowViewNode&); // Not implemented.
   void operator=(const vtkWindowViewNode&); // Not implemented.
-
-  class vtkInternals;
-  vtkInternals *Internals;
 };
 
 #endif

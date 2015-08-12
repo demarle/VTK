@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkXXX.h
+  Module:    vtkViewNodeFactory.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,31 +12,45 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkXXX -
+// .NAME vtkViewNodeFactory -
 // .SECTION Description
 //
 
-#ifndef vtkXXX_h
-#define vtkXXX_h
+#ifndef vtkViewNodeFactory_h
+#define vtkViewNodeFactory_h
 
 #include "vtkRenderingSceneGraphModule.h" // For export macro
 #include "vtkObject.h"
 
-class VTKRENDERINGSCENEGRAPH_EXPORT vtkXXX :
+class vtkViewNode;
+
+class VTKRENDERINGSCENEGRAPH_EXPORT vtkViewNodeFactory :
   public vtkObject
 {
 public:
-  static vtkXXX* New();
-  vtkTypeMacro(vtkXXX, vtkObject);
+  static vtkViewNodeFactory* New();
+  vtkTypeMacro(vtkViewNodeFactory, vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //Description:
+  //this...
+  vtkViewNode *CreateNode(vtkObject *);
+
+  //Description:
+  //this...
+  vtkViewNode *CreateNode(const char *);
+
+  //Description:
+  //this...
+  void RegisterOverride(const char *name, vtkViewNode *(*func)());
+
 protected:
-  vtkXXX();
-  ~vtkXXX();
+  vtkViewNodeFactory();
+  ~vtkViewNodeFactory();
 
 private:
-  vtkXXX(const vtkXXX&); // Not implemented.
-  void operator=(const vtkXXX&); // Not implemented.
+  vtkViewNodeFactory(const vtkViewNodeFactory&); // Not implemented.
+  void operator=(const vtkViewNodeFactory&); // Not implemented.
 
   class vtkInternals;
   vtkInternals *Internals;

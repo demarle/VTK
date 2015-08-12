@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkWindowViewNode.cxx
+  Module:    vtkViewNodeCollection.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,52 +12,35 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkWindowViewNode.h"
-
-#include "vtkCollectionIterator.h"
-#include "vtkObjectFactory.h"
-#include "vtkRenderWindow.h"
 #include "vtkViewNodeCollection.h"
 
+#include "vtkViewNode.h"
+#include "vtkObjectFactory.h"
+
 //============================================================================
-vtkStandardNewMacro(vtkWindowViewNode);
+vtkStandardNewMacro(vtkViewNodeCollection);
 
 //----------------------------------------------------------------------------
-vtkWindowViewNode::vtkWindowViewNode()
-{
-}
-
-//----------------------------------------------------------------------------
-vtkWindowViewNode::~vtkWindowViewNode()
-{
-}
-
-//----------------------------------------------------------------------------
-void vtkWindowViewNode::PrintSelf(ostream& os, vtkIndent indent)
+void vtkViewNodeCollection::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkWindowViewNode::Traverse(vtkRenderWindow *win)
+void vtkViewNodeCollection::AddItem(vtkViewNode *a)
 {
-  this->UpdateChildren();
+  this->vtkCollection::AddItem(a);
 }
 
 //----------------------------------------------------------------------------
-void vtkWindowViewNode::UpdateChildren()
+vtkViewNode *vtkViewNodeCollection::GetNextItem()
 {
-  /*
-    this->RendWin->GetRenderers()
-    for each Renderer make sure there is a node for it, otherwise create one with CreateViewNode
-  */
+  return static_cast<vtkViewNode *>(this->GetNextItemAsObject());
+}
 
-  vtkCollectionIterator *it = this->Children->NewIterator();
-  it->InitTraversal();
-  while (!it->IsDoneWithTraversal())
-    {
-    //vtkViewNode *child = vtkViewNode::SafeDownCast(it->GetCurrentObject());
-    //child->   ? ();
-    it->GoToNextItem();
-    }
+//----------------------------------------------------------------------------
+vtkViewNode *vtkViewNodeCollection::GetNextViewNode(
+  vtkCollectionSimpleIterator &cookie)
+{
+  return static_cast<vtkViewNode *>(this->GetNextItemAsObject(cookie));
 }

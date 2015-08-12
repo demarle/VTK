@@ -1,5 +1,7 @@
 set(Module_SRCS
   vtkViewNode.cxx
+  vtkViewNodeCollection.cxx
+  vtkViewNodeFactory.cxx
   vtkWindowViewNode.cxx
   )
 
