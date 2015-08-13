@@ -34,7 +34,11 @@ public:
 
   //Description:
   //...
-  virtual void Traverse(vtkRenderWindow *);
+  virtual void Traverse();
+
+  //Description:
+  //...
+  virtual void Update();
 
 protected:
   vtkWindowViewNode();

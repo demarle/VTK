@@ -41,12 +41,14 @@ vtkStandardNewMacro(vtkViewNodeFactory);
 //----------------------------------------------------------------------------
 vtkViewNodeFactory::vtkViewNodeFactory()
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   this->Internals = new vtkInternals;
 }
 
 //----------------------------------------------------------------------------
 vtkViewNodeFactory::~vtkViewNodeFactory()
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   delete this->Internals;
 }
 
@@ -59,13 +61,17 @@ void vtkViewNodeFactory::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 vtkViewNode *vtkViewNodeFactory::CreateNode(vtkObject *who)
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   const char *forwhom = who->GetClassName();
-  return this->CreateNode(forwhom);
+  vtkViewNode *ret = this->CreateNode(forwhom);
+  ret->SetRenderable(who);
+  return ret;
 }
 
 //----------------------------------------------------------------------------
 vtkViewNode *vtkViewNodeFactory::CreateNode(const char *forwhom)
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkViewNode *ret = NULL;
   if (this->Internals->Overrides.find(forwhom) == this->Internals->Overrides.end())
     {
@@ -86,5 +92,6 @@ vtkViewNode *vtkViewNodeFactory::CreateNode(const char *forwhom)
 void vtkViewNodeFactory::RegisterOverride
   (const char *name, vtkViewNode *(*func)())
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   this->Internals->Overrides[name] = func;
 }

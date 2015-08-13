@@ -35,7 +35,15 @@ public:
 
   //Description:
   //...
+  vtkGetObjectMacro(Renderable, vtkObject);
+
+  //Description:
+  //...
   virtual void Traverse();
+
+  //Description:
+  //...
+  virtual void Update();
 
   //Description:
   //...
@@ -65,11 +73,13 @@ protected:
   //...
   virtual vtkViewNode *CreateViewNode(vtkObject *obj);
 
-
-  vtkObject *SourceObject;
+  vtkObject *Renderable;
   vtkViewNode *Parent;
   vtkViewNodeCollection *Children;
   vtkViewNodeFactory *MyFactory;
+
+  friend class vtkViewNodeFactory;
+  void SetRenderable(vtkObject *);
 
 private:
   vtkViewNode(const vtkViewNode&); // Not implemented.

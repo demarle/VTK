@@ -31,6 +31,8 @@ vtkCxxSetObjectMacro(vtkViewNode,MyFactory,vtkViewNodeFactory);
 //----------------------------------------------------------------------------
 vtkViewNode::vtkViewNode()
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
+  this->Renderable = NULL;
   this->Parent = NULL;
   this->Children = vtkViewNodeCollection::New();
   this->MyFactory = NULL;
@@ -39,6 +41,7 @@ vtkViewNode::vtkViewNode()
 //----------------------------------------------------------------------------
 vtkViewNode::~vtkViewNode()
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   if (this->Parent)
     {
     this->Parent->Delete();
@@ -62,26 +65,37 @@ void vtkViewNode::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkViewNode::Traverse()
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ <<  endl;
   this->UpdateChildren();
-  //?
+  this->TraverseChildren();
+}
+
+//----------------------------------------------------------------------------
+void vtkViewNode::Update()
+{
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
+  cerr << "update " << this->GetRenderable()->GetClassName() << "[" << this->GetRenderable() << "]" << endl;
 }
 
 //----------------------------------------------------------------------------
 void vtkViewNode::UpdateChildren()
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkCollectionIterator *it = this->Children->NewIterator();
   it->InitTraversal();
   while (!it->IsDoneWithTraversal())
     {
-    //vtkViewNode *child = vtkViewNode::SafeDownCast(it->GetCurrentObject());
-    //child->   ? ();
+    vtkViewNode *child = vtkViewNode::SafeDownCast(it->GetCurrentObject());
+    child->Update();
     it->GoToNextItem();
     }
+  it->Delete();
 }
 
 //----------------------------------------------------------------------------
 void vtkViewNode::TraverseChildren()
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkCollectionIterator *it = this->Children->NewIterator();
   it->InitTraversal();
   while (!it->IsDoneWithTraversal())
@@ -90,20 +104,29 @@ void vtkViewNode::TraverseChildren()
     child->Traverse();
     it->GoToNextItem();
     }
+  it->Delete();
 }
 
 //----------------------------------------------------------------------------
 vtkViewNode *vtkViewNode::CreateViewNode(vtkObject *obj)
 {
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkViewNode *ret = NULL;
   if (!this->MyFactory)
     {
     vtkWarningMacro("Can not create view nodes without my own factory");
-    return NULL;
     }
   else
     {
     ret = this->MyFactory->CreateNode(obj);
+    ret->Renderable = obj;
     }
   return ret;
+}
+
+//----------------------------------------------------------------------------
+void vtkViewNode::SetRenderable(vtkObject *obj)
+{
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
+  this->Renderable = obj;
 }
