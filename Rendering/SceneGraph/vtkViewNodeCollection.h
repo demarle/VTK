@@ -46,6 +46,10 @@ public:
   // same cookie back and forth.
   vtkViewNode *GetNextViewNode(vtkCollectionSimpleIterator &cookie);
 
+  // Description:
+  // Return true only if we have viewnode for obj.
+  bool IsRenderablePresent(vtkObject *obj);
+
 protected:
   vtkViewNodeCollection() {};
   ~vtkViewNodeCollection() {};

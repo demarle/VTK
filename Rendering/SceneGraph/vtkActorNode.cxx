@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkOsprayWindowViewNode.cxx
+  Module:    vtkActorNode.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,35 +12,40 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkOsprayWindowViewNode.h"
+#include "vtkActorNode.h"
 
-#include "vtkCollectionIterator.h"
+#include "vtkActor.h"
 #include "vtkObjectFactory.h"
-#include "vtkRenderWindow.h"
-#include "vtkViewNodeCollection.h"
-
-#include "ospray/ospray.h"
 
 //============================================================================
-vtkStandardNewMacro(vtkOsprayWindowViewNode);
+vtkStandardNewMacro(vtkActorNode);
 
 //----------------------------------------------------------------------------
-vtkOsprayWindowViewNode::vtkOsprayWindowViewNode()
-{
-  cerr << "HELLO OSPRAY" << endl;
-  int ac = 2;
-  const char* av[] = {"pvOSPRay\0","--osp:verbose\0"};
-  ospInit(&ac, av);
-  cerr << "YEAH" << endl;
-}
-
-//----------------------------------------------------------------------------
-vtkOsprayWindowViewNode::~vtkOsprayWindowViewNode()
+vtkActorNode::vtkActorNode()
 {
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayWindowViewNode::PrintSelf(ostream& os, vtkIndent indent)
+vtkActorNode::~vtkActorNode()
+{
+}
+
+//----------------------------------------------------------------------------
+void vtkActorNode::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+}
+
+//----------------------------------------------------------------------------
+void vtkActorNode::Update()
+{
+  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
+  vtkActor *mine = vtkActor::SafeDownCast
+    (this->GetRenderable());
+  if (!mine)
+    {
+    return;
+    }
+
+  //TODO: get state from our renderable
 }

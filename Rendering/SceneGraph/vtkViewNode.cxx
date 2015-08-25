@@ -21,10 +21,13 @@
 
 //============================================================================
 vtkStandardNewMacro(vtkViewNode);
+
 //----------------------------------------------------------------------------
 vtkCxxSetObjectMacro(vtkViewNode,Parent,vtkViewNode);
+
 //----------------------------------------------------------------------------
 vtkCxxSetObjectMacro(vtkViewNode,Children,vtkViewNodeCollection);
+
 //----------------------------------------------------------------------------
 vtkCxxSetObjectMacro(vtkViewNode,MyFactory,vtkViewNodeFactory);
 
@@ -74,7 +77,8 @@ void vtkViewNode::Traverse()
 void vtkViewNode::Update()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
-  cerr << "update " << this->GetRenderable()->GetClassName() << "[" << this->GetRenderable() << "]" << endl;
+  cerr << "update " << this->GetRenderable()->GetClassName()
+       << "[" << this->GetRenderable() << "]" << endl;
 }
 
 //----------------------------------------------------------------------------

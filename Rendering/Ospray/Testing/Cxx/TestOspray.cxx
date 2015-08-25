@@ -14,11 +14,11 @@
 =========================================================================*/
 
 #include "vtkOsprayViewNodeFactory.h"
-#include "vtkOsprayWindowViewNode.h"
+#include "vtkOsprayWindowNode.h"
 
 int TestOspray( int argc, char *argv[] )
 {
-  vtkOsprayWindowViewNode *owvn = vtkOsprayWindowViewNode::New();
+  vtkOsprayWindowNode *owvn = vtkOsprayWindowNode::New();
   cerr << "owvn [" << owvn << "]" << endl;
   owvn->PrintSelf(cerr, vtkIndent(0));
   owvn->Delete();

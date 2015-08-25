@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkWindowViewNode.h
+  Module:    vtkCameraNode.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,45 +12,35 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkWindowViewNode -
+// .NAME vtkCameraNode -
 // .SECTION Description
 //
 
-#ifndef vtkWindowViewNode_h
-#define vtkWindowViewNode_h
+#ifndef vtkCameraNode_h
+#define vtkCameraNode_h
 
 #include "vtkRenderingSceneGraphModule.h" // For export macro
 #include "vtkViewNode.h"
 
-class vtkRenderWindow;
-
-class VTKRENDERINGSCENEGRAPH_EXPORT vtkWindowViewNode :
+class VTKRENDERINGSCENEGRAPH_EXPORT vtkCameraNode :
   public vtkViewNode
 {
 public:
-  static vtkWindowViewNode* New();
-  vtkTypeMacro(vtkWindowViewNode, vtkViewNode);
+  static vtkCameraNode* New();
+  vtkTypeMacro(vtkCameraNode, vtkViewNode);
   void PrintSelf(ostream& os, vtkIndent indent);
-
-  //Description:
-  //...
-  virtual void Traverse();
 
   //Description:
   //...
   virtual void Update();
 
 protected:
-  vtkWindowViewNode();
-  ~vtkWindowViewNode();
-
-  //Description:
-  //...
-  virtual void UpdateChildren();
+  vtkCameraNode();
+  ~vtkCameraNode();
 
 private:
-  vtkWindowViewNode(const vtkWindowViewNode&); // Not implemented.
-  void operator=(const vtkWindowViewNode&); // Not implemented.
+  vtkCameraNode(const vtkCameraNode&); // Not implemented.
+  void operator=(const vtkCameraNode&); // Not implemented.
 };
 
 #endif

@@ -3,7 +3,7 @@ include_directories(${OSPRAY_INCLUDE_DIRS})
 
 set(Module_SRCS
   vtkOsprayViewNodeFactory.cxx
-  vtkOsprayWindowViewNode.cxx
+  vtkOsprayWindowNode.cxx
   )
 
 vtk_module_library(vtkRenderingOspray ${Module_SRCS})

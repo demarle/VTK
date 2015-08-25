@@ -14,8 +14,9 @@
 =========================================================================*/
 #include "vtkViewNodeCollection.h"
 
-#include "vtkViewNode.h"
+#include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
+#include "vtkViewNode.h"
 
 //============================================================================
 vtkStandardNewMacro(vtkViewNodeCollection);
@@ -43,4 +44,28 @@ vtkViewNode *vtkViewNodeCollection::GetNextViewNode(
   vtkCollectionSimpleIterator &cookie)
 {
   return static_cast<vtkViewNode *>(this->GetNextItemAsObject(cookie));
+}
+
+//----------------------------------------------------------------------------
+bool vtkViewNodeCollection::IsRenderablePresent(vtkObject *obj)
+{
+  vtkCollectionIterator *it = this->NewIterator();
+  it->InitTraversal();
+  bool found = false;
+  while (!found && !it->IsDoneWithTraversal())
+    {
+    vtkViewNode *vn = vtkViewNode::SafeDownCast(it->GetCurrentObject());
+    if (vn)
+      {
+      vtkObject *nobj = vn->GetRenderable();
+      if (nobj == obj)
+        {
+        found = true;
+        }
+      it->GoToNextItem();
+      }
+    }
+  it->Delete();
+
+  return found;
 }

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkWindowViewNode.cxx
+  Module:    vtkWindowNode.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkWindowViewNode.h"
+#include "vtkWindowNode.h"
 
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
@@ -22,28 +22,28 @@
 #include "vtkViewNodeCollection.h"
 
 //============================================================================
-vtkStandardNewMacro(vtkWindowViewNode);
+vtkStandardNewMacro(vtkWindowNode);
 
 //----------------------------------------------------------------------------
-vtkWindowViewNode::vtkWindowViewNode()
+vtkWindowNode::vtkWindowNode()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
 }
 
 //----------------------------------------------------------------------------
-vtkWindowViewNode::~vtkWindowViewNode()
+vtkWindowNode::~vtkWindowNode()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
 }
 
 //----------------------------------------------------------------------------
-void vtkWindowViewNode::PrintSelf(ostream& os, vtkIndent indent)
+void vtkWindowNode::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkWindowViewNode::Traverse()
+void vtkWindowNode::Traverse()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   this->Update();
@@ -51,7 +51,7 @@ void vtkWindowViewNode::Traverse()
 }
 
 //----------------------------------------------------------------------------
-void vtkWindowViewNode::UpdateChildren()
+void vtkWindowNode::UpdateChildren()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkRenderWindow *mine = vtkRenderWindow::SafeDownCast
@@ -66,7 +66,7 @@ void vtkWindowViewNode::UpdateChildren()
   vtkViewNodeCollection *nodes = this->GetChildren();
   vtkRendererCollection *rens = mine->GetRenderers();
 
-  //remove viewnodes if their renderables that are no longer present
+  //remove viewnodes if their renderables are no longer present
   vtkCollectionIterator *nit = nodes->NewIterator();
   nit->InitTraversal();
   while (!nit->IsDoneWithTraversal())
@@ -75,7 +75,6 @@ void vtkWindowViewNode::UpdateChildren()
     vtkObject *obj = node->GetRenderable();
     if (!rens->IsItemPresent(obj))
       {
-      cerr << "DELETED VN " << node << " for " << obj << endl;
       nodes->RemoveItem(node);
       }
     nit->GoToNextItem();
@@ -87,11 +86,13 @@ void vtkWindowViewNode::UpdateChildren()
   rit->InitTraversal();
   while (!rit->IsDoneWithTraversal())
     {
-    vtkRenderer *ren = vtkRenderer::SafeDownCast(rit->GetCurrentObject());
-    vtkViewNode *node = this->CreateViewNode(ren);
-    cerr << "CREATED VN " << node << " for " << ren << endl;
-    nodes->AddItem(node);
-    node->Delete();
+    vtkRenderer *obj = vtkRenderer::SafeDownCast(rit->GetCurrentObject());
+    if (!nodes->IsRenderablePresent(obj))
+      {
+      vtkViewNode *node = this->CreateViewNode(obj);
+      nodes->AddItem(node);
+      node->Delete();
+      }
     rit->GoToNextItem();
     }
   rit->Delete();
@@ -101,20 +102,15 @@ void vtkWindowViewNode::UpdateChildren()
 }
 
 //----------------------------------------------------------------------------
-void vtkWindowViewNode::Update()
+void vtkWindowNode::Update()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkRenderWindow *mine = vtkRenderWindow::SafeDownCast
     (this->GetRenderable());
   if (!mine)
     {
-    cerr << "I GOT NOTHING" << endl;
     return;
     }
 
-  cerr << "update " << mine->GetClassName() << "[" << mine << "]" << endl;
-  //mine->PrintSelf(cerr, vtkIndent(0));
-
-  //get size, position, title, any other state that would be handy from
-  //out renderable
+  //TODO: get state from our renderable
 }
