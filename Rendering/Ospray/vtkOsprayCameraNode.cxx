@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkOsprayWindowNode.cxx
+  Module:    vtkOsprayCameraNode.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,41 +12,36 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkOsprayWindowNode.h"
+#include "vtkOsprayCameraNode.h"
 
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
-#include "vtkRenderWindow.h"
+#include "vtkCamera.h"
 #include "vtkViewNodeCollection.h"
 
 #include "ospray/ospray.h"
 
 //============================================================================
-vtkStandardNewMacro(vtkOsprayWindowNode);
+vtkStandardNewMacro(vtkOsprayCameraNode);
 
 //----------------------------------------------------------------------------
-vtkOsprayWindowNode::vtkOsprayWindowNode()
-{
-  cerr << "HELLO OSPRAY" << endl;
-  int ac = 2;
-  const char* av[] = {"pvOSPRay\0","--osp:verbose\0"};
-  ospInit(&ac, av);
-  cerr << "YEAH" << endl;
-}
-
-//----------------------------------------------------------------------------
-vtkOsprayWindowNode::~vtkOsprayWindowNode()
+vtkOsprayCameraNode::vtkOsprayCameraNode()
 {
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayWindowNode::PrintSelf(ostream& os, vtkIndent indent)
+vtkOsprayCameraNode::~vtkOsprayCameraNode()
+{
+}
+
+//----------------------------------------------------------------------------
+void vtkOsprayCameraNode::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayWindowNode::Update()
+void vtkOsprayCameraNode::Update()
 {
   cerr << "Hello from " << this << " " << this->GetClassName() << endl;
 }

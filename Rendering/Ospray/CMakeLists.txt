@@ -2,6 +2,10 @@ find_package(OSPRay REQUIRED)
 include_directories(${OSPRAY_INCLUDE_DIRS})
 
 set(Module_SRCS
+  vtkOsprayActorNode.cxx
+  vtkOsprayCameraNode.cxx
+  vtkOsprayLightNode.cxx
+  vtkOsprayRendererNode.cxx
   vtkOsprayViewNodeFactory.cxx
   vtkOsprayWindowNode.cxx
   )

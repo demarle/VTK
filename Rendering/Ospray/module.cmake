@@ -3,5 +3,6 @@ vtk_module(vtkRenderingOspray
     vtkRenderingSceneGraph
   TEST_DEPENDS
     vtkTestingCore
+    vtkRendering${VTK_RENDERING_BACKEND}
   EXCLUDE_FROM_ALL
   )

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkOsprayWindowNode.h
+  Module:    vtkOsprayActorNode.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,33 +12,33 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkOsprayWindowNode -
+// .NAME vtkOsprayActorNode -
 // .SECTION Description
 //
 
-#ifndef vtkOsprayWindowNode_h
-#define vtkOsprayWindowNode_h
+#ifndef vtkOsprayActorNode_h
+#define vtkOsprayActorNode_h
 
 #include "vtkRenderingOsprayModule.h" // For export macro
-#include "vtkWindowNode.h"
+#include "vtkActorNode.h"
 
-class VTKRENDERINGOSPRAY_EXPORT vtkOsprayWindowNode :
-  public vtkWindowNode
+class VTKRENDERINGOSPRAY_EXPORT vtkOsprayActorNode :
+  public vtkActorNode
 {
 public:
-  static vtkOsprayWindowNode* New();
-  vtkTypeMacro(vtkOsprayWindowNode, vtkWindowNode);
+  static vtkOsprayActorNode* New();
+  vtkTypeMacro(vtkOsprayActorNode, vtkActorNode);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   virtual void Update();
 
 protected:
-  vtkOsprayWindowNode();
-  ~vtkOsprayWindowNode();
+  vtkOsprayActorNode();
+  ~vtkOsprayActorNode();
 
 private:
-  vtkOsprayWindowNode(const vtkOsprayWindowNode&); // Not implemented.
-  void operator=(const vtkOsprayWindowNode&); // Not implemented.
+  vtkOsprayActorNode(const vtkOsprayActorNode&); // Not implemented.
+  void operator=(const vtkOsprayActorNode&); // Not implemented.
 };
 
 #endif

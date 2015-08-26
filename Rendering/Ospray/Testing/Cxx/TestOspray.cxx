@@ -14,13 +14,44 @@
 =========================================================================*/
 
 #include "vtkOsprayViewNodeFactory.h"
-#include "vtkOsprayWindowNode.h"
+
+#include "vtkActor.h"
+#include "vtkPolyDataMapper.h"
+#include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
+#include "vtkSphereSource.h"
+#include "vtkViewNode.h"
+#include "vtkViewNodeFactory.h"
 
 int TestOspray( int argc, char *argv[] )
 {
-  vtkOsprayWindowNode *owvn = vtkOsprayWindowNode::New();
-  cerr << "owvn [" << owvn << "]" << endl;
-  owvn->PrintSelf(cerr, vtkIndent(0));
-  owvn->Delete();
+  vtkRenderWindow *rwin = vtkRenderWindow::New();
+  vtkRenderer *ren = vtkRenderer::New();
+  vtkActor *actor = vtkActor::New();
+
+  vtkSphereSource *sphere = vtkSphereSource::New();
+  vtkPolyDataMapper *pmap = vtkPolyDataMapper::New();
+  pmap->SetInputConnection(sphere->GetOutputPort());
+  actor->SetMapper(pmap);
+  ren->AddActor(actor);
+  rwin->AddRenderer(ren);
+  rwin->Render();
+
+
+  vtkOsprayViewNodeFactory *vnf = vtkOsprayViewNodeFactory::New();
+  vtkViewNode *vn = vnf->CreateNode(rwin);
+
+
+  //HERE WE GO!
+  vn->Traverse();
+
+  vn->Delete();
+  vnf->Delete();
+  pmap->Delete();
+  sphere->Delete();
+  actor->Delete();
+  ren->Delete();
+  rwin->Delete();
+
   return 0;
 }

@@ -15,12 +15,53 @@
 #include "vtkOsprayViewNodeFactory.h"
 #include "vtkObjectFactory.h"
 
+#include "vtkOsprayActorNode.h"
+#include "vtkOsprayCameraNode.h"
+#include "vtkOsprayLightNode.h"
+#include "vtkOsprayRendererNode.h"
+#include "vtkOsprayWindowNode.h"
+
+vtkViewNode *win_maker()
+{
+  vtkOsprayWindowNode *vn = vtkOsprayWindowNode::New();
+  return vn;
+}
+
+vtkViewNode *ren_maker()
+{
+  vtkOsprayRendererNode *vn = vtkOsprayRendererNode::New();
+  return vn;
+}
+
+vtkViewNode *act_maker()
+{
+  vtkOsprayActorNode *vn = vtkOsprayActorNode::New();
+  return vn;
+}
+
+vtkViewNode *cam_maker()
+{
+  vtkOsprayCameraNode *vn = vtkOsprayCameraNode::New();
+  return vn;
+}
+
+vtkViewNode *light_maker()
+{
+  vtkOsprayLightNode *vn = vtkOsprayLightNode::New();
+  return vn;
+}
+
 //============================================================================
 vtkStandardNewMacro(vtkOsprayViewNodeFactory);
 
 //----------------------------------------------------------------------------
 vtkOsprayViewNodeFactory::vtkOsprayViewNodeFactory()
 {
+  this->RegisterOverride("vtkCocoaRenderWindow", win_maker); //TODO: sysname from OF
+  this->RegisterOverride("vtkOpenGLRenderer", ren_maker); //TODO: if not OpenGL?
+  this->RegisterOverride("vtkOpenGLActor", act_maker);
+  this->RegisterOverride("vtkOpenGLCamera", cam_maker);
+  this->RegisterOverride("vtkOpenGLLight", light_maker);
 }
 
 //----------------------------------------------------------------------------
