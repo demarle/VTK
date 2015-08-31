@@ -5,6 +5,7 @@ set(Module_SRCS
   vtkOsprayActorNode.cxx
   vtkOsprayCameraNode.cxx
   vtkOsprayLightNode.cxx
+  vtkOsprayPass.cxx
   vtkOsprayRendererNode.cxx
   vtkOsprayViewNodeFactory.cxx
   vtkOsprayWindowNode.cxx

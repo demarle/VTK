@@ -23,7 +23,7 @@
 #include "vtkViewNode.h"
 #include "vtkViewNodeFactory.h"
 
-int TestOspray( int argc, char *argv[] )
+int TestOspraySceneGraph( int argc, char *argv[] )
 {
   vtkRenderWindow *rwin = vtkRenderWindow::New();
   vtkRenderer *ren = vtkRenderer::New();
