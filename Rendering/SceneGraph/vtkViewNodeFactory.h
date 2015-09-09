@@ -12,9 +12,10 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkViewNodeFactory -
+// .NAME vtkViewNodeFactory - factory that chooses vtkViewNodes to create
 // .SECTION Description
-//
+// Class tells VTK which specific vtkViewNode subclass to make when it is
+// asked to make a vtkViewNode for a particular renderable.
 
 #ifndef vtkViewNodeFactory_h
 #define vtkViewNodeFactory_h
@@ -33,16 +34,19 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //Description:
-  //this...
+  //Give a functin pointer to a class that will manufacture a
+  //vtkViewNode when given a class name string.
+  void RegisterOverride(const char *name, vtkViewNode *(*func)());
+
+  //Description:
+  //Creates and returns a vtkViewNode for the provided renderable.
   vtkViewNode *CreateNode(vtkObject *);
 
   //Description:
-  //this...
+  //Description:
+  //Creates and returns a vtkViewNode for the provided class name.
   vtkViewNode *CreateNode(const char *);
 
-  //Description:
-  //this...
-  void RegisterOverride(const char *name, vtkViewNode *(*func)());
 
 protected:
   vtkViewNodeFactory();

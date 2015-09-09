@@ -152,13 +152,12 @@ int UnitTests( int argc, char *argv[] )
   vtkViewNodeFactory *vnf = vtkViewNodeFactory::New();
   cerr << "CREATE pre override" << endl;
   vn = vnf->CreateNode(vnc);
-  cerr << "factory makes" << endl;
-  cerr << vn << endl;
-
-  cerr << "TRAVERSE [" << endl;
-  vn->Traverse();
-  cerr << "]" << endl;
-  vn->Delete();
+  if (vn)
+    {
+    cerr << "Shouldn't have made anything" << endl;
+    return 1;
+    }
+  cerr << "factor made nothing as it should have" << endl;
 
   vtkRenderWindow *rwin = vtkRenderWindow::New();
   vnf->RegisterOverride(rwin->GetClassName(), win_maker);
@@ -167,8 +166,8 @@ int UnitTests( int argc, char *argv[] )
 
   cerr << "factory makes" << endl;
   cerr << vn << endl;
-  cerr << "TRAVERSE [" << endl;
-  vn->Traverse();
+  cerr << "BUILD [" << endl;
+  vn->Build();
   cerr << "]" << endl;
 
   cerr << "add renderer" << endl;
@@ -198,8 +197,14 @@ int UnitTests( int argc, char *argv[] )
   sphere->Delete();
   pmap->Delete();
 
-  cerr << "TRAVERSE [" << endl;
-  vn->Traverse();
+  cerr << "BUILD [" << endl;
+  vn->Build();
+  cerr << "]" << endl;
+  cerr << "SYNCHRONIZE [" << endl;
+  vn->Synchronize();
+  cerr << "]" << endl;
+  cerr << "RENDER [" << endl;
+  vn->Render();
   cerr << "]" << endl;
 
   vn->Delete();

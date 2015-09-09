@@ -49,15 +49,7 @@ void vtkRendererNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkRendererNode::Traverse()
-{
-  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
-  this->Update();
-  this->Superclass::Traverse();
-}
-
-//----------------------------------------------------------------------------
-void vtkRendererNode::UpdateChildren()
+void vtkRendererNode::BuildSelf()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkRenderer *mine = vtkRenderer::SafeDownCast
@@ -153,13 +145,10 @@ void vtkRendererNode::UpdateChildren()
     nodes->AddItem(node);
     node->Delete();
     }
-
-  //call parent class to recurse
-  this->Superclass::UpdateChildren();
 }
 
 //----------------------------------------------------------------------------
-void vtkRendererNode::Update()
+void vtkRendererNode::SynchronizeSelf()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkRenderer *mine = vtkRenderer::SafeDownCast

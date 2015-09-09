@@ -36,7 +36,7 @@ void vtkCameraNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkCameraNode::Update()
+void vtkCameraNode::SynchronizeSelf()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkCamera *mine = vtkCamera::SafeDownCast

@@ -50,4 +50,10 @@ void vtkOsprayPass::Render(const vtkRenderState *s)
   (void)s;
   this->NumberOfRenderedProps=0;
 
+  if (this->SceneGraph)
+    {
+    this->SceneGraph->Build();
+    this->SceneGraph->Synchronize();
+    this->SceneGraph->Render();
+    }
 }

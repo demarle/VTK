@@ -37,7 +37,7 @@ void vtkLightNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkLightNode::Update()
+void vtkLightNode::SynchronizeSelf()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkLight *mine = vtkLight::SafeDownCast

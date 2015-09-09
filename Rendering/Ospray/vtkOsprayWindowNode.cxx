@@ -44,10 +44,9 @@ void vtkOsprayWindowNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayWindowNode::Update()
+void vtkOsprayWindowNode::RenderSelf()
 {
-  cerr << "Hello from " << this << " " << this->GetClassName() << endl;
-  cerr << this->Renderable->GetClassName() << endl;
+  cerr << "RENDER" << endl;
 
   OSPRenderer oRenderer = (osp::Renderer*)ospNewRenderer("ao4");
   ospSet3f(oRenderer,"bgColor",1,0,1);
@@ -55,7 +54,6 @@ void vtkOsprayWindowNode::Update()
   OSPCamera oCamera = ospNewCamera("perspective");
   OSPModel oModel = ospNewModel();
 
-  //ospSetObject(vRenderer,"world",vModel);
   ospSetObject(oRenderer,"model",oModel);
   ospSetObject(oRenderer,"camera",oCamera);
 

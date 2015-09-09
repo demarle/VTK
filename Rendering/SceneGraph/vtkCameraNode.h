@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkCameraNode -
+// .NAME vtkCameraNode - vtkViewNode specialized for vtkCameras
 // .SECTION Description
 //
 
@@ -31,8 +31,15 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //Description:
+  virtual void BuildSelf() {};
+
+  //Description:
+  //Get state from our renderable.
+  virtual void SynchronizeSelf();
+
+  //Description:
   //...
-  virtual void Update();
+  virtual void RenderSelf() {};
 
 protected:
   vtkCameraNode();

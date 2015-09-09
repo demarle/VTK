@@ -9,4 +9,10 @@ set(Module_SRCS
   vtkWindowNode.cxx
   )
 
+
+set_source_files_properties(
+  vtkViewNode
+  ABSTRACT
+  )
+
 vtk_module_library(vtkRenderingSceneGraph ${Module_SRCS})

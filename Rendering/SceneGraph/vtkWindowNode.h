@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkWindowNode -
+// .NAME vtkWindowNode - vtkViewNode specialized for vtkRenderWindows
 // .SECTION Description
 //
 
@@ -33,20 +33,21 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //Description:
-  //...
-  virtual void Traverse();
+  //Build containers for our child nodes.
+  virtual void BuildSelf();
+
+  //Description:
+  //Get state of my renderable.
+  virtual void SynchronizeSelf();
 
   //Description:
   //...
-  virtual void Update();
+  virtual void RenderSelf() {};
+
 
 protected:
   vtkWindowNode();
   ~vtkWindowNode();
-
-  //Description:
-  //...
-  virtual void UpdateChildren();
 
 private:
   vtkWindowNode(const vtkWindowNode&); // Not implemented.

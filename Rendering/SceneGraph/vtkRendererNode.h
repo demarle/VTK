@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkRendererNode -
+// .NAME vtkRendererNode - vtkViewNode specialized for vtkRenderers
 // .SECTION Description
 //
 
@@ -31,20 +31,20 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //Description:
-  //...
-  virtual void Traverse();
+  //Build containers for our child nodes.
+  virtual void BuildSelf();
+
+  //Description:
+  //Get state of my renderable.
+  virtual void SynchronizeSelf();
 
   //Description:
   //...
-  virtual void Update();
+  virtual void RenderSelf() {};
 
 protected:
   vtkRendererNode();
   ~vtkRendererNode();
-
-  //Description:
-  //...
-  virtual void UpdateChildren();
 
 private:
   vtkRendererNode(const vtkRendererNode&); // Not implemented.

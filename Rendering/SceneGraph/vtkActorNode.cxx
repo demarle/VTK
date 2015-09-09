@@ -37,7 +37,7 @@ void vtkActorNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkActorNode::Update()
+void vtkActorNode::SynchronizeSelf()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkActor *mine = vtkActor::SafeDownCast

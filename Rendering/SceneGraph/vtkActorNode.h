@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkActorNode -
+// .NAME vtkActorNode - vtkViewNode specialized for vtkActors
 // .SECTION Description
 //
 
@@ -32,7 +32,15 @@ public:
 
   //Description:
   //...
-  virtual void Update();
+  virtual void BuildSelf() {};
+
+  //Description:
+  //Get state from our renderable.
+  virtual void SynchronizeSelf();
+
+  //Description:
+  //...
+  virtual void RenderSelf() {};
 
 protected:
   vtkActorNode();

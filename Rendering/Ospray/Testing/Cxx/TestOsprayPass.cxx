@@ -50,13 +50,11 @@ int TestOsprayPass(int argc, char* argv[])
   actor->SetMapper(mapper);
   renderer->SetBackground(0.1,0.3,0.0);
   renWin->SetSize(400,400);
-
-
   renWin->Render();
 
   vtkSmartPointer<vtkOsprayViewNodeFactory> vnf = vtkSmartPointer<vtkOsprayViewNodeFactory>::New();
   vtkViewNode *vn = vnf->CreateNode(renWin);
-  vn->Traverse();
+  vn->Build();
 
   vtkSmartPointer<vtkOsprayPass> ddm=vtkSmartPointer<vtkOsprayPass>::New();
   ddm->SetSceneGraph(vtkOsprayWindowNode::SafeDownCast(vn));

@@ -30,7 +30,9 @@ public:
   vtkTypeMacro(vtkOsprayLightNode, vtkLightNode);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  virtual void Update();
+  //Description:
+  //Make ospray calls to render me.
+  virtual void RenderSelf();
 
 protected:
   vtkOsprayLightNode();

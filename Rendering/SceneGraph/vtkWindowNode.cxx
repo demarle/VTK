@@ -43,15 +43,7 @@ void vtkWindowNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkWindowNode::Traverse()
-{
-  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
-  this->Update();
-  this->Superclass::Traverse();
-}
-
-//----------------------------------------------------------------------------
-void vtkWindowNode::UpdateChildren()
+void vtkWindowNode::BuildSelf()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkRenderWindow *mine = vtkRenderWindow::SafeDownCast
@@ -96,13 +88,10 @@ void vtkWindowNode::UpdateChildren()
     rit->GoToNextItem();
     }
   rit->Delete();
-
-  //call parent class to recurse
-  this->Superclass::UpdateChildren();
 }
 
 //----------------------------------------------------------------------------
-void vtkWindowNode::Update()
+void vtkWindowNode::SynchronizeSelf()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkRenderWindow *mine = vtkRenderWindow::SafeDownCast

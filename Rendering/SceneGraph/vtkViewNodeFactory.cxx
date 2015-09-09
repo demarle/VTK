@@ -64,7 +64,10 @@ vtkViewNode *vtkViewNodeFactory::CreateNode(vtkObject *who)
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   const char *forwhom = who->GetClassName();
   vtkViewNode *ret = this->CreateNode(forwhom);
-  ret->SetRenderable(who);
+  if (ret)
+    {
+    ret->SetRenderable(who);
+    }
   return ret;
 }
 
@@ -76,15 +79,15 @@ vtkViewNode *vtkViewNodeFactory::CreateNode(const char *forwhom)
   if (this->Internals->Overrides.find(forwhom) == this->Internals->Overrides.end())
     {
     vtkWarningMacro("no override found for " << forwhom);
-    ret = vtkViewNode::New();
+    ret = NULL;//vtkViewNode::New();
     }
   else
     {
     vtkViewNode *(*func)() = this->Internals->Overrides.find(forwhom)->second;
     ret = func();
+    ret->SetMyFactory(this);
     }
 
-  ret->SetMyFactory(this);
   return ret;
 }
 

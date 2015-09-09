@@ -19,8 +19,15 @@
 #include "vtkViewNodeCollection.h"
 #include "vtkViewNodeFactory.h"
 
-//============================================================================
-vtkStandardNewMacro(vtkViewNode);
+//----------------------------------------------------------------------------
+const char *vtkViewNode::operation_type_strings[] =
+{
+  "noop",
+  "build",
+  "synchronize",
+  "render",
+  NULL
+};
 
 //----------------------------------------------------------------------------
 vtkCxxSetObjectMacro(vtkViewNode,Parent,vtkViewNode);
@@ -66,50 +73,22 @@ void vtkViewNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkViewNode::Traverse()
-{
-  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ <<  endl;
-  this->UpdateChildren();
-  this->TraverseChildren();
-}
-
-//----------------------------------------------------------------------------
-void vtkViewNode::Update()
+void vtkViewNode::Traverse(int operation)
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
-  cerr << "update " << this->GetRenderable()->GetClassName()
-       << "[" << this->GetRenderable() << "]" << endl;
-}
+  this->Apply(operation);
 
-//----------------------------------------------------------------------------
-void vtkViewNode::UpdateChildren()
-{
-  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   vtkCollectionIterator *it = this->Children->NewIterator();
   it->InitTraversal();
   while (!it->IsDoneWithTraversal())
     {
     vtkViewNode *child = vtkViewNode::SafeDownCast(it->GetCurrentObject());
-    child->Update();
+    child->Traverse(operation);
     it->GoToNextItem();
     }
   it->Delete();
 }
 
-//----------------------------------------------------------------------------
-void vtkViewNode::TraverseChildren()
-{
-  //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
-  vtkCollectionIterator *it = this->Children->NewIterator();
-  it->InitTraversal();
-  while (!it->IsDoneWithTraversal())
-    {
-    vtkViewNode *child = vtkViewNode::SafeDownCast(it->GetCurrentObject());
-    child->Traverse();
-    it->GoToNextItem();
-    }
-  it->Delete();
-}
 
 //----------------------------------------------------------------------------
 vtkViewNode *vtkViewNode::CreateViewNode(vtkObject *obj)
@@ -133,4 +112,48 @@ void vtkViewNode::SetRenderable(vtkObject *obj)
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   this->Renderable = obj;
+}
+
+//----------------------------------------------------------------------------
+void vtkViewNode::Build()
+{
+  cerr << this->GetClassName() << "(" << this << ") Build()" << endl;
+  this->Traverse(build);
+}
+
+//----------------------------------------------------------------------------
+void vtkViewNode::Synchronize()
+{
+  cerr << this->GetClassName() << "(" << this << ") Synchronize()" << endl;
+  this->Traverse(synchronize);
+}
+
+//----------------------------------------------------------------------------
+void vtkViewNode::Render()
+{
+  cerr << this->GetClassName() << "(" << this << ") Render()" << endl;
+  this->Traverse(render);
+}
+
+//----------------------------------------------------------------------------
+void vtkViewNode::Apply(int operation)
+{
+  cerr << this->GetClassName() << "(" << this << ") Apply("
+       << vtkViewNode::operation_type_strings[operation] << ")" << endl;
+  switch (operation)
+    {
+    case noop:
+      break;
+    case build:
+      this->BuildSelf();
+      break;
+    case synchronize:
+      this->SynchronizeSelf();
+      break;
+    case render:
+      this->RenderSelf();
+      break;
+    default:
+      cerr << "UNKNOWN OPERATION" << operation << endl;
+    }
 }

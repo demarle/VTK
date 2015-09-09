@@ -12,9 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkViewNodeCollection -
+// .NAME vtkViewNodeCollection - collection of view nodes
 // .SECTION Description
-//
+// vtk centric collection of vtkViewNodes
 
 #ifndef vtkViewNodeCollection_h
 #define vtkViewNodeCollection_h

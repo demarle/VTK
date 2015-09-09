@@ -41,7 +41,7 @@ void vtkOsprayCameraNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayCameraNode::Update()
+void vtkOsprayCameraNode::RenderSelf()
 {
   cerr << "Hello from " << this << " " << this->GetClassName() << endl;
 }

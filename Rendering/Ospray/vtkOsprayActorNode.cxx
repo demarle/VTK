@@ -41,7 +41,7 @@ void vtkOsprayActorNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayActorNode::Update()
+void vtkOsprayActorNode::RenderSelf()
 {
   cerr << "Hello from " << this << " " << this->GetClassName() << endl;
 }

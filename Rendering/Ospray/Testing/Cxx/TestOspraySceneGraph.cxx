@@ -43,7 +43,9 @@ int TestOspraySceneGraph( int argc, char *argv[] )
 
 
   //HERE WE GO!
-  vn->Traverse();
+  vn->Build();
+  vn->Synchronize();
+  vn->Render();
 
   vn->Delete();
   vnf->Delete();
