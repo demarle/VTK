@@ -28,6 +28,8 @@ vtkStandardNewMacro(vtkWindowNode);
 vtkWindowNode::vtkWindowNode()
 {
   //cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
+  this->Size[0] = 0;
+  this->Size[1] = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -102,4 +104,35 @@ void vtkWindowNode::SynchronizeSelf()
     }
 
   //TODO: get state from our renderable
+  /*
+    GetAAFrames()   vtkRenderWindow virtual
+    GetActualSize() vtkWindow
+    GetAlphaBitPlanes()     vtkRenderWindow virtual
+    GetDoubleBuffer()       vtkWindow       virtual
+    GetDPI()        vtkWindow       virtual
+    GetFDFrames()   vtkRenderWindow virtual
+    GetFullScreen() vtkRenderWindow virtual
+    GetLineSmoothing()      vtkRenderWindow virtual
+    GetMapped()     vtkWindow       virtual
+    GetMTime()      vtkObject       virtual
+    GetMultiSamples()       vtkRenderWindow virtual
+    GetNeverRendered()      vtkRenderWindow virtual
+    GetNumberOfLayers()     vtkRenderWindow virtual
+    GetOffScreenRendering() vtkWindow       virtual
+    GetPointSmoothing()     vtkRenderWindow virtual
+    GetPolygonSmoothing()   vtkRenderWindow virtual
+    GetPosition()   vtkWindow       virtual
+    GetScreenSize()=0       vtkWindow       pure virtual
+    GetSize()       vtkWindow       virtual
+    GetStereoType() vtkRenderWindow virtual
+    GetSubFrames()  vtkRenderWindow virtual
+    GetSwapBuffers()        vtkRenderWindow virtual
+    GetTileScale()  vtkWindow       virtual
+    GetTileViewport()       vtkWindow       virtual
+    GetUseConstantFDOffsets()       vtkRenderWindow virtual
+  */
+  int * sz = mine->GetSize();
+  cerr << sz[0] << "x" << sz[1] << endl;
+  this->Size[0] = sz[0];
+  this->Size[1] = sz[1];
 }

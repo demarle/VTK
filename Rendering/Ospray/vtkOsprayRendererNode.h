@@ -34,9 +34,16 @@ public:
   //Make ospray calls to render me.
   virtual void RenderSelf();
 
+  //Description:
+  //Put my results into the correct place in the provided pixel buffer.
+  virtual void WriteLayer(unsigned char *buffer, int buffx, int buffy);
+
 protected:
   vtkOsprayRendererNode();
   ~vtkOsprayRendererNode();
+
+  //internal structures
+  unsigned char *Buffer;
 
 private:
   vtkOsprayRendererNode(const vtkOsprayRendererNode&); // Not implemented.

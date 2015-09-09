@@ -35,17 +35,14 @@ int TestOspraySceneGraph( int argc, char *argv[] )
   actor->SetMapper(pmap);
   ren->AddActor(actor);
   rwin->AddRenderer(ren);
-  rwin->Render();
-
 
   vtkOsprayViewNodeFactory *vnf = vtkOsprayViewNodeFactory::New();
   vtkViewNode *vn = vnf->CreateNode(rwin);
 
-
   //HERE WE GO!
   vn->Build();
   vn->Synchronize();
-  vn->Render();
+  //vn->Render();
 
   vn->Delete();
   vnf->Delete();

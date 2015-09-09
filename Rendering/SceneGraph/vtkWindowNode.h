@@ -49,6 +49,9 @@ protected:
   vtkWindowNode();
   ~vtkWindowNode();
 
+  //state
+  int Size[2];
+
 private:
   vtkWindowNode(const vtkWindowNode&); // Not implemented.
   void operator=(const vtkWindowNode&); // Not implemented.

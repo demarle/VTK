@@ -34,6 +34,10 @@ public:
   //Make ospray calls to render me.
   virtual void RenderSelf();
 
+  //Description:
+  //Update my renderable with the result
+  virtual void PostRender();
+
 protected:
   vtkOsprayWindowNode();
   ~vtkOsprayWindowNode();

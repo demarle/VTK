@@ -35,6 +35,13 @@ vtkStandardNewMacro(vtkRendererNode);
 //----------------------------------------------------------------------------
 vtkRendererNode::vtkRendererNode()
 {
+  this->Ambient[0] = this->Ambient[1] = this->Ambient[2] = 0.0;
+  this->Background[0] = this->Background[1] = this->Background[2] = 0.0;
+  this->Background2[0] = this->Background2[1] = this->Background2[2] = 0.0;
+  this->GradientBackground = false;
+  this->Layer = 0;
+  this->Origin[0] = this->Origin[1] = 0;
+  this->Size[0] = this->Size[1] = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -159,4 +166,45 @@ void vtkRendererNode::SynchronizeSelf()
     }
 
   //TODO: get state from our renderable
+/*
+  GetAmbient(double data[3])    vtkRenderer     virtual
+  GetBackground(double &, double &, double &)   vtkViewport     virtual
+  GetBackground2(double &, double &, double &)  vtkViewport     virtual
+  GetBackgroundTexture()        vtkRenderer     virtual
+  GetCullers()  vtkRenderer     inline
+  GetDraw()     vtkRenderer     virtual
+  GetErase()    vtkRenderer     virtual
+  GetGradientBackground()       vtkViewport     virtual
+  GetLayer()    vtkRenderer     virtual
+  GetLightFollowCamera()        vtkRenderer     virtual
+  GetMTime()    vtkRenderer     virtual
+  GetNearClippingPlaneTolerance()       vtkRenderer     virtual
+  GetOrigin()     vtkViewport     virtual
+  GetPreserveColorBuffer()      vtkRenderer     virtual
+  GetPreserveDepthBuffer()      vtkRenderer     virtual
+  GetSize()     vtkViewport     virtual
+  GetTexturedBackground()       vtkRenderer     virtual
+  GetTiledSizeAndOrigin(int *width, int *height, int *lowerLeftX, int *lowerLeftY)
+  GetTwoSidedLighting() vtkRenderer     virtual
+  GetUseDepthPeeling()  vtkRenderer     virtual
+  GetUseShadows()       vtkRenderer     virtual
+  GetViewport(double data[4])   vtkViewport     virtual
+*/
+  mine->GetAmbient(this->Ambient);
+  mine->GetBackground(this->Background[0],
+                      this->Background[1],
+                      this->Background[2]);
+  mine->GetBackground2(this->Background2[0],
+                       this->Background2[1],
+                       this->Background2[2]);
+  this->GradientBackground = mine->GetGradientBackground();
+  this->Layer = mine->GetLayer();
+  int *result;
+  result = mine->GetOrigin();
+  this->Origin[0] = result[0];
+  this->Origin[1] = result[1];
+  result = mine->GetSize();
+  this->Size[0] = result[0];
+  this->Size[1] = result[1];
+  //this->TexturedBackground = mine->GetTexturedBackground();
 }

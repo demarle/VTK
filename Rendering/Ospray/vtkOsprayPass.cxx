@@ -55,5 +55,6 @@ void vtkOsprayPass::Render(const vtkRenderState *s)
     this->SceneGraph->Build();
     this->SceneGraph->Synchronize();
     this->SceneGraph->Render();
+    this->SceneGraph->PostRender();
     }
 }

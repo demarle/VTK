@@ -58,6 +58,7 @@ vtkStandardNewMacro(vtkOsprayViewNodeFactory);
 vtkOsprayViewNodeFactory::vtkOsprayViewNodeFactory()
 {
   this->RegisterOverride("vtkCocoaRenderWindow", win_maker); //TODO: sysname from OF
+  //see vtkRenderWindow::GetRenderLibrary
   this->RegisterOverride("vtkOpenGLRenderer", ren_maker); //TODO: if not OpenGL?
   this->RegisterOverride("vtkOpenGLActor", act_maker);
   this->RegisterOverride("vtkOpenGLCamera", cam_maker);

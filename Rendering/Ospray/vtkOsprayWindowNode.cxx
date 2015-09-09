@@ -16,6 +16,7 @@
 
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
+#include "vtkOsprayRendererNode.h"
 #include "vtkRenderWindow.h"
 #include "vtkViewNodeCollection.h"
 
@@ -47,33 +48,31 @@ void vtkOsprayWindowNode::PrintSelf(ostream& os, vtkIndent indent)
 void vtkOsprayWindowNode::RenderSelf()
 {
   cerr << "RENDER" << endl;
+}
 
-  OSPRenderer oRenderer = (osp::Renderer*)ospNewRenderer("ao4");
-  ospSet3f(oRenderer,"bgColor",1,0,1);
+//----------------------------------------------------------------------------
+void vtkOsprayWindowNode::PostRender()
+{
+  //composite all renderers framebuffers together
+  unsigned char *rgba = new unsigned char[this->Size[0]*this->Size[1]*4];
 
-  OSPCamera oCamera = ospNewCamera("perspective");
-  OSPModel oModel = ospNewModel();
+  vtkViewNodeCollection *renderers = this->GetChildren();
+  vtkCollectionIterator *it = renderers->NewIterator();
+  it->InitTraversal();
+  while (!it->IsDoneWithTraversal())
+    {
+    vtkOsprayRendererNode *child =
+      vtkOsprayRendererNode::SafeDownCast(it->GetCurrentObject());
+    child->WriteLayer(rgba, this->Size[0], this->Size[1]);
+    it->GoToNextItem();
+    }
+  it->Delete();
 
-  ospSetObject(oRenderer,"model",oModel);
-  ospSetObject(oRenderer,"camera",oCamera);
-
-  ospCommit(oModel);
-  ospCommit(oCamera);
-  ospCommit(oRenderer);
-
-  OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer
-    (osp::vec2i(400, 400),
-     OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH | OSP_FB_ACCUM);
-  ospFrameBufferClear(osp_framebuffer, OSP_FB_ACCUM);
-
-  ospRenderFrame(osp_framebuffer, oRenderer, OSP_FB_COLOR|OSP_FB_ACCUM);
-
-  const void* rgba = ospMapFrameBuffer(osp_framebuffer);
-
+  //show the result
   vtkRenderWindow *rwin = vtkRenderWindow::SafeDownCast(this->Renderable);
-  rwin->SetRGBACharPixelData( 0,  0, 399, 399,
-                              (unsigned char*)rgba, 0, 0 );
-  ospUnmapFrameBuffer(rgba, osp_framebuffer);
-
+  rwin->SetRGBACharPixelData( 0,  0, this->Size[0]-1, this->Size[1]-1,
+                              rgba, 0, 0 );
+  rwin->Frame();//TODO: why twice?
   rwin->Frame();
+  delete[] rgba;
 }

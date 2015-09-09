@@ -46,6 +46,14 @@ protected:
   vtkRendererNode();
   ~vtkRendererNode();
 
+  //state
+  double Ambient[3];
+  double Background[3];
+  double Background2[3];
+  bool GradientBackground;
+  int Layer;
+  int Origin[2];
+  int Size[2];
 private:
   vtkRendererNode(const vtkRendererNode&); // Not implemented.
   void operator=(const vtkRendererNode&); // Not implemented.

@@ -15,7 +15,9 @@
 // .NAME vtkViewNodeFactory - factory that chooses vtkViewNodes to create
 // .SECTION Description
 // Class tells VTK which specific vtkViewNode subclass to make when it is
-// asked to make a vtkViewNode for a particular renderable.
+// asked to make a vtkViewNode for a particular renderable. modules for
+// different rendering backends are expected to use this to customize the
+// set of instances for their own purposes
 
 #ifndef vtkViewNodeFactory_h
 #define vtkViewNodeFactory_h
