@@ -22,6 +22,10 @@ vtkStandardNewMacro(vtkCameraNode);
 //----------------------------------------------------------------------------
 vtkCameraNode::vtkCameraNode()
 {
+  this->Position[0] = this->Position[1] = this->Position[2] = 0.0;
+  this->FocalPoint[0] = this->FocalPoint[1] = this->FocalPoint[2] = 0.0;
+  this->ViewUp[0] = this->ViewUp[1] = this->ViewUp[2] = 0.0;
+  this->ViewAngle = 0.0;
 }
 
 //----------------------------------------------------------------------------
@@ -46,5 +50,14 @@ void vtkCameraNode::SynchronizeSelf()
     return;
     }
 
-  //TODO: get state from our renderable
+  this->Position[0] = mine->GetPosition()[0];
+  this->Position[1] = mine->GetPosition()[1];
+  this->Position[2] = mine->GetPosition()[2];
+  this->FocalPoint[0] = mine->GetFocalPoint()[0];
+  this->FocalPoint[1] = mine->GetFocalPoint()[1];
+  this->FocalPoint[2] = mine->GetFocalPoint()[2];
+  this->ViewUp[0] = mine->GetViewUp()[0];
+  this->ViewUp[1] = mine->GetViewUp()[1];
+  this->ViewUp[2] = mine->GetViewUp()[2];
+  this->ViewAngle = mine->GetViewAngle();
 }

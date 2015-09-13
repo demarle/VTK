@@ -31,8 +31,12 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //Description:
+  //Traverse graph in ospray's prefered order and render
+  virtual void Render();
+
+  //Description:
   //Make ospray calls to render me.
-  virtual void RenderSelf();
+  virtual void RenderSelf() {};
 
   //Description:
   //Put my results into the correct place in the provided pixel buffer.

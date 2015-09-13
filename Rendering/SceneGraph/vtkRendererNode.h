@@ -54,6 +54,9 @@ protected:
   int Layer;
   int Origin[2];
   int Size[2];
+  int TiledOrigin[2];
+  int TiledSize[2];
+
 private:
   vtkRendererNode(const vtkRendererNode&); // Not implemented.
   void operator=(const vtkRendererNode&); // Not implemented.

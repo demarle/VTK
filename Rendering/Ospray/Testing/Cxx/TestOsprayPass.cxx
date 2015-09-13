@@ -49,8 +49,8 @@ int TestOsprayPass(int argc, char* argv[])
   renderer->AddActor(actor);
   actor->SetMapper(mapper);
   renderer->SetBackground(0.1,0.1,1.0);
-  renWin->SetSize(200,400);
-  //renWin->Render();
+  renWin->SetSize(400,400);
+  renWin->Render();
 
   vtkSmartPointer<vtkOsprayViewNodeFactory> vnf = vtkSmartPointer<vtkOsprayViewNodeFactory>::New();
   vtkViewNode *vn = vnf->CreateNode(renWin);

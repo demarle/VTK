@@ -45,6 +45,22 @@ void vtkOsprayWindowNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
+void vtkOsprayWindowNode::Render()
+{
+  vtkViewNodeCollection *renderers = this->GetChildren();
+  vtkCollectionIterator *it = renderers->NewIterator();
+  it->InitTraversal();
+  while (!it->IsDoneWithTraversal())
+    {
+    vtkOsprayRendererNode *child =
+      vtkOsprayRendererNode::SafeDownCast(it->GetCurrentObject());
+    child->Render();
+    it->GoToNextItem();
+    }
+  it->Delete();
+}
+
+//----------------------------------------------------------------------------
 void vtkOsprayWindowNode::RenderSelf()
 {
   cerr << "RENDER" << endl;

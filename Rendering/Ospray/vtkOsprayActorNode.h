@@ -34,6 +34,8 @@ public:
   //Make ospray calls to render me.
   virtual void RenderSelf();
 
+  virtual void ORender(void *oModel);
+
 protected:
   vtkOsprayActorNode();
   ~vtkOsprayActorNode();

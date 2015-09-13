@@ -61,7 +61,7 @@ public:
 
   //Description:
   //Call to make self and descendents visible.
-  void Render();
+  virtual void Render();
 
   //Description:
   //Makes calls to make self visible.

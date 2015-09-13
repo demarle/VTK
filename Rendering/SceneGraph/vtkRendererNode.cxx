@@ -42,6 +42,8 @@ vtkRendererNode::vtkRendererNode()
   this->Layer = 0;
   this->Origin[0] = this->Origin[1] = 0;
   this->Size[0] = this->Size[1] = 0;
+  this->TiledOrigin[0] = this->TiledOrigin[1] = 0;
+  this->TiledSize[0] = this->TiledSize[1] = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -206,5 +208,7 @@ void vtkRendererNode::SynchronizeSelf()
   result = mine->GetSize();
   this->Size[0] = result[0];
   this->Size[1] = result[1];
+  mine->GetTiledSizeAndOrigin(&this->TiledSize[0], &this->TiledSize[1],
+                              &this->TiledOrigin[0], &this->TiledOrigin[1]);
   //this->TexturedBackground = mine->GetTexturedBackground();
 }

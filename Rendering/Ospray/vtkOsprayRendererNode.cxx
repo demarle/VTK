@@ -16,6 +16,8 @@
 
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
+#include "vtkOsprayActorNode.h"
+#include "vtkOsprayCameraNode.h"
 #include "vtkRenderer.h"
 #include "vtkViewNodeCollection.h"
 
@@ -43,7 +45,7 @@ void vtkOsprayRendererNode::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayRendererNode::RenderSelf()
+void vtkOsprayRendererNode::Render()
 {
   cerr << "Hello from " << this << " " << this->GetClassName() << endl;
   OSPRenderer oRenderer = (osp::Renderer*)ospNewRenderer("ao4");
@@ -52,14 +54,42 @@ void vtkOsprayRendererNode::RenderSelf()
            this->Background[1],
            this->Background[2]);
 
-  OSPCamera oCamera = ospNewCamera("perspective");
-  OSPModel oModel = ospNewModel();
+  //camera
+  vtkViewNodeCollection *nodes = this->GetChildren();
+  vtkCollectionIterator *it = nodes->NewIterator();
+  it->InitTraversal();
+  while (!it->IsDoneWithTraversal())
+    {
+    vtkOsprayCameraNode *child =
+      vtkOsprayCameraNode::SafeDownCast(it->GetCurrentObject());
+    if (child)
+      {
+      OSPCamera oCamera = ospNewCamera("perspective");
+      ospSetObject(oRenderer,"camera", oCamera);
+      child->ORender(this->TiledSize, oCamera);
+      ospCommit(oCamera);
+      break;
+      }
+    it->GoToNextItem();
+    }
 
-  ospSetObject(oRenderer,"model",oModel);
-  ospSetObject(oRenderer,"camera",oCamera);
+  //actors
+  it->InitTraversal();
+  while (!it->IsDoneWithTraversal())
+    {
+    vtkOsprayActorNode *child =
+      vtkOsprayActorNode::SafeDownCast(it->GetCurrentObject());
+    if (child)
+      {
+      OSPModel oModel = ospNewModel();
+      child->ORender(oModel);
+      ospSetObject(oRenderer,"model", oModel);
+      ospCommit(oModel);
+      }
+    it->GoToNextItem();
+    }
+  it->Delete();
 
-  ospCommit(oModel);
-  ospCommit(oCamera);
   ospCommit(oRenderer);
 
   OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer

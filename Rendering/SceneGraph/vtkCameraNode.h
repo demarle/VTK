@@ -45,6 +45,11 @@ protected:
   vtkCameraNode();
   ~vtkCameraNode();
 
+  double Position[3];
+  double FocalPoint[3];
+  double ViewUp[3];
+  double ViewAngle;
+
 private:
   vtkCameraNode(const vtkCameraNode&); // Not implemented.
   void operator=(const vtkCameraNode&); // Not implemented.
