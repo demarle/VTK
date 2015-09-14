@@ -23,6 +23,24 @@ vtkStandardNewMacro(vtkLightNode);
 //----------------------------------------------------------------------------
 vtkLightNode::vtkLightNode()
 {
+  this->AmbientColor[0] =
+    this->AmbientColor[1] =
+    this->AmbientColor[2] = 0.0;
+  this->AttenuationValues[0] =
+    this->AttenuationValues[1] =
+    this->AttenuationValues[2] = 0.0;
+  this->ConeAngle = 0.0;
+  this->DiffuseColor[0] = this->DiffuseColor[1] = this->DiffuseColor[2] = 0.0;
+  this->Exponent = 0.0;
+  this->FocalPoint[0] = this->FocalPoint[1] = this->FocalPoint[2] = 0.0;
+  this->Intensity = 0.0;
+  this->LightType = 0;
+  this->Position[0] = this->Position[1] = this->Position[2] = 0.0;
+  this->Positional = false;
+  this->SpecularColor[0] =
+    this->SpecularColor[1] =
+    this->SpecularColor[2] = 0.0;
+  this->Switch = false;
 }
 
 //----------------------------------------------------------------------------
@@ -47,5 +65,20 @@ void vtkLightNode::SynchronizeSelf()
     return;
     }
 
-  //TODO: get state from our renderable
+  //get state from our renderable
+  /*
+    GetTransformMatrix()
+  */
+  mine->GetAmbientColor(this->AmbientColor);
+  mine->GetAttenuationValues(this->AttenuationValues);
+  this->ConeAngle = mine->GetConeAngle();
+  mine->GetDiffuseColor(this->DiffuseColor);
+  this->Exponent = mine->GetExponent();
+  mine->GetFocalPoint(this->FocalPoint);
+  this->Intensity = mine->GetIntensity();
+  this->LightType = mine->GetLightType();
+  mine->GetPosition(this->Position);
+  this->Positional = mine->GetPositional();
+  mine->GetSpecularColor(this->SpecularColor);
+  this->Switch = mine->GetSwitch();
 }

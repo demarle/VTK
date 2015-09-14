@@ -46,6 +46,20 @@ protected:
   vtkLightNode();
   ~vtkLightNode();
 
+  //state
+  double AmbientColor[3];
+  double AttenuationValues[3];
+  double ConeAngle;
+  double DiffuseColor[3];
+  double Exponent;
+  double FocalPoint[3];
+  double Intensity;
+  int LightType;
+  double Position[3];
+  bool Positional;
+  double SpecularColor[3];
+  bool Switch;
+
 private:
   vtkLightNode(const vtkLightNode&); // Not implemented.
   void operator=(const vtkLightNode&); // Not implemented.

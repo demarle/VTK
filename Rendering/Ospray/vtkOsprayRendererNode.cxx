@@ -18,6 +18,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkOsprayActorNode.h"
 #include "vtkOsprayCameraNode.h"
+#include "vtkOsprayLightNode.h"
 #include "vtkRenderer.h"
 #include "vtkViewNodeCollection.h"
 
@@ -55,6 +56,8 @@ void vtkOsprayRendererNode::Render()
            this->Background[2]);
 
   //camera
+  //TODO: this repeated traversal to find things of particular types
+  //is bad, find something smarter
   vtkViewNodeCollection *nodes = this->GetChildren();
   vtkCollectionIterator *it = nodes->NewIterator();
   it->InitTraversal();
@@ -68,6 +71,20 @@ void vtkOsprayRendererNode::Render()
       ospSetObject(oRenderer,"camera", oCamera);
       child->ORender(this->TiledSize, oCamera);
       ospCommit(oCamera);
+      break;
+      }
+    it->GoToNextItem();
+    }
+
+  //lights
+  it->InitTraversal();
+  while (!it->IsDoneWithTraversal())
+    {
+    vtkOsprayLightNode *child =
+      vtkOsprayLightNode::SafeDownCast(it->GetCurrentObject());
+    if (child)
+      {
+      child->ORender(oRenderer);
       break;
       }
     it->GoToNextItem();

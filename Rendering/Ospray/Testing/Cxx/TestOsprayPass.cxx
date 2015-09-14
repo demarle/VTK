@@ -23,6 +23,8 @@
 
 #include "vtkActor.h"
 #include "vtkCamera.h"
+#include "vtkLight.h"
+#include "vtkLightCollection.h"
 #include "vtkOsprayPass.h"
 #include "vtkOsprayViewNodeFactory.h"
 #include "vtkOsprayWindowNode.h"
@@ -43,6 +45,7 @@ int TestOsprayPass(int argc, char* argv[])
   vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
   renWin->AddRenderer(renderer);
   vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
+  sphere->SetPhiResolution(100);
   vtkSmartPointer<vtkPolyDataMapper> mapper=vtkSmartPointer<vtkPolyDataMapper>::New();
   mapper->SetInputConnection(sphere->GetOutputPort());
   vtkSmartPointer<vtkActor> actor=vtkSmartPointer<vtkActor>::New();
@@ -62,9 +65,25 @@ int TestOsprayPass(int argc, char* argv[])
   renderer->SetPass(ddm);
   renWin->Render();
 
+  vtkLight *light = vtkLight::SafeDownCast(renderer->GetLights()->GetItemAsObject(0));
+  double lColor[3];
+  light->GetDiffuseColor(lColor);
+
+  vtkCamera *camera = renderer->GetActiveCamera();
+  double position[3];
+  camera->GetPosition(position);
+
   for (int i = 0; i < 10; i++)
     {
+    renWin->SetSize(400+i,400-i);
     double I = (double)i/10.0;
+    sphere->SetThetaResolution(10+i);
+    lColor[0] += I;
+    lColor[1] -= I;
+    cerr << lColor[0] << "," << lColor[1] << "," <<  lColor[2] << endl;
+    light->SetDiffuseColor(lColor[0],lColor[1],lColor[2]); //TODO: not working, nor is lposition
+    position[2] += I;
+    camera->SetPosition(position);
     renderer->SetBackground(0.0,I,1-I);
     renWin->Render();
     }

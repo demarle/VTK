@@ -32,7 +32,7 @@ public:
 
   //Description:
   //Make ospray calls to render me.
-  virtual void RenderSelf();
+  virtual void ORender(void *oRenderer);
 
 protected:
   vtkOsprayLightNode();
