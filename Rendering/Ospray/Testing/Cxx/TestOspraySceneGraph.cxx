@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    Mace.cxx
+  Module:    TestOspraySceneGraph.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,6 +12,11 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+// This test verifies that ospray scene graph classes are constructed OK
+//
+// The command line arguments are:
+// -I        => run in interactive mode; unless this is used, the program will
+//              not allow interaction and exit
 
 #include "vtkOsprayViewNodeFactory.h"
 

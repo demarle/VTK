@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    TestOsprayPass.cxx
+  Module:    TestOsprayDynamicObject.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,9 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// This test verifies that we can hot swap ospray and GL backends.
+// This test verifies that we can render objects and that changing vtk state
+// changes the resulting image accordingly. It
+// runs for a while so that we can verify that we have no leaks.
 //
 // The command line arguments are:
 // -I        => run in interactive mode; unless this is used, the program will
@@ -35,7 +37,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSphereSource.h"
 
-int TestOsprayPass(int argc, char* argv[])
+int TestOsprayDynamicObject(int argc, char* argv[])
 {
   int retVal = 1;
 
@@ -73,20 +75,24 @@ int TestOsprayPass(int argc, char* argv[])
   double position[3];
   camera->GetPosition(position);
 
-#define MAXFRAME 10
+#define MAXFRAME 100
 
   for (int i = 0; i < MAXFRAME; i++)
     {
-    if (i%2 == 0)
-      {
-      cerr << "RASTERIZATION" << endl;
-      renderer->SetPass(NULL);
-      }
-    else
-      {
-      cerr << "RAY TRACER" << endl;
-      renderer->SetPass(ospray);
-      }
+    double I = (double)i/(double)MAXFRAME;
+
+    renWin->SetSize(400+i,400-i); //TODO: not working yet
+
+    sphere->SetThetaResolution(3+i);
+
+    lColor[0] += I;
+    lColor[1] -= I;
+    light->SetDiffuseColor(lColor[0],lColor[1],lColor[2]); //TODO: not working, nor is lposition
+
+    position[2] += I;
+    camera->SetPosition(position);
+
+    renderer->SetBackground(0.0,I,1-I);
     renWin->Render();
     }
 

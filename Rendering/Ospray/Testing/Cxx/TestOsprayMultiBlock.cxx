@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    TestOsprayPass.cxx
+  Module:    TestOsprayMultiBlock.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// This test verifies that we can hot swap ospray and GL backends.
+// This test verifies that treatment of multiblock data is correct
 //
 // The command line arguments are:
 // -I        => run in interactive mode; unless this is used, the program will
@@ -23,19 +23,20 @@
 
 #include "vtkActor.h"
 #include "vtkCamera.h"
+#include "vtkCompositeDataSet.h"
+#include "vtkCompositePolyDataMapper2.h"
 #include "vtkLight.h"
 #include "vtkLightCollection.h"
 #include "vtkOsprayPass.h"
 #include "vtkOsprayViewNodeFactory.h"
 #include "vtkOsprayWindowNode.h"
-#include "vtkPolyDataMapper.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkSmartPointer.h"
-#include "vtkSphereSource.h"
+#include "vtkXMLMultiBlockDataReader.h"
 
-int TestOsprayPass(int argc, char* argv[])
+int TestOsprayMultiBlock(int argc, char* argv[])
 {
   int retVal = 1;
 
@@ -44,10 +45,16 @@ int TestOsprayPass(int argc, char* argv[])
   iren->SetRenderWindow(renWin);
   vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
   renWin->AddRenderer(renderer);
-  vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
-  sphere->SetPhiResolution(100);
-  vtkSmartPointer<vtkPolyDataMapper> mapper=vtkSmartPointer<vtkPolyDataMapper>::New();
-  mapper->SetInputConnection(sphere->GetOutputPort());
+
+  vtkSmartPointer<vtkXMLMultiBlockDataReader> reader = vtkSmartPointer<vtkXMLMultiBlockDataReader>::New();
+  const char* fileName = vtkTestUtilities::ExpandDataFileName(argc, argv,
+                                                               "Data/many_blocks/many_blocks.vtm");
+  reader->SetFileName(fileName);
+  reader->Update();
+  cerr << reader->GetOutput() << endl;
+
+  vtkSmartPointer<vtkCompositePolyDataMapper2> mapper=vtkSmartPointer<vtkCompositePolyDataMapper2>::New();
+  mapper->SetInputConnection(reader->GetOutputPort());
   vtkSmartPointer<vtkActor> actor=vtkSmartPointer<vtkActor>::New();
   renderer->AddActor(actor);
   actor->SetMapper(mapper);
@@ -62,37 +69,11 @@ int TestOsprayPass(int argc, char* argv[])
   vtkSmartPointer<vtkOsprayPass> ospray=vtkSmartPointer<vtkOsprayPass>::New();
   ospray->SetSceneGraph(vtkOsprayWindowNode::SafeDownCast(vn));
 
-  renderer->SetPass(ospray);
+  //TODO: segfault when uncommented
+  //renderer->SetPass(ospray);
+
   renWin->Render();
 
-  vtkLight *light = vtkLight::SafeDownCast(renderer->GetLights()->GetItemAsObject(0));
-  double lColor[3];
-  light->GetDiffuseColor(lColor);
-
-  vtkCamera *camera = renderer->GetActiveCamera();
-  double position[3];
-  camera->GetPosition(position);
-
-#define MAXFRAME 10
-
-  for (int i = 0; i < MAXFRAME; i++)
-    {
-    if (i%2 == 0)
-      {
-      cerr << "RASTERIZATION" << endl;
-      renderer->SetPass(NULL);
-      }
-    else
-      {
-      cerr << "RAY TRACER" << endl;
-      renderer->SetPass(ospray);
-      }
-    renWin->Render();
-    }
-
   vn->Delete();
-
-  //iren->Start();
-
   return !retVal;
 }
