@@ -44,7 +44,7 @@ int TestOsprayDynamicScene(int argc, char* argv[])
   iren->SetRenderWindow(renWin);
   vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
   renWin->AddRenderer(renderer);
-  renderer->SetBackground(0.1,0.1,1.0);
+  renderer->SetBackground(0.0,0.0,0.0);
   renWin->SetSize(400,400);
   renWin->Render();
 
@@ -54,23 +54,20 @@ int TestOsprayDynamicScene(int argc, char* argv[])
 
   vtkSmartPointer<vtkOsprayPass> ospray=vtkSmartPointer<vtkOsprayPass>::New();
   ospray->SetSceneGraph(vtkOsprayWindowNode::SafeDownCast(vn));
-  //TODO: doesn't work right if I use ospray
   renderer->SetPass(ospray);
-
-  //TODO: segfault if render before any geometry
   //renWin->Render();
 
-  #define MAXFRAME 2
+  #define NUMACTS 3
   vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-  camera->SetPosition(MAXFRAME*3,MAXFRAME*3,MAXFRAME*4);
+  camera->SetPosition(NUMACTS*3,NUMACTS*3,NUMACTS*4);
   renderer->SetActiveCamera(camera);
 
   std::map<int, vtkActor*> actors;
-  for (int i = 0; i < MAXFRAME; i++)
+  for (int i = 0; i < NUMACTS; i++)
     {
-    for (int j = 0; j < MAXFRAME; j++)
+    for (int j = 0; j < NUMACTS; j++)
       {
-      for (int k = 0; k < MAXFRAME; k++)
+      for (int k = 0; k < NUMACTS; k++)
         {
         vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
         sphere->SetCenter(i,j,k);
@@ -81,45 +78,45 @@ int TestOsprayDynamicScene(int argc, char* argv[])
         vtkActor *actor= vtkActor::New();
         renderer->AddActor(actor);
         actor->SetMapper(mapper);
-        actors[i*MAXFRAME*MAXFRAME+j*MAXFRAME+k] = actor;
+        actors[i*NUMACTS*NUMACTS+j*NUMACTS+k] = actor;
         renWin->Render();
         }
       }
     }
 
-  for (int i = 0; i < MAXFRAME; i++)
+  for (int i = 0; i < NUMACTS; i++)
     {
-    for (int j = 0; j < MAXFRAME; j++)
+    for (int j = 0; j < NUMACTS; j++)
       {
-      for (int k = 0; k < MAXFRAME; k++)
+      for (int k = 0; k < NUMACTS; k++)
         {
-        vtkActor *actor = actors[i*MAXFRAME*MAXFRAME+j*MAXFRAME+k];
+        vtkActor *actor = actors[i*NUMACTS*NUMACTS+j*NUMACTS+k];
         actor->VisibilityOff();
         renWin->Render();
         }
       }
     }
 
-  for (int i = 0; i < MAXFRAME; i++)
+  for (int i = 0; i < NUMACTS; i++)
     {
-    for (int j = 0; j < MAXFRAME; j++)
+    for (int j = 0; j < NUMACTS; j++)
       {
-      for (int k = 0; k < MAXFRAME; k++)
+      for (int k = 0; k < NUMACTS; k++)
         {
-        vtkActor *actor = actors[i*MAXFRAME*MAXFRAME+j*MAXFRAME+k];
+        vtkActor *actor = actors[i*NUMACTS*NUMACTS+j*NUMACTS+k];
         actor->VisibilityOn();
         renWin->Render();
         }
       }
     }
 
-  for (int i = 0; i < MAXFRAME; i++)
+  for (int i = 0; i < NUMACTS; i++)
     {
-    for (int j = 0; j < MAXFRAME; j++)
+    for (int j = 0; j < NUMACTS; j++)
       {
-      for (int k = 0; k < MAXFRAME; k++)
+      for (int k = 0; k < NUMACTS; k++)
         {
-        vtkActor *actor = actors[i*MAXFRAME*MAXFRAME+j*MAXFRAME+k];
+        vtkActor *actor = actors[i*NUMACTS*NUMACTS+j*NUMACTS+k];
         renderer->RemoveActor(actor);
         actor->Delete();
         renWin->Render();

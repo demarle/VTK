@@ -117,9 +117,15 @@ void vtkOsprayActorNode::RenderSelf()
 //----------------------------------------------------------------------------
 void vtkOsprayActorNode::ORender(void *model)
 {
-  OSPModel oModel = (OSPModel) model;
+  if (this->Visibility == false)
+    {
+    return;
+    }
+  //TODO: not safe assumption, in general may not be actor or polydata.
+  vtkActor *act = (vtkActor*)this->GetRenderable();
+  vtkPolyData *pd = (vtkPolyData*)(act->GetMapper()->GetInput());
 
-  vtkPolyData *pd = (vtkPolyData*)(((vtkActor*)this->GetRenderable())->GetMapper()->GetInput());
+  OSPModel oModel = (OSPModel) model;
 
   vtkPoints *points = pd->GetPoints();
 

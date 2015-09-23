@@ -46,6 +46,8 @@ protected:
   vtkActorNode();
   ~vtkActorNode();
 
+  //state
+  bool Visibility;
 private:
   vtkActorNode(const vtkActorNode&); // Not implemented.
   void operator=(const vtkActorNode&); // Not implemented.

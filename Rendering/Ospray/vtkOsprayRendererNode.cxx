@@ -90,6 +90,7 @@ void vtkOsprayRendererNode::Render()
     it->GoToNextItem();
     }
 
+  OSPModel oModel = ospNewModel();
   //actors
   it->InitTraversal();
   while (!it->IsDoneWithTraversal())
@@ -98,14 +99,13 @@ void vtkOsprayRendererNode::Render()
       vtkOsprayActorNode::SafeDownCast(it->GetCurrentObject());
     if (child)
       {
-      OSPModel oModel = ospNewModel();
       child->ORender(oModel);
-      ospSetObject(oRenderer,"model", oModel);
-      ospCommit(oModel);
       }
     it->GoToNextItem();
     }
   it->Delete();
+  ospSetObject(oRenderer,"model", oModel);
+  ospCommit(oModel);
 
   ospCommit(oRenderer);
 
