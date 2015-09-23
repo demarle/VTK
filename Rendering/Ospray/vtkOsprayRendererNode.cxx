@@ -48,8 +48,8 @@ void vtkOsprayRendererNode::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkOsprayRendererNode::Render()
 {
-  cerr << "Hello from " << this << " " << this->GetClassName() << endl;
-  OSPRenderer oRenderer = (osp::Renderer*)ospNewRenderer("ao4");
+  OSPRenderer oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
+  //TODO: other options include {ao{1,2,4,8,16},raycast} - which to pick?
   ospSet3f(oRenderer,"bgColor",
            this->Background[0],
            this->Background[1],
@@ -71,6 +71,7 @@ void vtkOsprayRendererNode::Render()
       ospSetObject(oRenderer,"camera", oCamera);
       child->ORender(this->TiledSize, oCamera);
       ospCommit(oCamera);
+      ospRelease(oCamera);
       break;
       }
     it->GoToNextItem();
@@ -106,20 +107,25 @@ void vtkOsprayRendererNode::Render()
   it->Delete();
   ospSetObject(oRenderer,"model", oModel);
   ospCommit(oModel);
-
+  ospRelease(oModel);
   ospCommit(oRenderer);
 
   OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer
     (osp::vec2i(this->Size[0], this->Size[1]),
      OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH | OSP_FB_ACCUM);
   ospFrameBufferClear(osp_framebuffer, OSP_FB_ACCUM);
-
   ospRenderFrame(osp_framebuffer, oRenderer, OSP_FB_COLOR|OSP_FB_ACCUM);
+  ospRelease(oModel);
+  ospRelease(oRenderer);
+  ospRelease(oRenderer); //wth?
 
   const void* rgba = ospMapFrameBuffer(osp_framebuffer);
   delete[] this->Buffer;
   this->Buffer = new unsigned char[this->Size[0]*this->Size[1]*4];
   memcpy((void*)this->Buffer, rgba, this->Size[0]*this->Size[1]*4);
+//  delete osp_framebuffer;
+  ospRelease(osp_framebuffer);
+  ospRelease(osp_framebuffer); //wth?
 }
 
 //----------------------------------------------------------------------------
@@ -138,5 +144,4 @@ void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer,
       *optr++ = *iptr++;
       }
     }
-  cerr << "DONE" << endl;
 }

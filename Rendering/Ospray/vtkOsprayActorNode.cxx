@@ -86,6 +86,30 @@ namespace vtkosp {
     std::vector<Vec4> colors;
     std::vector<ospray::vec3fa> wireframe_vertex;
     std::vector<int> wireframe_index;
+    ~Mesh()
+    {
+#if 0
+      std::vector<size_t>().swap(vertex_indices);
+      std::vector<Vec3>().swap(vertices);
+      std::vector<Vec3>().swap(vertexNormals);
+      std::vector<Vec2>().swap(texCoords);
+      std::vector<size_t>().swap(texture_indices);
+      std::vector<size_t>().swap(normal_indices);
+      std::vector<Vec4>().swap(colors);
+      std::vector<ospray::vec3fa>().swap(wireframe_vertex);
+      std::vector<int>().swap(wireframe_index);
+#else
+      vertex_indices.clear();
+      vertices.clear();
+      vertexNormals.clear();
+      texCoords.clear();
+      texture_indices.clear();
+      normal_indices.clear();
+      colors.clear();
+      wireframe_vertex.clear();
+      wireframe_index.clear();
+#endif
+    }
   };
 }
 
@@ -111,7 +135,6 @@ void vtkOsprayActorNode::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkOsprayActorNode::RenderSelf()
 {
-  cerr << "Hello from " << this << " " << this->GetClassName() << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -121,6 +144,7 @@ void vtkOsprayActorNode::ORender(void *model)
     {
     return;
     }
+
   //TODO: not safe assumption, in general may not be actor or polydata.
   vtkActor *act = (vtkActor*)this->GetRenderable();
   vtkPolyData *pd = (vtkPolyData*)(act->GetMapper()->GetInput());
@@ -238,16 +262,19 @@ void vtkOsprayActorNode::ORender(void *model)
     OSPGeometry ospMesh = ospNewTriangleMesh();
     OSPData position = ospNewData(numPositions, OSP_FLOAT3A, &vertices[0]);
     ospSetData(ospMesh, "position", position);
+    ospRelease(position);
 
     if (!mesh->normal_indices.empty())
       {
       OSPData normal =
         ospNewData(mesh->vertexNormals.size(), OSP_FLOAT3A, &normals[0]);
       ospSetData(ospMesh, "vertex.normal", normal);
+      ospRelease(normal);
       }
 
     OSPData index = ospNewData(numTriangles, OSP_INT3, &triangles[0]);
     ospSetData(ospMesh, "index", index);
+    ospRelease(index);
 
     if (!mesh->texCoords.empty())
       {
@@ -255,6 +282,7 @@ void vtkOsprayActorNode::ORender(void *model)
         ospNewData(mesh->texCoords.size(), OSP_FLOAT2, &mesh->texCoords[0]);
       assert(mesh->texCoords.size() > 0);
       ospSetData(ospMesh, "vertex.texcoord", texcoord);
+      ospRelease(texcoord);
       }
 
     if (!mesh->colors.empty())
@@ -262,11 +290,16 @@ void vtkOsprayActorNode::ORender(void *model)
       OSPData colors =
         ospNewData(mesh->colors.size(), OSP_FLOAT4, &mesh->colors[0]);
       ospSetData(ospMesh, "vertex.color", colors);
+      ospRelease(colors);
       }
 
     //ospSetMaterial(ospMesh, ospMaterial);
     ospCommit(ospMesh);
 
     ospAddGeometry(oModel, ospMesh);
+
+    ospRelease(ospMesh);
     }
+
+  delete mesh;
 }
