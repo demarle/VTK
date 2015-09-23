@@ -31,12 +31,14 @@ vtkStandardNewMacro(vtkOsprayRendererNode);
 vtkOsprayRendererNode::vtkOsprayRendererNode()
 {
   this->Buffer = NULL;
+  this->ZBuffer = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkOsprayRendererNode::~vtkOsprayRendererNode()
 {
   delete[] this->Buffer;
+  delete[] this->ZBuffer;
 }
 
 //----------------------------------------------------------------------------
@@ -112,17 +114,27 @@ void vtkOsprayRendererNode::Render()
 
   OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer
     (osp::vec2i(this->Size[0], this->Size[1]),
-     OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH | OSP_FB_ACCUM);
-  ospFrameBufferClear(osp_framebuffer, OSP_FB_ACCUM);
-  ospRenderFrame(osp_framebuffer, oRenderer, OSP_FB_COLOR|OSP_FB_ACCUM);
+     OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH);
+
+  ospFrameBufferClear(osp_framebuffer, OSP_FB_COLOR|OSP_FB_DEPTH);
+
+  ospRenderFrame(osp_framebuffer, oRenderer, OSP_FB_COLOR|OSP_FB_DEPTH);
   ospRelease(oModel);
   ospRelease(oRenderer);
   ospRelease(oRenderer); //wth?
 
-  const void* rgba = ospMapFrameBuffer(osp_framebuffer);
+  const void* rgba = ospMapFrameBuffer(osp_framebuffer, OSP_FB_COLOR);
   delete[] this->Buffer;
   this->Buffer = new unsigned char[this->Size[0]*this->Size[1]*4];
   memcpy((void*)this->Buffer, rgba, this->Size[0]*this->Size[1]*4);
+  ospUnmapFrameBuffer(rgba, osp_framebuffer);
+
+  const void* Z = ospMapFrameBuffer(osp_framebuffer, OSP_FB_DEPTH);
+  delete[] this->ZBuffer;
+  this->ZBuffer = new float[this->Size[0]*this->Size[1]*1];
+  memcpy((void*)this->ZBuffer, Z, this->Size[0]*this->Size[1]*1*sizeof(float));
+  ospUnmapFrameBuffer(Z, osp_framebuffer);
+
 //  delete osp_framebuffer;
   ospRelease(osp_framebuffer);
   ospRelease(osp_framebuffer); //wth?
@@ -132,16 +144,45 @@ void vtkOsprayRendererNode::Render()
 void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer,
                                        int buffx, int buffy)
 {
+  //TODO: have to keep depth information around in VTK side for
+  //parallel compositing to work too.
   unsigned char *iptr = this->Buffer;
+  float *zptr = this->ZBuffer;
   unsigned char *optr = buffer;
-  for (int i = 0; i < buffx && i < this->Size[0]; i++)
+  if (this->Layer == 0)
     {
-    for (int j = 0; j < buffy && i < this->Size[1]; j++)
+    for (int i = 0; i < buffx && i < this->Size[0]; i++)
       {
-      *optr++ = *iptr++;
-      *optr++ = *iptr++;
-      *optr++ = *iptr++;
-      *optr++ = *iptr++;
+      for (int j = 0; j < buffy && i < this->Size[1]; j++)
+        {
+        *optr++ = *iptr++;
+        *optr++ = *iptr++;
+        *optr++ = *iptr++;
+        *optr++ = *iptr++;
+        //cerr << (int) *zptr++ << endl;
+        }
+      }
+    }
+  else
+    {
+    for (int i = 0; i < buffx && i < this->Size[0]; i++)
+      {
+      for (int j = 0; j < buffy && i < this->Size[1]; j++)
+        {
+        if (!std::isinf(*zptr))
+          {
+          *optr++ = *iptr++;
+          *optr++ = *iptr++;
+          *optr++ = *iptr++;
+          *optr++ = *iptr++;
+          }
+        else
+          {
+          optr+=4;
+          iptr+=4;
+          }
+        zptr++;
+        }
       }
     }
 }

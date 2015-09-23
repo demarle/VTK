@@ -48,6 +48,7 @@ protected:
 
   //internal structures
   unsigned char *Buffer;
+  float *ZBuffer;
 
 private:
   vtkOsprayRendererNode(const vtkOsprayRendererNode&); // Not implemented.
