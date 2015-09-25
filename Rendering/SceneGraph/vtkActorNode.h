@@ -46,8 +46,31 @@ protected:
   vtkActorNode();
   ~vtkActorNode();
 
-  //state
+  //actor state
   bool Visibility;
+
+  //property state
+  double Opacity;
+  int Representation;
+  bool Lighting;
+  int Interpolation;
+  double Ambient;
+  double AmbientColor[3];
+  double Diffuse;
+  double DiffuseColor[3];
+  double Specular;
+  double SpecularColor[3];
+  double SpecularPower;
+
+  //mapper state
+  bool ScalarVisibility;
+  int ScalarMode;
+  int ColorMode;
+  bool InterpolateScalarsBeforeMapping;
+  double ScalarRange[2];
+  bool UseLookupTableScalarRange;
+  int ScalarMaterialMode;
+
 private:
   vtkActorNode(const vtkActorNode&); // Not implemented.
   void operator=(const vtkActorNode&); // Not implemented.
