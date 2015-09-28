@@ -496,6 +496,7 @@ protected:
   vtkMapper();
   ~vtkMapper();
 
+  friend class vtkOsprayActorNode;
   vtkUnsignedCharArray *Colors;
 
   // Use texture coordinates for coloring.

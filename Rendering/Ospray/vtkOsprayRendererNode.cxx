@@ -102,7 +102,7 @@ void vtkOsprayRendererNode::Render()
       vtkOsprayActorNode::SafeDownCast(it->GetCurrentObject());
     if (child)
       {
-      child->ORender(oModel);
+      child->ORender(oRenderer, oModel);
       }
     it->GoToNextItem();
     }

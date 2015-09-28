@@ -108,6 +108,17 @@ renderable *MakeSphereAt(double x, double y, double z, int res=10)
     double vals[3] = {(double)i/(double)np, (double)(i*4)/(double)np-2.0, 42.0};
     da->InsertNextTuple3(vals[0],vals[1],vals[2]);
     }
+
+  vtkSmartPointer<vtkUnsignedCharArray> pac = vtkSmartPointer<vtkUnsignedCharArray>::New();
+  pac->SetName("testarrayc1");
+  pac->SetNumberOfComponents(3);
+  pd->GetPointData()->AddArray(pac);
+  for (int i = 0; i < np; i++)
+    {
+    unsigned char vals[3] = {255*((double)i/(double)np), 255*((double)(i*4)/(double)np-2.0), 42};
+    pac->InsertNextTuple3(vals[0],vals[1],vals[2]);
+    }
+
   vtkSmartPointer<vtkUnsignedCharArray> ca = vtkSmartPointer<vtkUnsignedCharArray>::New();
   ca->SetName("testarray3");
   ca->SetNumberOfComponents(3);
@@ -153,6 +164,15 @@ renderable *MakeSphereAt(double x, double y, double z, int res=10)
 
 int TestOsprayRenderMesh(int argc, char* argv[])
 {
+
+  bool useGL = false;
+  for (int i = 0; i < argc; i++)
+    {
+    if (!strcmp(argv[i], "-GL"))
+      {
+      useGL = true;
+      }
+    }
   int retVal = 1;
 
   vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
@@ -170,13 +190,15 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   //TODO: exercise exotic types of camera manipulation
 
   vtkSmartPointer<vtkOsprayViewNodeFactory> vnf = vtkSmartPointer<vtkOsprayViewNodeFactory>::New();
-  //vtkViewNode *vn = vnf->CreateNode(renWin);
-  //vn->Build();
+  vtkViewNode *vn = vnf->CreateNode(renWin);
+  vn->Build();
 
   vtkSmartPointer<vtkOsprayPass> ospray = vtkSmartPointer<vtkOsprayPass>::New();
-  //ospray->SetSceneGraph(vtkOsprayWindowNode::SafeDownCast(vn));
-  //TODO: don't yet handle multiple actors correctly for some reason
-  //renderer->SetPass(ospray);
+  ospray->SetSceneGraph(vtkOsprayWindowNode::SafeDownCast(vn));
+  if (!useGL)
+    {
+    renderer->SetPass(ospray);
+    }
 
 
   //Now, vary of most of the many parameters that rendering can vary by
@@ -274,6 +296,22 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   renderer->AddActor(ren->a);
   delete(ren);
 
+  //RGB direct
+  ren = MakeSphereAt(2,0,-3);
+  ren->m->SetScalarModeToUsePointFieldData();
+  ren->m->SetColorModeToDefault();
+  ren->m->SelectColorArray("testarrayc1");
+  renderer->AddActor(ren->a);
+  delete(ren);
+
+  //RGB mapped
+  ren = MakeSphereAt(2,0,-2);
+  ren->m->SetScalarModeToUsePointFieldData();
+  ren->m->SetColorModeToMapScalars();
+  ren->m->SelectColorArray("testarrayc1");
+  renderer->AddActor(ren->a);
+  delete(ren);
+
   //lighting off, flat, gouraud and phong lighting
   ren = MakeSphereAt(1,0,-5,7);
   ren->a->GetProperty()->LightingOff();
@@ -338,10 +376,12 @@ int TestOsprayRenderMesh(int argc, char* argv[])
 
   //TODO: mapper clipping planes
 
+  //TODO: hierarchical actors
+
   renWin->Render();
 
   iren->Start();
-  //vn->Delete();
+  vn->Delete();
 
   return !retVal;
 }

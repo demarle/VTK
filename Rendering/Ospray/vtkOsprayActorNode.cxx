@@ -19,6 +19,7 @@
 #include "vtkCollectionIterator.h"
 #include "vtkMapper.h"
 #include "vtkObjectFactory.h"
+#include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
 #include "vtkProperty.h"
@@ -31,8 +32,8 @@
 #define SHOW_POINTS 0
 #define SHOW_LINE_POINTS 0
 #define SHOW_LINE_WIRE 0
-#define SHOW_MESH_PTS 0
-#define SHOW_MESH_WIRE 0
+#define SHOW_MESH_PTS 1
+#define SHOW_MESH_WIRE 1
 #define SHOW_MESH_SURF 1
 #define SHOW_STRIP_PTS 0
 #define SHOW_STRIP_WIRE 0
@@ -291,7 +292,7 @@ namespace {
 
 }
 //----------------------------------------------------------------------------
-void vtkOsprayActorNode::ORender(void *model)
+void vtkOsprayActorNode::ORender(void *renderer, void *model)
 {
   if (this->Visibility == false)
     {
@@ -359,6 +360,67 @@ void vtkOsprayActorNode::ORender(void *model)
       } while (wasNan == true && fixIndex >= 0);
     _vertices.push_back(vtkosp::Vec3(pos[0], pos[1], pos[2]));
     }
+
+  //material
+  OSPRenderer oRenderer = (OSPRenderer) renderer;
+  OSPMaterial oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+  float diffusef[] = {(float)this->DiffuseColor[0],
+                      (float)this->DiffuseColor[1],
+                      (float)this->DiffuseColor[2]};
+  float specularf[] = {(float)this->SpecularColor[0],
+                       (float)this->SpecularColor[1],
+                       (float)this->SpecularColor[2]};
+  ospSet3fv(oMaterial,"Kd",diffusef);
+  ospSet3fv(oMaterial,"Ks",specularf);
+  ospSet1f(oMaterial,"Ns",float(this->SpecularPower*.5));
+  ospSet1f(oMaterial,"d", float(this->Opacity));
+  ospCommit(oMaterial);
+
+  //normals
+  ospray::vec3fa *normals = NULL;
+  int numNormals = 0;
+  if (this->Interpolation != VTK_FLAT)
+    {
+    vtkPointData *pointData = poly->GetPointData();
+    if (vtkDataArray *vNormals = pointData->GetNormals())
+      {
+      numNormals= vNormals->GetNumberOfTuples();
+      normals = (ospray::vec3fa *)embree::alignedMalloc
+        (sizeof(ospray::vec3fa) * numNormals);
+
+      //vtkDataArray *normals = vtkFloatArray::New();
+      //normals->SetNumberOfComponents(3);
+      //transform->TransformNormals(pointData->GetNormals(), normals);
+      for (int i = 0; i < numNormals; i++)
+        {
+        double *vNormal = vNormals->GetTuple(i);
+        normals[i] = ospray::vec3fa(vNormal[0],vNormal[1],vNormal[2]);
+        }
+      //normals->Delete();
+      }
+  }
+
+  //direct colors
+  int numColors = 0;
+  ospray::vec4f *colors = NULL;
+  act->GetMapper()->MapScalars(1.0);
+  vtkUnsignedCharArray *vColors = act->GetMapper()->Colors;
+  if (vColors)
+    {
+    numColors = vColors->GetNumberOfTuples();
+    colors = (ospray::vec4f *)malloc
+        (sizeof(ospray::vec4f) * numColors);
+
+    for (int i = 0; i < numColors; i++)
+      {
+      unsigned char *color = vColors->GetPointer(4 * i);
+      colors[i] = ospray::vec4f(color[0] / 255.0,
+                                color[1] / 255.0,
+                                color[2] / 255.0,
+                                1);
+      }
+    }
+
 
   //points
   OSPModel oModel = (OSPModel) model;
@@ -441,10 +503,12 @@ void vtkOsprayActorNode::ORender(void *model)
       case VTK_WIREFRAME:
         {
 #if SHOW_MESH_WIRE
-        OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("cylinders");
-        cerr << tIndexArray.size() << " " << prims[2]->GetNumberOfCells() << endl;
-        float *mdata = (float *)embree::alignedMalloc
-          (sizeof(float )*tIndexArray.size()*3);
+#if 0
+        OSPGeometry ospMesh = ospNewGeometry("cylinders");
+        cerr << "NT" << prims[2]->GetNumberOfCells() << endl;
+        cerr << "NI" << tIndexArray.size() << endl;
+        float *mdata = (float *)malloc
+          (sizeof(float)*tIndexArray.size()*3);
         OSPData _mdata = ospNewData(tIndexArray.size()*3, OSP_FLOAT, &mdata[0]);
         for (size_t i = 0; i < tIndexArray.size(); i++)
           {
@@ -460,6 +524,22 @@ void vtkOsprayActorNode::ORender(void *model)
         ospAddGeometry(oModel, ospMesh);
         ospCommit(ospMesh);
         ospRelease(ospMesh);
+#else
+        OSPGeometry ospMesh = ospNewGeometry("streamlines");
+        std::vector<int> mdata;
+        for (size_t i = 0; i < tIndexArray.size(); i++)
+          {
+          mdata.push_back(tIndexArray[i]);
+          }
+        OSPData _mdata = ospNewData(tIndexArray.size(), OSP_INT, &mdata[0]);
+        ospSetData(ospMesh, "vertex", position);
+        ospSetData(ospMesh, "index", _mdata);
+        ospSet1f(ospMesh, "radius", 0.01);
+
+        ospAddGeometry(oModel, ospMesh);
+        ospCommit(ospMesh);
+        ospRelease(ospMesh);
+#endif
 #endif
         break;
         }
@@ -483,7 +563,26 @@ void vtkOsprayActorNode::ORender(void *model)
         ospSetData(ospMesh, "index", index);
         ospRelease(index);
 
+        if (numNormals)
+          {
+          OSPData _normals =
+            ospNewData(numNormals, OSP_FLOAT3A, &normals[0]);
+          ospSetData(ospMesh, "vertex.normal", _normals);
+          ospRelease(_normals);
+          }
+
+        if (numColors)
+          {
+          OSPData _colors =
+            ospNewData(numColors, OSP_FLOAT4, &colors[0]);
+          ospSetData(ospMesh, "vertex.color", _colors);
+          ospRelease(_colors);
+          }
+
         ospAddGeometry(oModel, ospMesh);
+
+        ospSetMaterial(ospMesh, oMaterial);
+
         ospCommit(ospMesh);
         ospRelease(ospMesh);
 #endif
