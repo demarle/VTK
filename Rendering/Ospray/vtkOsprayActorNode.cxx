@@ -338,6 +338,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
     }
 
   std::vector<vtkosp::Vec3> _vertices;
+//  cerr << "NUMPTS" << poly->GetPoints()->GetNumberOfPoints() << endl;
   for (int i = 0; i < poly->GetPoints()->GetNumberOfPoints(); i++)
     {
     double *pos = poly->GetPoints()->GetPoint(i);
@@ -439,6 +440,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   if (pIndexArray.size())
     {
     //draw vertices
+    cerr << "TODO SHOW_POINTS" << endl;
 #if SHOW_POINTS
     OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("spheres");
     ospAddGeometry(oModel, ospMesh);
@@ -452,6 +454,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
     //draw lines
     if (this->Representation == VTK_POINTS)
       {
+      cerr << "TODO SHOW_LINE_POINTS" << endl;
 #if SHOW_LINE_POINTS
       OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("spheres");
       ospAddGeometry(oModel, ospMesh);
@@ -461,6 +464,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
       }
     else
       {
+      cerr << "TODO SHOW_LINE_WIRE" << endl;
 #if SHOW_LINE_WIRE
       OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("cylinders");
       ospAddGeometry(oModel, ospMesh);
@@ -478,23 +482,27 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
       case VTK_POINTS:
         {
 #if SHOW_MESH_PTS
-        OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("spheres");
-        ospray::vec4f *mdata = (ospray::vec4f *)embree::alignedMalloc
-          (sizeof(ospray::vec4f) * tIndexArray.size());
-        OSPData _mdata = ospNewData(tIndexArray.size(), OSP_FLOAT4, &mdata[0]);
+        OSPGeometry ospMesh = ospNewGeometry("spheres");
+        float *mdata = new float[3*tIndexArray.size()];
         for (size_t i = 0; i < tIndexArray.size(); i++)
           {
-          mdata[i] = embree::Vec4f(vertices[tIndexArray[i]].x,
-                                   vertices[tIndexArray[i]].y,
-                                   vertices[tIndexArray[i]].z,
-                                   100);
+          mdata[i*3+0] = (float)vertices[tIndexArray[i]].x;
+          mdata[i*3+1] = (float)vertices[tIndexArray[i]].y;
+          mdata[i*3+2] = (float)vertices[tIndexArray[i]].z;
           }
-        ospSetData(ospMesh, "spheres", _mdata);
-        ospSet1f(ospMesh, "radius", 0.05); //TODO: control by mapper pointsize AND/or variable
-        ospSet1i(ospMesh, "bytes_per_sphere", 4*sizeof(float));
+        OSPData _mdata = ospNewData(tIndexArray.size()*3, OSP_FLOAT, mdata);
+        ospSetObject(ospMesh, "spheres", _mdata);
+        ospSet1i(ospMesh, "bytes_per_sphere", 3*sizeof(float));
+        ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
+        ospSet1i(ospMesh, "offset_radius", -1);//3*sizeof(float));
+        ospSet1f(ospMesh, "radius", 0.02);
+        ospSet1i(ospMesh, "offset_materialID", -1);
+        ospSet1i(ospMesh, "materialID", 0);
         ospRelease(_mdata);
 
         ospAddGeometry(oModel, ospMesh);
+        ospSetMaterial(ospMesh, oMaterial);
+
         ospCommit(ospMesh);
         ospRelease(ospMesh);
 #endif
@@ -503,39 +511,71 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
       case VTK_WIREFRAME:
         {
 #if SHOW_MESH_WIRE
-#if 0
+#if 1
         OSPGeometry ospMesh = ospNewGeometry("cylinders");
-        cerr << "NT" << prims[2]->GetNumberOfCells() << endl;
-        cerr << "NI" << tIndexArray.size() << endl;
         float *mdata = (float *)malloc
           (sizeof(float)*tIndexArray.size()*3);
-        OSPData _mdata = ospNewData(tIndexArray.size()*3, OSP_FLOAT, &mdata[0]);
         for (size_t i = 0; i < tIndexArray.size(); i++)
           {
-          mdata[i*3+0] = vertices[tIndexArray[i]].x;
-          mdata[i*3+1] = vertices[tIndexArray[i]].y;
-          mdata[i*3+2] = vertices[tIndexArray[i]].z;
+          mdata[i*3+0] = (float)vertices[tIndexArray[i]].x;
+          mdata[i*3+1] = (float)vertices[tIndexArray[i]].y;
+          mdata[i*3+2] = (float)vertices[tIndexArray[i]].z;
           }
+        OSPData _mdata = ospNewData(tIndexArray.size()*3, OSP_FLOAT, &mdata[0]);
+        //ospCommit(_mdata);
         ospSetData(ospMesh, "cylinders", _mdata);
-        ospSet1f(ospMesh, "radius", 0.05); //TODO: control by mapper linewidth AND/or variable
         ospSet1i(ospMesh, "bytes_per_cylinder", 6*sizeof(float));
+        ospSet1i(ospMesh, "offset_v0", 0);
+        ospSet1i(ospMesh, "offset_v1", 3*sizeof(float));
+        ospSet1f(ospMesh, "radius", 0.01);
+        ospSet1i(ospMesh, "offset_radius", -1);
+        ospSet1i(ospMesh, "materialID", 0);
+        ospSet1i(ospMesh, "offset_materialID", -1);
         ospRelease(_mdata);
 
+        ospSetMaterial(ospMesh, oMaterial);
         ospAddGeometry(oModel, ospMesh);
         ospCommit(ospMesh);
         ospRelease(ospMesh);
 #else
         OSPGeometry ospMesh = ospNewGeometry("streamlines");
         std::vector<int> mdata;
-        for (size_t i = 0; i < tIndexArray.size(); i++)
+ #if 1
+        ospray::vec3fa *mverts = (ospray::vec3fa *)embree::alignedMalloc
+          (sizeof(ospray::vec3fa) * tIndexArray.size());
+        for (size_t i = 0; i < tIndexArray.size(); i+=2)
           {
-          mdata.push_back(tIndexArray[i]);
+          mdata.push_back(i);
+          mverts[i+0] = ospray::vec3fa(vertices[tIndexArray[i+0]].x,
+                                       vertices[tIndexArray[i+0]].y,
+                                       vertices[tIndexArray[i+0]].z);
+          mverts[i+1] = ospray::vec3fa(vertices[tIndexArray[i+1]].x,
+                                       vertices[tIndexArray[i+1]].y,
+                                       vertices[tIndexArray[i+1]].z);
           }
-        OSPData _mdata = ospNewData(tIndexArray.size(), OSP_INT, &mdata[0]);
-        ospSetData(ospMesh, "vertex", position);
+        OSPData _mdata = ospNewData(mdata.size(), OSP_INT, &mdata[0]);
+        OSPData _mverts = ospNewData(mdata.size()*2, OSP_FLOAT3A, &mverts[0]);
+ #else
+        float *mverts = (float *)embree::alignedMalloc
+          (sizeof(float) * tIndexArray.size() *6);
+        for (size_t i = 0; i < tIndexArray.size(); i+=2)
+          {
+          mdata.push_back(i);
+          mverts[i*6+0] = vertices[tIndexArray[i+0]].x;
+          mverts[i*6+1] = vertices[tIndexArray[i+0]].y;
+          mverts[i*6+2] = vertices[tIndexArray[i+0]].z;
+          mverts[i*6+3] = vertices[tIndexArray[i+1]].x;
+          mverts[i*6+4] = vertices[tIndexArray[i+1]].y;
+          mverts[i*6+5] = vertices[tIndexArray[i+1]].z;
+          }
+        OSPData _mdata = ospNewData(mdata.size(), OSP_INT, &mdata[0]);
+        OSPData _mverts = ospNewData(mdata.size()*12, OSP_FLOAT, &mverts[0]);
+ #endif
+        ospSetData(ospMesh, "vertex", _mverts);
         ospSetData(ospMesh, "index", _mdata);
         ospSet1f(ospMesh, "radius", 0.01);
 
+        ospSetMaterial(ospMesh, oMaterial);
         ospAddGeometry(oModel, ospMesh);
         ospCommit(ospMesh);
         ospRelease(ospMesh);
@@ -597,6 +637,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
       {
       case VTK_POINTS:
         {
+        cerr << "TODO SHOW_STRIP_POINTS" << endl;
 #if SHOW_STRIP_PTS
         OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("spheres");
         ospAddGeometry(oModel, ospMesh);
@@ -607,6 +648,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         }
       case VTK_WIREFRAME:
         {
+        cerr << "TODO SHOW_STRIP_WIRE" << endl;
 #if SHOW_STRIP_WIRE
         OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("cylinders");
         ospAddGeometry(oModel, ospMesh);
@@ -617,6 +659,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         }
       default:
         {
+        cerr << "TODO SHOW_STRIP_MESH" << endl;
 #if SHOW_STRIP_MESH
         OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("trianglemesh");
         ospAddGeometry(oModel, ospMesh);
