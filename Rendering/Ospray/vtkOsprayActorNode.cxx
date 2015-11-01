@@ -511,7 +511,6 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
       case VTK_WIREFRAME:
         {
 #if SHOW_MESH_WIRE
-#if 1
         OSPGeometry ospMesh = ospNewGeometry("cylinders");
         float *mdata = (float *)malloc
           (sizeof(float)*tIndexArray.size()*3);
@@ -537,56 +536,12 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         ospAddGeometry(oModel, ospMesh);
         ospCommit(ospMesh);
         ospRelease(ospMesh);
-#else
-        OSPGeometry ospMesh = ospNewGeometry("streamlines");
-        std::vector<int> mdata;
- #if 1
-        ospray::vec3fa *mverts = (ospray::vec3fa *)embree::alignedMalloc
-          (sizeof(ospray::vec3fa) * tIndexArray.size());
-        for (size_t i = 0; i < tIndexArray.size(); i+=2)
-          {
-          mdata.push_back(i);
-          mverts[i+0] = ospray::vec3fa(vertices[tIndexArray[i+0]].x,
-                                       vertices[tIndexArray[i+0]].y,
-                                       vertices[tIndexArray[i+0]].z);
-          mverts[i+1] = ospray::vec3fa(vertices[tIndexArray[i+1]].x,
-                                       vertices[tIndexArray[i+1]].y,
-                                       vertices[tIndexArray[i+1]].z);
-          }
-        OSPData _mdata = ospNewData(mdata.size(), OSP_INT, &mdata[0]);
-        OSPData _mverts = ospNewData(mdata.size()*2, OSP_FLOAT3A, &mverts[0]);
- #else
-        float *mverts = (float *)embree::alignedMalloc
-          (sizeof(float) * tIndexArray.size() *6);
-        for (size_t i = 0; i < tIndexArray.size(); i+=2)
-          {
-          mdata.push_back(i);
-          mverts[i*6+0] = vertices[tIndexArray[i+0]].x;
-          mverts[i*6+1] = vertices[tIndexArray[i+0]].y;
-          mverts[i*6+2] = vertices[tIndexArray[i+0]].z;
-          mverts[i*6+3] = vertices[tIndexArray[i+1]].x;
-          mverts[i*6+4] = vertices[tIndexArray[i+1]].y;
-          mverts[i*6+5] = vertices[tIndexArray[i+1]].z;
-          }
-        OSPData _mdata = ospNewData(mdata.size(), OSP_INT, &mdata[0]);
-        OSPData _mverts = ospNewData(mdata.size()*12, OSP_FLOAT, &mverts[0]);
- #endif
-        ospSetData(ospMesh, "vertex", _mverts);
-        ospSetData(ospMesh, "index", _mdata);
-        ospSet1f(ospMesh, "radius", 0.01);
-
-        ospSetMaterial(ospMesh, oMaterial);
-        ospAddGeometry(oModel, ospMesh);
-        ospCommit(ospMesh);
-        ospRelease(ospMesh);
-#endif
 #endif
         break;
         }
       default:
         {
 #if SHOW_MESH_SURF
-//      OSPGeometry ospMesh = ospNewTriangleMesh();
         OSPGeometry ospMesh = ospNewGeometry("trianglemesh");
         ospSetData(ospMesh, "position", position);
 

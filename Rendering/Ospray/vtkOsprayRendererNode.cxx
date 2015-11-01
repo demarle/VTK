@@ -51,7 +51,16 @@ void vtkOsprayRendererNode::PrintSelf(ostream& os, vtkIndent indent)
 void vtkOsprayRendererNode::Render()
 {
   OSPRenderer oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
-  //TODO: other options include {ao{1,2,4,8,16},raycast} - which to pick?
+  //TODO: other options include {ao{1,2,4,8,16},obj,tachyon,pathtracer,raycast,volume...} - which to pick?
+  //git grep OSP_REGISTER_RENDERER
+  //ao - simple ambient occlusion (X semi-rand sample per hit) does not account for opacity
+  //obj - implements much of OBJ standard, but not all
+  //volume - for volumes with intermixed surfaces
+  //tachyon - scene characteristics from John Stone's Tachyon
+  //pathtracer - experimental code
+  //raycast - 1 hit and done w color chosen from a few possibilities (normal, etc)
+  //everything but raycast is a possibility, but none seem to be feature perfect right now
+
   ospSet3f(oRenderer,"bgColor",
            this->Background[0],
            this->Background[1],
