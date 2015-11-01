@@ -365,6 +365,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   //material
   OSPRenderer oRenderer = (OSPRenderer) renderer;
   OSPMaterial oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+  cerr << "MAT " << oMaterial << endl;
   float diffusef[] = {(float)this->DiffuseColor[0],
                       (float)this->DiffuseColor[1],
                       (float)this->DiffuseColor[2]};
@@ -397,7 +398,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         double *vNormal = vNormals->GetTuple(i);
         normals[i] = ospray::vec3fa(vNormal[0],vNormal[1],vNormal[2]);
         }
-      //normals->Delete();
+      embree::alignedFree(normals);
       }
   }
 
@@ -436,6 +437,9 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
                      _vertices[i].z());
     }
   OSPData position = ospNewData(numPositions, OSP_FLOAT3A, &vertices[0]);
+  cerr << "POS " << position << endl;
+  ospCommit(position);
+  embree::alignedFree(vertices);
 
   if (pIndexArray.size())
     {
@@ -521,6 +525,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
           mdata[i*3+2] = (float)vertices[tIndexArray[i]].z;
           }
         OSPData _mdata = ospNewData(tIndexArray.size()*3, OSP_FLOAT, &mdata[0]);
+        free(mdata);
         //ospCommit(_mdata);
         ospSetData(ospMesh, "cylinders", _mdata);
         ospSet1i(ospMesh, "bytes_per_cylinder", 6*sizeof(float));
@@ -543,6 +548,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         {
 #if SHOW_MESH_SURF
         OSPGeometry ospMesh = ospNewGeometry("trianglemesh");
+        cerr << "MESH " << ospMesh << endl;
         ospSetData(ospMesh, "position", position);
 
         size_t numTriangles = tIndexArray.size() / 3;
@@ -555,23 +561,27 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
                                        tIndexArray[mi + 2]);
           }
         OSPData index = ospNewData(numTriangles, OSP_INT3, &triangles[0]);
+        cerr << "TOPO " << index << endl;
+        embree::alignedFree(triangles);
+        cerr << "HERE" << endl;
         ospSetData(ospMesh, "index", index);
+        ospCommit(index);
         ospRelease(index);
 
+        OSPData _normals = NULL;
         if (numNormals)
           {
-          OSPData _normals =
-            ospNewData(numNormals, OSP_FLOAT3A, &normals[0]);
+          _normals = ospNewData(numNormals, OSP_FLOAT3A, &normals[0]);
+          cerr << "NORM " << _normals << endl;
           ospSetData(ospMesh, "vertex.normal", _normals);
-          ospRelease(_normals);
           }
 
+        OSPData _colors = NULL;
         if (numColors)
           {
-          OSPData _colors =
-            ospNewData(numColors, OSP_FLOAT4, &colors[0]);
+          _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
+          cerr << "COL " << _colors << endl;
           ospSetData(ospMesh, "vertex.color", _colors);
-          ospRelease(_colors);
           }
 
         ospAddGeometry(oModel, ospMesh);
@@ -579,7 +589,12 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         ospSetMaterial(ospMesh, oMaterial);
 
         ospCommit(ospMesh);
+        ospCommit(oModel);
+        ospRelease(index);
+        ospRelease(_normals);
+        ospRelease(_colors);
         ospRelease(ospMesh);
+
 #endif
         }
       }
@@ -624,5 +639,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         }
       }
     }
+  ospRelease(oMaterial);
+  ospRelease(position);
   ospRelease(position);
 }

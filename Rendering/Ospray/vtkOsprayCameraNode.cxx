@@ -43,7 +43,6 @@ void vtkOsprayCameraNode::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkOsprayCameraNode::ORender(int *TiledSize, void *camera)
 {
-  cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   OSPCamera ospCamera = (OSPCamera)camera;
   ospSetf(ospCamera,"aspect",float(TiledSize[0])/float(TiledSize[1]));
   ospSetf(ospCamera,"fovy",this->ViewAngle);

@@ -51,6 +51,7 @@ void vtkOsprayRendererNode::PrintSelf(ostream& os, vtkIndent indent)
 void vtkOsprayRendererNode::Render()
 {
   OSPRenderer oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
+  cerr << "REND " << oRenderer << endl;
   //TODO: other options include {ao{1,2,4,8,16},obj,tachyon,pathtracer,raycast,volume...} - which to pick?
   //git grep OSP_REGISTER_RENDERER
   //ao - simple ambient occlusion (X semi-rand sample per hit) does not account for opacity
@@ -103,6 +104,7 @@ void vtkOsprayRendererNode::Render()
     }
 
   OSPModel oModel = ospNewModel();
+  cerr << "MODEL " << oModel << endl;
   //actors
   it->InitTraversal();
   while (!it->IsDoneWithTraversal())
@@ -118,19 +120,20 @@ void vtkOsprayRendererNode::Render()
   it->Delete();
   ospSetObject(oRenderer,"model", oModel);
   ospCommit(oModel);
-  ospRelease(oModel);
   ospCommit(oRenderer);
+  ospRelease(oModel);
 
   OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer
     (osp::vec2i(this->Size[0], this->Size[1]),
      OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH);
+  cerr << "FB " << osp_framebuffer << endl;
 
   ospFrameBufferClear(osp_framebuffer, OSP_FB_COLOR|OSP_FB_DEPTH);
 
   ospRenderFrame(osp_framebuffer, oRenderer, OSP_FB_COLOR|OSP_FB_DEPTH);
   ospRelease(oModel);
   ospRelease(oRenderer);
-  ospRelease(oRenderer); //wth?
+
 
   const void* rgba = ospMapFrameBuffer(osp_framebuffer, OSP_FB_COLOR);
   delete[] this->Buffer;
@@ -144,9 +147,7 @@ void vtkOsprayRendererNode::Render()
   memcpy((void*)this->ZBuffer, Z, this->Size[0]*this->Size[1]*1*sizeof(float));
   ospUnmapFrameBuffer(Z, osp_framebuffer);
 
-//  delete osp_framebuffer;
   ospRelease(osp_framebuffer);
-  ospRelease(osp_framebuffer); //wth?
 }
 
 //----------------------------------------------------------------------------

@@ -8,6 +8,7 @@ vtk_module(vtkRenderingOspray
     vtkRenderingParallel  #for composite test
     vtkFiltersTexture
     vtkInteractionStyle
+    vtkIOPLY
     vtkIOXML
     vtkTestingCore
     vtkTestingRendering

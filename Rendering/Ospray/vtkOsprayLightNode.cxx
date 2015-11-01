@@ -43,7 +43,6 @@ void vtkOsprayLightNode::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkOsprayLightNode::ORender(void *renderer)
 {
-  cerr << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << endl;
   OSPRenderer oRenderer = (OSPRenderer) renderer;
   if (this->Positional)
     {
@@ -68,7 +67,6 @@ void vtkOsprayLightNode::ORender(void *renderer)
     }
   else
     {
-    cerr << "DIRECTIONAL" << endl;
     double direction[3];
     direction[0] = this->Position[0] - this->FocalPoint[0];
     direction[1] = this->Position[1] - this->FocalPoint[1];
