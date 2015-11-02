@@ -36,9 +36,13 @@ public:
 
   virtual void ORender(void *oRenderer, void *oModel);
 
+  vtkTimeStamp RenderTime;
+
 protected:
   vtkOsprayActorNode();
   ~vtkOsprayActorNode();
+
+  void *OSPMesh;
 
 private:
   vtkOsprayActorNode(const vtkOsprayActorNode&); // Not implemented.

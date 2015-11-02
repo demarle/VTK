@@ -32,6 +32,8 @@ vtkOsprayRendererNode::vtkOsprayRendererNode()
 {
   this->Buffer = NULL;
   this->ZBuffer = NULL;
+  this->Model = NULL;
+  this->ORend = NULL;
 }
 
 //----------------------------------------------------------------------------
@@ -39,6 +41,8 @@ vtkOsprayRendererNode::~vtkOsprayRendererNode()
 {
   delete[] this->Buffer;
   delete[] this->ZBuffer;
+  ospRelease((OSPModel)this->Model);
+  ospRelease((OSPRenderer)this->ORend);
 }
 
 //----------------------------------------------------------------------------
@@ -50,8 +54,19 @@ void vtkOsprayRendererNode::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkOsprayRendererNode::Render()
 {
-  OSPRenderer oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
-  cerr << "REND " << oRenderer << endl;
+  OSPRenderer oRenderer = NULL;
+  if (!this->ORend)
+    {
+    ospRelease((osp::Renderer*)this->ORend);
+    oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
+    this->ORend = oRenderer;
+    }
+  else
+    {
+    oRenderer = (osp::Renderer*)this->ORend;
+    }
+
+  //cerr << "REND " << oRenderer << endl;
   //TODO: other options include {ao{1,2,4,8,16},obj,tachyon,pathtracer,raycast,volume...} - which to pick?
   //git grep OSP_REGISTER_RENDERER
   //ao - simple ambient occlusion (X semi-rand sample per hit) does not account for opacity
@@ -103,37 +118,60 @@ void vtkOsprayRendererNode::Render()
     it->GoToNextItem();
     }
 
-  OSPModel oModel = ospNewModel();
-  cerr << "MODEL " << oModel << endl;
   //actors
+  OSPModel oModel=NULL;
   it->InitTraversal();
+  unsigned int recent = 0;
   while (!it->IsDoneWithTraversal())
     {
     vtkOsprayActorNode *child =
       vtkOsprayActorNode::SafeDownCast(it->GetCurrentObject());
     if (child)
       {
-      child->ORender(oRenderer, oModel);
+      if (child->RenderTime > recent)
+        {
+        recent = child->RenderTime;
+        }
       }
     it->GoToNextItem();
     }
+  static int cnt = 0;
+  if (recent > this->RenderTime || !this->Model)
+    {
+    cnt = 0;
+    ospRelease((OSPModel)this->Model);
+
+    oModel = ospNewModel();
+    it->InitTraversal();
+    while (!it->IsDoneWithTraversal())
+      {
+      vtkOsprayActorNode *child =
+        vtkOsprayActorNode::SafeDownCast(it->GetCurrentObject());
+      if (child)
+        {
+        child->ORender(oRenderer, oModel);
+        }
+      it->GoToNextItem();
+      }
+    this->Model = oModel;
+    this->RenderTime.Modified();
+    ospSetObject(oRenderer,"model", oModel);
+    ospCommit(oModel);
+    }
+  else
+    {
+    oModel = (OSPModel)this->Model;
+    }
   it->Delete();
-  ospSetObject(oRenderer,"model", oModel);
-  ospCommit(oModel);
   ospCommit(oRenderer);
-  ospRelease(oModel);
 
   OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer
     (osp::vec2i(this->Size[0], this->Size[1]),
      OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH);
-  cerr << "FB " << osp_framebuffer << endl;
+  //cerr << "FB " << osp_framebuffer << endl;
 
   ospFrameBufferClear(osp_framebuffer, OSP_FB_COLOR|OSP_FB_DEPTH);
-
   ospRenderFrame(osp_framebuffer, oRenderer, OSP_FB_COLOR|OSP_FB_DEPTH);
-  ospRelease(oModel);
-  ospRelease(oRenderer);
-
 
   const void* rgba = ospMapFrameBuffer(osp_framebuffer, OSP_FB_COLOR);
   delete[] this->Buffer;
@@ -169,7 +207,6 @@ void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer,
         *optr++ = *iptr++;
         *optr++ = *iptr++;
         *optr++ = *iptr++;
-        //cerr << (int) *zptr++ << endl;
         }
       }
     }

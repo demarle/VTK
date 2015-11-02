@@ -47,7 +47,6 @@ vtkViewNode *cam_maker()
 
 vtkViewNode *light_maker()
 {
-  cerr << "MAKE NEW LIGHT" << endl;
   vtkOsprayLightNode *vn = vtkOsprayLightNode::New();
   return vn;
 }

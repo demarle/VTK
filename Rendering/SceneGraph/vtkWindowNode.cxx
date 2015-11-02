@@ -132,7 +132,6 @@ void vtkWindowNode::SynchronizeSelf()
     GetUseConstantFDOffsets()       vtkRenderWindow virtual
   */
   int * sz = mine->GetSize();
-  cerr << sz[0] << "x" << sz[1] << endl;
   this->Size[0] = sz[0];
   this->Size[1] = sz[1];
 }

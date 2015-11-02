@@ -117,29 +117,29 @@ void vtkViewNode::SetRenderable(vtkObject *obj)
 //----------------------------------------------------------------------------
 void vtkViewNode::Build()
 {
-  cerr << this->GetClassName() << "(" << this << ") Build()" << endl;
+  //cerr << this->GetClassName() << "(" << this << ") Build()" << endl;
   this->Traverse(build);
 }
 
 //----------------------------------------------------------------------------
 void vtkViewNode::Synchronize()
 {
-  cerr << this->GetClassName() << "(" << this << ") Synchronize()" << endl;
+  //cerr << this->GetClassName() << "(" << this << ") Synchronize()" << endl;
   this->Traverse(synchronize);
 }
 
 //----------------------------------------------------------------------------
 void vtkViewNode::Render()
 {
-  cerr << this->GetClassName() << "(" << this << ") Render()" << endl;
+  //cerr << this->GetClassName() << "(" << this << ") Render()" << endl;
   this->Traverse(render);
 }
 
 //----------------------------------------------------------------------------
 void vtkViewNode::Apply(int operation)
 {
-  cerr << this->GetClassName() << "(" << this << ") Apply("
-       << vtkViewNode::operation_type_strings[operation] << ")" << endl;
+  //cerr << this->GetClassName() << "(" << this << ") Apply("
+  //     << vtkViewNode::operation_type_strings[operation] << ")" << endl;
   switch (operation)
     {
     case noop:

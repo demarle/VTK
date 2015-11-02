@@ -66,11 +66,13 @@ vtkStandardNewMacro(vtkOsprayActorNode);
 //----------------------------------------------------------------------------
 vtkOsprayActorNode::vtkOsprayActorNode()
 {
+  this->OSPMesh = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkOsprayActorNode::~vtkOsprayActorNode()
 {
+  ospRelease((OSPGeometry)this->OSPMesh);
 }
 
 //----------------------------------------------------------------------------
@@ -302,6 +304,15 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   //TODO: not safe assumption, in general may not be actor or polydata.
   vtkActor *act = (vtkActor*)this->GetRenderable();
   vtkPolyData *poly = (vtkPolyData*)(act->GetMapper()->GetInput());
+  OSPModel oModel = (OSPModel) model;
+
+  if (this->RenderTime > act->GetMTime() &&
+      this->RenderTime > poly->GetMTime())
+    {
+    ospAddGeometry(oModel, (OSPGeometry)this->OSPMesh);
+    return;
+    }
+  ospRelease((OSPGeometry)this->OSPMesh);
 
   vtkCellArray *prims[4];
   prims[0] =  poly->GetVerts();
@@ -365,7 +376,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   //material
   OSPRenderer oRenderer = (OSPRenderer) renderer;
   OSPMaterial oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
-  cerr << "MAT " << oMaterial << endl;
+  //cerr << "MAT " << oMaterial << endl;
   float diffusef[] = {(float)this->DiffuseColor[0],
                       (float)this->DiffuseColor[1],
                       (float)this->DiffuseColor[2]};
@@ -425,7 +436,6 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
 
 
   //points
-  OSPModel oModel = (OSPModel) model;
   size_t numPositions = _vertices.size();
   ospray::vec3fa *vertices = (ospray::vec3fa *)embree::alignedMalloc
     (sizeof(ospray::vec3fa) * numPositions);
@@ -437,7 +447,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
                      _vertices[i].z());
     }
   OSPData position = ospNewData(numPositions, OSP_FLOAT3A, &vertices[0]);
-  cerr << "POS " << position << endl;
+  //cerr << "POS " << position << endl;
   ospCommit(position);
   embree::alignedFree(vertices);
 
@@ -548,7 +558,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         {
 #if SHOW_MESH_SURF
         OSPGeometry ospMesh = ospNewGeometry("trianglemesh");
-        cerr << "MESH " << ospMesh << endl;
+        //cerr << "MESH " << ospMesh << endl;
         ospSetData(ospMesh, "position", position);
 
         size_t numTriangles = tIndexArray.size() / 3;
@@ -561,9 +571,8 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
                                        tIndexArray[mi + 2]);
           }
         OSPData index = ospNewData(numTriangles, OSP_INT3, &triangles[0]);
-        cerr << "TOPO " << index << endl;
+        //cerr << "TOPO " << index << endl;
         embree::alignedFree(triangles);
-        cerr << "HERE" << endl;
         ospSetData(ospMesh, "index", index);
         ospCommit(index);
         ospRelease(index);
@@ -572,7 +581,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         if (numNormals)
           {
           _normals = ospNewData(numNormals, OSP_FLOAT3A, &normals[0]);
-          cerr << "NORM " << _normals << endl;
+          //cerr << "NORM " << _normals << endl;
           ospSetData(ospMesh, "vertex.normal", _normals);
           }
 
@@ -580,7 +589,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         if (numColors)
           {
           _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
-          cerr << "COL " << _colors << endl;
+          //cerr << "COL " << _colors << endl;
           ospSetData(ospMesh, "vertex.color", _colors);
           }
 
@@ -593,8 +602,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         ospRelease(index);
         ospRelease(_normals);
         ospRelease(_colors);
-        ospRelease(ospMesh);
-
+        this->OSPMesh = ospMesh;
 #endif
         }
       }
@@ -642,4 +650,6 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   ospRelease(oMaterial);
   ospRelease(position);
   ospRelease(position);
+
+  this->RenderTime.Modified();
 }

@@ -113,9 +113,9 @@ int TestOsprayPass(int argc, char* argv[])
 #if 1
   vtkSmartPointer<vtkPLYReader> polysource = vtkSmartPointer<vtkPLYReader>::New();
   polysource->SetFileName("/Data/VTKData/Data/bunny.ply");
-  //polysource->SetFileName("/Data/Stanford/dragon_recon/dragon_vrip.ply");
+  polysource->SetFileName("/Data/Stanford/dragon_vrip.ply");
   //polysource->SetFileName("/Data/Stanford/xyzrgb_dragon.ply");
-  //polysource->SetFileName("/Data/Stanford/lucy.ply");
+  polysource->SetFileName("/Data/Stanford/lucy.ply");
 #else
   vtkSmartPointer<vtkSphereSource> polysource = vtkSmartPointer<vtkSphereSource>::New();
   polysource->SetPhiResolution(100);

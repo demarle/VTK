@@ -50,6 +50,9 @@ protected:
   unsigned char *Buffer;
   float *ZBuffer;
 
+  vtkTimeStamp RenderTime;
+  void *Model;
+  void *ORend;
 private:
   vtkOsprayRendererNode(const vtkOsprayRendererNode&); // Not implemented.
   void operator=(const vtkOsprayRendererNode&); // Not implemented.
