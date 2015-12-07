@@ -58,6 +58,7 @@ if (OSPRAY_BUILD_DIR)
     )
 
   SET(OSPRAY_INCLUDE_DIRS
+    ${OSPRAY_BUILD_DIR}
     ${OSPRAY_DIR}
     ${OSPRAY_DIR}/ospray
     ${OSPRAY_DIR}/ospray/embree/common

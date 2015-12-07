@@ -57,9 +57,18 @@ vtkStandardNewMacro(vtkOsprayViewNodeFactory);
 //----------------------------------------------------------------------------
 vtkOsprayViewNodeFactory::vtkOsprayViewNodeFactory()
 {
-  this->RegisterOverride("vtkCocoaRenderWindow", win_maker); //TODO: sysname from OF
+  //TODO: cooler to introspect these, for now just grepped override in Rendering/OpenGL*/CMakeLists.txt
+  this->RegisterOverride("vtkCocoaRenderWindow", win_maker);
+  this->RegisterOverride("vtkXOpenGLRenderWindow", win_maker);
+  this->RegisterOverride("vtkOSOpenGLRenderWindow", win_maker);
+  this->RegisterOverride("vtkWin32OpenGLRenderWindow", win_maker);
+  this->RegisterOverride("vtkCocoaRenderWindow", win_maker);
+  this->RegisterOverride("vtkCarbonRenderWindow", win_maker);
+  this->RegisterOverride("vtkEGLRenderWindow", win_maker);
+  this->RegisterOverride("vtkIOSRenderWindow", win_maker);
+
   //see vtkRenderWindow::GetRenderLibrary
-  this->RegisterOverride("vtkOpenGLRenderer", ren_maker); //TODO: if not OpenGL?
+  this->RegisterOverride("vtkOpenGLRenderer", ren_maker);
   this->RegisterOverride("vtkOpenGLActor", act_maker);
   this->RegisterOverride("vtkOpenGLCamera", cam_maker);
   this->RegisterOverride("vtkOpenGLLight", light_maker);
