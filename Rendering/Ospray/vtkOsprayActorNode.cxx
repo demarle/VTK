@@ -29,7 +29,10 @@
 #include "ospray/api/Device.h"
 #include "ospray/common/OSPCommon.h"
 
-#define SHOW_POINTS 0
+#include <map>
+
+
+#define SHOW_POINTS 1
 #define SHOW_LINE_POINTS 0
 #define SHOW_LINE_WIRE 0
 #define SHOW_MESH_PTS 1
@@ -349,7 +352,6 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
     }
 
   std::vector<vtkosp::Vec3> _vertices;
-//  cerr << "NUMPTS" << poly->GetPoints()->GetNumberOfPoints() << endl;
   for (int i = 0; i < poly->GetPoints()->GetNumberOfPoints(); i++)
     {
     double *pos = poly->GetPoints()->GetPoint(i);
@@ -373,10 +375,11 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
     _vertices.push_back(vtkosp::Vec3(pos[0], pos[1], pos[2]));
     }
 
-  //material
+  //materials
+  OSPMaterial oMaterial;
+  std::vector<OSPMaterial> ospMaterials;
   OSPRenderer oRenderer = (OSPRenderer) renderer;
-  OSPMaterial oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
-  //cerr << "MAT " << oMaterial << endl;
+  oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
   float diffusef[] = {(float)this->DiffuseColor[0],
                       (float)this->DiffuseColor[1],
                       (float)this->DiffuseColor[2]};
@@ -386,8 +389,88 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   ospSet3fv(oMaterial,"Kd",diffusef);
   ospSet3fv(oMaterial,"Ks",specularf);
   ospSet1f(oMaterial,"Ns",float(this->SpecularPower*.5));
-  ospSet1f(oMaterial,"d", float(this->Opacity));
+  ospSet1f(oMaterial,"d",float(this->Opacity));
   ospCommit(oMaterial);
+  ospMaterials.push_back(oMaterial);
+
+  //making up a rainbow color lookup table for the particles
+  //this was a quick hack to get something nice looking for SC15
+  //TODO: remove it and use actual materials
+  double *tlut = new double[261*3];
+  for (int x=0;x<261;x++)
+    {
+    double r = 0, g = 0, b = 0;
+    double a = (1.0-x/260.0)/0.25;
+    int X = floor(a);
+    double Y = (a-X);
+    if (X == 0)
+      {
+      r=1.0;
+      g=Y;
+      b=0;
+      }
+    if (X == 1)
+      {
+      r=1-Y;
+      g=1;
+      b=0;
+      }
+    if (X == 2)
+      {
+      r=0;
+      g=1;
+      b=Y;
+      }
+    if (X == 3)
+      {
+      r=0;
+      g=1-Y;
+      b=1;
+      }
+    if (X == 4)
+      {
+      r=0;
+      g=0;
+      b=1;
+      }
+    tlut[x*3+0] = r;
+    tlut[x*3+1] = g;
+    tlut[x*3+2] = b;
+    }
+  //grabbing some canned arrays from a particular data set to show as color
+  //this was a quick hack to get something nice looking for SC15
+  //TODO: remove it and use VTK's actual color control paths
+  vtkIntArray *da1 = vtkIntArray::SafeDownCast(poly->GetPointData()->GetArray("Field 3"));
+  vtkIntArray *da2 = vtkIntArray::SafeDownCast(poly->GetPointData()->GetArray("Field 4"));
+  std::map<std::pair<int,int>, int> items;
+  int l = 1;
+  if (da1 && da2)
+    {
+    for (vtkIdType i = 0; i < da1->GetNumberOfTuples(); i++)
+      {
+      int d1 = da1->GetValue(i);
+      int d2 = da2->GetValue(i);
+      std::pair<int,int> id = std::pair<int,int>(d1,d2);
+      if (items.find(id) == items.end())
+        {
+        items[id] = l++;
+        oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+        float diffusef[] = {tlut[l*3+0],//*((float)d1/50.0+0.9),
+                            tlut[l*3+1],//*((float)d1/50.0+0.9),
+                            tlut[l*3+2]};//*((float)d1/50.0+0.9)};
+        float specularf[] = {1,
+                             1.,
+                             1.};
+        ospSet3fv(oMaterial,"Kd",diffusef);
+        ospSet3fv(oMaterial,"Ks",specularf);
+        ospSet1f(oMaterial,"Ns",100.0);///float(this->SpecularPower*.5));
+        ospSet1f(oMaterial,"d", 1.0);//float(this->Opacity));
+        ospCommit(oMaterial);
+        ospMaterials.push_back(oMaterial);
+        }
+      }
+    }
+  OSPData materialData = ospNewData(ospMaterials.size(), OSP_OBJECT, &ospMaterials[0]);
 
   //normals
   ospray::vec3fa *normals = NULL;
@@ -454,10 +537,39 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   if (pIndexArray.size())
     {
     //draw vertices
-    cerr << "TODO SHOW_POINTS" << endl;
 #if SHOW_POINTS
-    OSPGeometry ospMesh = ospray::api::Device::current->newGeometry("spheres");
+    OSPGeometry ospMesh = ospNewGeometry("spheres");
+    float *mdata = new float[4*pIndexArray.size()];
+    int *idata = (int*)mdata;
+    for (size_t i = 0; i < pIndexArray.size(); i++)
+      {
+      mdata[i*4+0] = (float)vertices[pIndexArray[i]].x;
+      mdata[i*4+1] = (float)vertices[pIndexArray[i]].y;
+      mdata[i*4+2] = (float)vertices[pIndexArray[i]].z;
+      int mat = 0;
+      if (da1 && da2)
+        {
+        int d1 = da1->GetValue(i);
+        int d2 = da2->GetValue(i);
+        std::pair<int,int> id = std::pair<int,int>(d1,d2);
+        mat = items[id];
+        }
+      idata[i*4+3] = mat;
+      }
+    OSPData _mdata = ospNewData(pIndexArray.size()*4, OSP_FLOAT, mdata);
+    ospSetObject(ospMesh, "spheres", _mdata);
+    ospSet1i(ospMesh, "bytes_per_sphere", 4*sizeof(float));
+    ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
+    ospSet1i(ospMesh, "offset_radius", -1);//*sizeof(float));
+    ospSet1f(ospMesh, "radius", 0.25);
+    ospSet1i(ospMesh, "offset_materialID", 3*sizeof(float));
+    ospSet1i(ospMesh, "materialID", -1);
+    ospRelease(_mdata);
+
     ospAddGeometry(oModel, ospMesh);
+    ospSetMaterial(ospMesh, oMaterial);
+    ospSetData(ospMesh, "materialList", materialData);
+
     ospCommit(ospMesh);
     ospRelease(ospMesh);
 #endif
@@ -647,7 +759,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
         }
       }
     }
-  ospRelease(oMaterial);
+  //ospRelease(oMaterial);
   ospRelease(position);
   ospRelease(position);
 
