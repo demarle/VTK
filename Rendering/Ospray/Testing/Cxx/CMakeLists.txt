@@ -1,4 +1,5 @@
 vtk_add_test_cxx(${vtk-module}CxxTests tests
+  TestOsprayDemo.cxx,NO_DATA,NO_VALID,NO_OUTPUT
   TestOspraySceneGraph.cxx,NO_DATA,NO_VALID,NO_OUTPUT
   TestOsprayRenderMesh.cxx,NO_DATA,NO_VALID
   TestOsprayPass.cxx,NO_DATA,NO_VALID

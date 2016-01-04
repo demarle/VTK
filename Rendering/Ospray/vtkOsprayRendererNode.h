@@ -42,6 +42,10 @@ public:
   //Put my results into the correct place in the provided pixel buffer.
   virtual void WriteLayer(unsigned char *buffer, int buffx, int buffy);
 
+  static int maxframes;
+  static int rtype;
+  static int doshadows;
+  static int spp;
 protected:
   vtkOsprayRendererNode();
   ~vtkOsprayRendererNode();

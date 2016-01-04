@@ -24,6 +24,10 @@
 
 #include "ospray/ospray.h"
 
+int vtkOsprayRendererNode::maxframes = 1;
+int vtkOsprayRendererNode::rtype=0;
+int vtkOsprayRendererNode::doshadows=0;
+int vtkOsprayRendererNode::spp=1;
 //============================================================================
 vtkStandardNewMacro(vtkOsprayRendererNode);
 
@@ -55,10 +59,34 @@ void vtkOsprayRendererNode::PrintSelf(ostream& os, vtkIndent indent)
 void vtkOsprayRendererNode::Render()
 {
   OSPRenderer oRenderer = NULL;
+  static int lRend = 0;
+  if (lRend != rtype)
+    {
+    lRend = rtype;
+    ospRelease((osp::Renderer*)this->ORend);
+    this->ORend = NULL;
+    }
   if (!this->ORend)
     {
     ospRelease((osp::Renderer*)this->ORend);
-    oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
+    if (rtype==0)
+      {
+      oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
+      }
+    else
+      {
+      oRenderer = (osp::Renderer*)ospNewRenderer("obj");
+      }
+    //TODO: other options include {ao{1,2,4,8,16},obj,tachyon,pathtracer,raycast,volume...} - which to pick?
+    //git grep OSP_REGISTER_RENDERER
+    //ao - simple ambient occlusion (X semi-rand sample per hit) does not account for opacity
+    //obj - implements much of OBJ standard, but not all
+    //volume - for volumes with intermixed surfaces
+    //tachyon - scene characteristics from John Stone's Tachyon
+    //pathtracer - experimental code
+    //raycast - 1 hit and done w color chosen from a few possibilities (normal, etc)
+    //everything but raycast is a possibility, but none seem to be feature perfect right now
+
     this->ORend = oRenderer;
     }
   else
@@ -66,16 +94,15 @@ void vtkOsprayRendererNode::Render()
     oRenderer = (osp::Renderer*)this->ORend;
     }
 
-  //cerr << "REND " << oRenderer << endl;
-  //TODO: other options include {ao{1,2,4,8,16},obj,tachyon,pathtracer,raycast,volume...} - which to pick?
-  //git grep OSP_REGISTER_RENDERER
-  //ao - simple ambient occlusion (X semi-rand sample per hit) does not account for opacity
-  //obj - implements much of OBJ standard, but not all
-  //volume - for volumes with intermixed surfaces
-  //tachyon - scene characteristics from John Stone's Tachyon
-  //pathtracer - experimental code
-  //raycast - 1 hit and done w color chosen from a few possibilities (normal, etc)
-  //everything but raycast is a possibility, but none seem to be feature perfect right now
+  if (doshadows)
+    {
+    ospSet1i(oRenderer,"shadowsEnabled",1);
+    }
+  else
+    {
+    ospSet1i(oRenderer,"shadowsEnabled",0);
+    }
+  ospSet1i(oRenderer,"spp",spp);
 
   ospSet3f(oRenderer,"bgColor",
            this->Background[0],
@@ -167,12 +194,12 @@ void vtkOsprayRendererNode::Render()
 
   OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer
     (osp::vec2i(this->Size[0], this->Size[1]),
-     OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH);
-  //cerr << "FB " << osp_framebuffer << endl;
-
-  ospFrameBufferClear(osp_framebuffer, OSP_FB_COLOR|OSP_FB_DEPTH);
-  ospRenderFrame(osp_framebuffer, oRenderer, OSP_FB_COLOR|OSP_FB_DEPTH);
-
+     OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH | OSP_FB_ACCUM);
+  ospFrameBufferClear(osp_framebuffer, OSP_FB_COLOR|OSP_FB_DEPTH|OSP_FB_ACCUM);
+  for (int i = 0; i < maxframes; i++)
+    {
+    ospRenderFrame(osp_framebuffer, oRenderer, OSP_FB_COLOR|OSP_FB_DEPTH|OSP_FB_ACCUM);
+    }
   const void* rgba = ospMapFrameBuffer(osp_framebuffer, OSP_FB_COLOR);
   delete[] this->Buffer;
   this->Buffer = new unsigned char[this->Size[0]*this->Size[1]*4];

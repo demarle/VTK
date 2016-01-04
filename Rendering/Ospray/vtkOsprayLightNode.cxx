@@ -44,9 +44,18 @@ void vtkOsprayLightNode::PrintSelf(ostream& os, vtkIndent indent)
 void vtkOsprayLightNode::ORender(void *renderer)
 {
   OSPRenderer oRenderer = (OSPRenderer) renderer;
+
+  std::vector<OSPLight> lights;
+
+  OSPLight ospLight = ospNewLight(oRenderer, "AmbientLight");
+  ospSetString(ospLight, "name", "ambient" );
+  ospSet3f(ospLight, "color", 1,1,1);
+  ospSet1f(ospLight, "intensity", 0.7);
+  ospCommit(ospLight);
+  lights.push_back(ospLight);
+
   if (this->Positional)
     {
-    cerr << "POSITIONAL" << endl;
     OSPLight ospLight = ospNewLight(oRenderer, "PointLight");
     ospSetString(ospLight, "name", "point" );
     ospSet3f(ospLight, "color",
@@ -58,12 +67,7 @@ void vtkOsprayLightNode::ORender(void *renderer)
              this->Position[1],
              this->Position[2]);
     ospCommit(ospLight);
-    std::vector<OSPLight> pointLights;
-    pointLights.push_back(ospLight);
-    OSPData lightArray = ospNewData(pointLights.size(),
-                                    OSP_OBJECT, &pointLights[0], 0);
-    //ospSetData(oRenderer, "pointLights", lightArray);
-    ospSetData(oRenderer, "lights", lightArray);
+    lights.push_back(ospLight);
     }
   else
     {
@@ -77,19 +81,15 @@ void vtkOsprayLightNode::ORender(void *renderer)
              this->DiffuseColor[0],
              this->DiffuseColor[1],
              this->DiffuseColor[2]);
-    ospSet3f(ospLight, "direction",
-             direction[0],
-             direction[1],
-             direction[2]);
-    ospSet3f(ospLight, "direction", direction[0], direction[1], direction[2]);
+    osp::vec3f dir(-direction[0],-direction[1],-direction[2]);
+    dir = normalize(dir);
+    ospSet3f(ospLight, "direction", dir.x,dir.y,dir.z);
     ospCommit(ospLight);
-    std::vector<OSPLight> directionalLights;
-    //ospGetData(oRenderer, "directionalLights", &directionalLights);
-
-    directionalLights.push_back(ospLight);
-    OSPData lightArray = ospNewData(directionalLights.size(),
-                                         OSP_OBJECT, &directionalLights[0], 0);
-    ospSetData(oRenderer, "directionalLights", lightArray);
-    //?ospSetData(oRenderer, "lights", lightArray);
+    lights.push_back(ospLight);
     }
+
+  OSPData lightArray = ospNewData(lights.size(),
+                                  OSP_OBJECT, &lights[0], 0);
+  ospSetData(oRenderer, "lights", lightArray);
+
 }
