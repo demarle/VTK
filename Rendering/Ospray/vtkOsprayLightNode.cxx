@@ -47,21 +47,23 @@ void vtkOsprayLightNode::ORender(void *renderer)
 
   std::vector<OSPLight> lights;
 
+  /*
   OSPLight ospLight = ospNewLight(oRenderer, "AmbientLight");
   ospSetString(ospLight, "name", "ambient" );
-  ospSet3f(ospLight, "color", 1,1,1);
-  ospSet1f(ospLight, "intensity", 0.7);
+  ospSet3f(ospLight, "color", 255.0,255.0,255.0);
+  ospSet1f(ospLight, "intensity", 255.0);
   ospCommit(ospLight);
   lights.push_back(ospLight);
+  */
 
   if (this->Positional)
     {
     OSPLight ospLight = ospNewLight(oRenderer, "PointLight");
     ospSetString(ospLight, "name", "point" );
     ospSet3f(ospLight, "color",
-             this->DiffuseColor[0],
-             this->DiffuseColor[1],
-             this->DiffuseColor[2]);
+             this->DiffuseColor[0]*255.0, //TODO: why 0..255 not 0.0..1.0?
+             this->DiffuseColor[1]*255.0,
+             this->DiffuseColor[2]*255.0);
     ospSet3f(ospLight, "position",
              this->Position[0],
              this->Position[1],
@@ -78,7 +80,7 @@ void vtkOsprayLightNode::ORender(void *renderer)
     OSPLight ospLight = ospNewLight(oRenderer, "DirectionalLight");
     ospSetString(ospLight, "name", "sun" );
     ospSet3f(ospLight, "color",
-             this->DiffuseColor[0],
+             this->DiffuseColor[0], //TODO: why 0.0..1.0 not 0..255?
              this->DiffuseColor[1],
              this->DiffuseColor[2]);
     osp::vec3f dir(-direction[0],-direction[1],-direction[2]);

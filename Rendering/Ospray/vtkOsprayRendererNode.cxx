@@ -25,7 +25,7 @@
 #include "ospray/ospray.h"
 
 int vtkOsprayRendererNode::maxframes = 1;
-int vtkOsprayRendererNode::rtype=0;
+int vtkOsprayRendererNode::rtype=1;
 int vtkOsprayRendererNode::doshadows=0;
 int vtkOsprayRendererNode::spp=1;
 //============================================================================
