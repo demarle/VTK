@@ -132,11 +132,13 @@ class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
           if (this->VisibleActor == -1 || this->VisibleActor == i)
             {
             cerr << names[i] << " ";
-            vtkActor::SafeDownCast(actors->GetItemAsObject(i))->SetVisibility(1);
+            vtkActor::SafeDownCast(actors->GetItemAsObject(i))->
+              SetVisibility(1);
             }
           else
             {
-            vtkActor::SafeDownCast(actors->GetItemAsObject(i))->SetVisibility(0);
+            vtkActor::SafeDownCast(actors->GetItemAsObject(i))->
+              SetVisibility(0);
             }
           }
         cerr << endl;
@@ -166,12 +168,13 @@ public:
   }
 };
 
-renderable *MakeSphereAt(double x, double y, double z, int res, int type, const char *name)
+renderable *MakeSphereAt(double x, double y, double z, int res,
+                         int type, int rep, const char *name)
 {
   names.push_back(name);
   renderable *ret = new renderable;
   ret->s = vtkSphereSource::New();
-  ret->s->SetEndTheta(180); //make half spheres to better show variation and too show f and back
+  ret->s->SetEndTheta(180); //half spheres better show variation and f and back
   ret->s->SetStartPhi(30);
   ret->s->SetEndPhi(150);
   ret->s->SetPhiResolution(res);
@@ -216,23 +219,27 @@ renderable *MakeSphereAt(double x, double y, double z, int res, int type, const 
     da->InsertNextTuple3(vals[0],vals[1],vals[2]);
     }
 
-  vtkSmartPointer<vtkUnsignedCharArray> pac = vtkSmartPointer<vtkUnsignedCharArray>::New();
+  vtkSmartPointer<vtkUnsignedCharArray> pac =
+    vtkSmartPointer<vtkUnsignedCharArray>::New();
   pac->SetName("testarrayc1");
   pac->SetNumberOfComponents(3);
   pd->GetPointData()->AddArray(pac);
   for (int i = 0; i < np; i++)
     {
-    unsigned char vals[3] = {255*((double)i/(double)np), 255*((double)(i*4)/(double)np-2.0), 42};
+    unsigned char vals[3] =
+      {255*((double)i/(double)np), 255*((double)(i*4)/(double)np-2.0), 42};
     pac->InsertNextTuple3(vals[0],vals[1],vals[2]);
     }
 
-  vtkSmartPointer<vtkUnsignedCharArray> ca = vtkSmartPointer<vtkUnsignedCharArray>::New();
+  vtkSmartPointer<vtkUnsignedCharArray> ca =
+    vtkSmartPointer<vtkUnsignedCharArray>::New();
   ca->SetName("testarray3");
   ca->SetNumberOfComponents(3);
   pd->GetPointData()->AddArray(ca);
   for (int i = 0; i < np; i++)
     {
-    unsigned char vals[3] = {(double)i/(double)np*255, (double)(1-i)/(double)np, 42};
+    unsigned char vals[3] =
+      {(double)i/(double)np*255, (double)(1-i)/(double)np, 42};
     ca->InsertNextTuple3(vals[0],vals[1],vals[2]);
     }
   //cell aligned
@@ -259,7 +266,8 @@ renderable *MakeSphereAt(double x, double y, double z, int res, int type, const 
   pd->GetCellData()->AddArray(ca);
   for (int i = 0; i < nc; i++)
     {
-    unsigned char vals[3] = {(double)i/(double)np*255, (double)(1-i)/(double)np, 42};
+    unsigned char vals[3] =
+      {(double)i/(double)np*255, (double)(1-i)/(double)np, 42};
     ca->InsertNextTuple3(vals[0],vals[1],vals[2]);
     }
   ret->m = vtkPolyDataMapper::New();
@@ -301,7 +309,10 @@ renderable *MakeSphereAt(double x, double y, double z, int res, int type, const 
   ret->a->SetMapper(ret->m);
   ret->a->GetProperty()->SetPointSize(5);
   ret->a->GetProperty()->SetLineWidth(5);
-
+  if (rep != -1)
+    {
+    ret->a->GetProperty()->SetRepresentation(rep);
+    }
   return ret;
 }
 
@@ -310,6 +321,7 @@ int TestOsprayRenderMesh(int argc, char* argv[])
 
   bool useGL = false;
   int type = 2;
+  int rep = -1;
   for (int i = 0; i < argc; i++)
     {
     if (!strcmp(argv[i], "-GL"))
@@ -320,18 +332,22 @@ int TestOsprayRenderMesh(int argc, char* argv[])
       {
       type = atoi(argv[i+1]);
       }
+    if (!strcmp(argv[i], "-rep"))
+      {
+      rep = atoi(argv[i+1]);
+      }
     }
   int retVal = 1;
 
-  vtkSmartPointer<vtkRenderWindowInteractor> iren = vtkSmartPointer<vtkRenderWindowInteractor>::New();
-  vtkSmartPointer<vtkRenderWindow> renWin = vtkSmartPointer<vtkRenderWindow>::New();
+  vtkSmartPointer<vtkRenderWindowInteractor> iren =
+    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  vtkSmartPointer<vtkRenderWindow> renWin =
+    vtkSmartPointer<vtkRenderWindow>::New();
   iren->SetRenderWindow(renWin);
   vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
   renWin->AddRenderer(renderer);
-  //renderer->SetBackground(0.1,0.1,1.0);
   renderer->AutomaticLightCreationOn();
-  renderer->SetBackground(0.0,0.0,0.0);
-  renderer->SetBackground(1.0,1.0,1.0);
+  renderer->SetBackground(0.5,0.5,0.5);
   renWin->SetSize(1500,1500);
   vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
   camera->SetPosition(2,15,-2);
@@ -341,7 +357,8 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   renWin->Render();
   //TODO: exercise exotic types of camera manipulation
 
-  vtkSmartPointer<vtkOsprayViewNodeFactory> vnf = vtkSmartPointer<vtkOsprayViewNodeFactory>::New();
+  vtkSmartPointer<vtkOsprayViewNodeFactory> vnf =
+    vtkSmartPointer<vtkOsprayViewNodeFactory>::New();
   vtkViewNode *vn = vnf->CreateNode(renWin);
   vn->Build();
 
@@ -355,29 +372,29 @@ int TestOsprayRenderMesh(int argc, char* argv[])
 
   //Now, vary of most of the many parameters that rendering can vary by
   //representations points, wireframe, surface ////////////////////
-  renderable *ren = MakeSphereAt(5,0,-5, 10, type, "points");
+  renderable *ren = MakeSphereAt(5,0,-5, 10, type, rep, "points");
   ren->a->GetProperty()->SetRepresentationToPoints();
   renderer->AddActor(ren->a);
   delete(ren);
 
-  ren = MakeSphereAt(5,0,-4, 10, type, "wireframe");
+  ren = MakeSphereAt(5,0,-4, 10, type, rep, "wireframe");
   ren->a->GetProperty()->SetRepresentationToWireframe();
   renderer->AddActor(ren->a);
   delete(ren);
 
-  ren = MakeSphereAt(5,0,-3, 10, type, "surface");
+  ren = MakeSphereAt(5,0,-3, 10, type, rep, "surface");
   ren->a->GetProperty()->SetRepresentationToSurface();
   renderer->AddActor(ren->a);
   delete(ren);
 
   //actor color ////////////////////
-  ren = MakeSphereAt(4,0,-5, 10, type, "actor_color");
+  ren = MakeSphereAt(4,0,-5, 10, type, rep, "actor_color");
   ren->a->GetProperty()->SetColor(0,1,0);
   renderer->AddActor(ren->a);
   delete(ren);
 
   //ambient, diffuse, and specular components
-  ren = MakeSphereAt(4,0,-4, 7, type, "amb/diff/spec");
+  ren = MakeSphereAt(4,0,-4, 7, type, rep, "amb/diff/spec");
   ren->a->GetProperty()->SetAmbient(0.5);
   ren->a->GetProperty()->SetAmbientColor(0.1,0.1,0.3);
   ren->a->GetProperty()->SetDiffuse(0.4);
@@ -390,28 +407,28 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   delete(ren);
 
   //opacity
-  ren = MakeSphereAt(4,0,-3, 10, type, "opacity");
+  ren = MakeSphereAt(4,0,-3, 10, type, rep, "opacity");
   ren->a->GetProperty()->SetOpacity(0.2);
   renderer->AddActor(ren->a);
   delete(ren);
 
   //
   //color map cell values ////////////////////
-  ren = MakeSphereAt(3,0,-5, 10, type, "cell_value");
+  ren = MakeSphereAt(3,0,-5, 10, type, rep, "cell_value");
   ren->m->SetScalarModeToUseCellFieldData();
   ren->m->SelectColorArray(0);
   renderer->AddActor(ren->a);
   delete(ren);
 
   //default color component
-  ren = MakeSphereAt(3,0,-4, 10, type, "cell_default_comp");
+  ren = MakeSphereAt(3,0,-4, 10, type, rep, "cell_default_comp");
   ren->m->SetScalarModeToUseCellFieldData();
   ren->m->SelectColorArray(1);
   renderer->AddActor(ren->a);
   delete(ren);
 
   //choose color component
-  ren = MakeSphereAt(3,0,-3, 10, type, "cell_comp_1");
+  ren = MakeSphereAt(3,0,-3, 10, type, rep, "cell_comp_1");
   ren->m->SetScalarModeToUseCellFieldData();
   ren->m->SelectColorArray(1);
   ren->m->ColorByArrayComponent(1,1); //todo, use lut since this is deprecated
@@ -419,14 +436,14 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   delete(ren);
 
   //RGB direct
-  ren = MakeSphereAt(3,0,-2, 10, type, "cell_rgb");
+  ren = MakeSphereAt(3,0,-2, 10, type, rep, "cell_rgb");
   ren->m->SetScalarModeToUseCellFieldData();
   ren->m->SelectColorArray(2);
   renderer->AddActor(ren->a);
   delete(ren);
 
   //RGB through LUT
-  ren = MakeSphereAt(3,0,-1, 10, type, "cell_rgb_through_LUT");
+  ren = MakeSphereAt(3,0,-1, 10, type, rep, "cell_rgb_through_LUT");
   ren->m->SetScalarModeToUseCellFieldData();
   ren->m->SelectColorArray(2);
   ren->m->SetColorModeToMapScalars();
@@ -434,14 +451,14 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   delete(ren);
 
   //color map point values ////////////////////
-  ren = MakeSphereAt(2,0,-5,6, type, "point_value");
+  ren = MakeSphereAt(2,0,-5,6, type, rep, "point_value");
   ren->m->SetScalarModeToUsePointFieldData();
   ren->m->SelectColorArray("testarray1");
   renderer->AddActor(ren->a);
   delete(ren);
 
   //interpolate scalars before mapping
-  ren = MakeSphereAt(2,0,-4,6, type, "point_interp");
+  ren = MakeSphereAt(2,0,-4,6, type, rep, "point_interp");
   ren->m->SetScalarModeToUsePointFieldData();
   ren->m->SelectColorArray("testarray1");
   ren->m->InterpolateScalarsBeforeMappingOn();
@@ -449,7 +466,7 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   delete(ren);
 
   //RGB direct
-  ren = MakeSphereAt(2,0,-3, 10, type, "point_rgb");
+  ren = MakeSphereAt(2,0,-3, 10, type, rep, "point_rgb");
   ren->m->SetScalarModeToUsePointFieldData();
   ren->m->SetColorModeToDefault();
   ren->m->SelectColorArray("testarrayc1");
@@ -457,29 +474,29 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   delete(ren);
 
   //RGB mapped
-  ren = MakeSphereAt(2,0,-2, 10, type, "point_rgb_through_LUT");
+  ren = MakeSphereAt(2,0,-2, 10, type, rep, "point_rgb_through_LUT");
   ren->m->SetScalarModeToUsePointFieldData();
   ren->m->SetColorModeToMapScalars();
   ren->m->SelectColorArray("testarrayc1");
   renderer->AddActor(ren->a);
   delete(ren);
 
-  ren = MakeSphereAt(1,0,-5,7, type, "not_lit");
+  ren = MakeSphereAt(1,0,-5,7, type, rep, "not_lit");
   ren->a->GetProperty()->LightingOff();
   renderer->AddActor(ren->a);
   delete(ren);
 
-  ren = MakeSphereAt(1,0,-4,7, type, "flat");
+  ren = MakeSphereAt(1,0,-4,7, type, rep, "flat");
   ren->a->GetProperty()->SetInterpolationToFlat();
   renderer->AddActor(ren->a);
   delete(ren);
 
-  ren = MakeSphereAt(1,0,-3,7, type, "gouraud");
+  ren = MakeSphereAt(1,0,-3,7, type, rep, "gouraud");
   ren->a->GetProperty()->SetInterpolationToGouraud();
   renderer->AddActor(ren->a);
   delete(ren);
 
-  ren = MakeSphereAt(1,0,-2,7, type, "phong");
+  ren = MakeSphereAt(1,0,-2,7, type, rep, "phong");
   ren->a->GetProperty()->SetInterpolationToPhong();
   renderer->AddActor(ren->a);
   delete(ren);
@@ -490,7 +507,8 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   vtkSmartPointer<vtkImageData> texin = vtkSmartPointer<vtkImageData>::New();
   texin->SetExtent(0,maxi,0,maxj,0,0);
   texin->AllocateScalars(VTK_UNSIGNED_CHAR, 3);
-  vtkUnsignedCharArray *aa = vtkUnsignedCharArray::SafeDownCast(texin->GetPointData()->GetScalars());
+  vtkUnsignedCharArray *aa =
+    vtkUnsignedCharArray::SafeDownCast(texin->GetPointData()->GetScalars());
   int idx = 0;
   for (int i = 0; i<=maxi; i++)
     {
@@ -511,7 +529,7 @@ int TestOsprayRenderMesh(int argc, char* argv[])
       idx = idx + 1;
       }
     }
-  ren = MakeSphereAt(0,0,-5,20,type, "texture");
+  ren = MakeSphereAt(0,0,-5,20,type, rep, "texture");
   renderer->AddActor(ren->a);
   vtkSmartPointer<vtkTexture> texture =
     vtkSmartPointer<vtkTexture>::New();
@@ -531,7 +549,8 @@ int TestOsprayRenderMesh(int argc, char* argv[])
 
   renWin->Render();
 
-  vtkLight *light = vtkLight::SafeDownCast(renderer->GetLights()->GetItemAsObject(0));
+  vtkLight *light =
+    vtkLight::SafeDownCast(renderer->GetLights()->GetItemAsObject(0));
   double lColor[3];
   light->GetDiffuseColor(lColor);
   light->SetPosition(2,15,-2);
@@ -540,7 +559,8 @@ int TestOsprayRenderMesh(int argc, char* argv[])
 
   vtkSmartPointer<KeyPressInteractorStyle> style =
     vtkSmartPointer<KeyPressInteractorStyle>::New();
-  style->SetPipelineControlPoints((vtkOpenGLRenderer*)renderer.Get(), ospray, NULL);
+  style->
+    SetPipelineControlPoints((vtkOpenGLRenderer*)renderer.Get(), ospray, NULL);
   iren->SetInteractorStyle(style);
   style->SetCurrentRenderer(renderer);
 

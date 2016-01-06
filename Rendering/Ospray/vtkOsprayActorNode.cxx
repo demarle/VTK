@@ -79,9 +79,12 @@ void vtkOsprayActorNode::RenderSelf()
 }
 
 namespace {
-  //borrowed from vtkOpenGLIndexBufferObject
+
+  //CreateXIndexBuffer's adapted from vtkOpenGLIndexBufferObject
   //TODO: rule of three if this is copied anywhere else in VTK
-  void CreatePointIndexBuffer(vtkCellArray *cells, std::vector<unsigned int> &indexArray)
+  //----------------------------------------------------------------------------
+  void CreatePointIndexBuffer(vtkCellArray *cells,
+                              std::vector<unsigned int> &indexArray)
   {
     //TODO: restore the preallocate and append to offset features I omitted
     vtkIdType* indices(NULL);
@@ -98,7 +101,10 @@ namespace {
         }
       }
     }
-  void CreateLineIndexBuffer(vtkCellArray *cells, std::vector<unsigned int> &indexArray)
+
+  //----------------------------------------------------------------------------
+  void CreateLineIndexBuffer(vtkCellArray *cells,
+                             std::vector<unsigned int> &indexArray)
   {
     //TODO: restore the preallocate and append to offset features I omitted
     vtkIdType* indices(NULL);
@@ -116,7 +122,10 @@ namespace {
         }
       }
   }
-  void CreateTriangleLineIndexBuffer(vtkCellArray *cells, std::vector<unsigned int> &indexArray)
+
+  //----------------------------------------------------------------------------
+  void CreateTriangleLineIndexBuffer(vtkCellArray *cells,
+                                     std::vector<unsigned int> &indexArray)
   {
     //TODO: restore the preallocate and append to offset features I omitted
     vtkIdType* indices(NULL);
@@ -135,7 +144,10 @@ namespace {
         }
       }
   }
-  void CreateTriangleIndexBuffer(vtkCellArray *cells, vtkPoints *points, std::vector<unsigned int> &indexArray)
+
+  //----------------------------------------------------------------------------
+  void CreateTriangleIndexBuffer(vtkCellArray *cells, vtkPoints *points,
+                                 std::vector<unsigned int> &indexArray)
   {
     //TODO: restore the preallocate and append to offset features I omitted
     vtkIdType* indices(NULL);
@@ -240,7 +252,11 @@ namespace {
       triPoints->Delete();
       }
   }
-  void CreateStripIndexBuffer(vtkCellArray *cells, std::vector<unsigned int> &indexArray, bool wireframeTriStrips)
+
+  //----------------------------------------------------------------------------
+  void CreateStripIndexBuffer(vtkCellArray *cells,
+                              std::vector<unsigned int> &indexArray,
+                              bool wireframeTriStrips)
   {
     if (!cells->GetNumberOfCells())
       {
@@ -284,6 +300,163 @@ namespace {
       }
   }
 
+  //----------------------------------------------------------------------------
+  void RenderAsSpheres(OSPModel oModel,
+                       std::vector<unsigned int> &indexArray,
+                       ospray::vec3fa *vertices,
+                       int numColors,
+                       ospray::vec4f *colors,
+                       OSPMaterial oMaterial,
+                       OSPData materialData)
+  {
+    OSPGeometry ospMesh = ospNewGeometry("spheres");
+    float *mdata = new float[4*indexArray.size()];
+    int *idata = (int*)mdata;
+    for (size_t i = 0; i < indexArray.size(); i++)
+      {
+      mdata[i*4+0] = (float)vertices[indexArray[i]].x;
+      mdata[i*4+1] = (float)vertices[indexArray[i]].y;
+      mdata[i*4+2] = (float)vertices[indexArray[i]].z;
+      int mat = 0;
+      if (numColors)
+        {
+        mat = i;
+        }
+      idata[i*4+3] = mat;
+      }
+    OSPData _colors = NULL;
+    if (numColors)
+      {
+      _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
+      }
+    OSPData _mdata = ospNewData(indexArray.size()*4, OSP_FLOAT, mdata);
+    ospSetObject(ospMesh, "spheres", _mdata);
+    ospSet1i(ospMesh, "bytes_per_sphere", 4*sizeof(float));
+    ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
+    ospSet1i(ospMesh, "offset_radius", -1);
+    ospSet1f(ospMesh, "radius", 0.01);
+    ospSet1i(ospMesh, "offset_materialID", -1);
+    ospSet1i(ospMesh, "materialID", 0);
+    if (numColors)
+      {
+      ospSet1i(ospMesh, "offset_colorID", 3*sizeof(float));
+      ospSetData(ospMesh, "color", _colors);
+      }
+    ospAddGeometry(oModel, ospMesh);
+    ospSetMaterial(ospMesh, oMaterial);
+    ospSetData(ospMesh, "materialList", materialData);
+    ospCommit(ospMesh);
+    ospRelease(_colors);
+    ospRelease(_mdata);
+    delete[] mdata;
+
+    ospRelease(ospMesh);
+  }
+
+  //----------------------------------------------------------------------------
+  void RenderAsCylinders(OSPModel oModel,
+                         std::vector<unsigned int> &indexArray,
+                         ospray::vec3fa *vertices,
+                         int numColors,
+                         ospray::vec4f *colors,
+                         OSPMaterial oMaterial,
+                         OSPData materialData)
+  {
+    OSPGeometry ospMesh = ospNewGeometry("cylinders");
+    float *mdata = new float[indexArray.size()/2*7];
+    int *idata = (int*)mdata;
+    for (size_t i = 0; i < indexArray.size()/2; i++)
+      {
+      mdata[i*7+0] = (float)vertices[indexArray[i*2+0]].x;
+      mdata[i*7+1] = (float)vertices[indexArray[i*2+0]].y;
+      mdata[i*7+2] = (float)vertices[indexArray[i*2+0]].z;
+      mdata[i*7+3] = (float)vertices[indexArray[i*2+1]].x;
+      mdata[i*7+4] = (float)vertices[indexArray[i*2+1]].y;
+      mdata[i*7+5] = (float)vertices[indexArray[i*2+1]].z;
+      int mat = 0;
+      if (numColors)
+        {
+        mat = i;
+        }
+      idata[i*7+6] = mat;
+      }
+    OSPData _colors = NULL;
+    if (numColors)
+      {
+      _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
+      }
+    OSPData _mdata = ospNewData(indexArray.size()/2*7, OSP_FLOAT, mdata);
+    ospSetData(ospMesh, "cylinders", _mdata);
+    ospSet1i(ospMesh, "bytes_per_cylinder", 7*sizeof(float));
+    ospSet1i(ospMesh, "offset_v0", 0);
+    ospSet1i(ospMesh, "offset_v1", 3*sizeof(float));
+    ospSet1f(ospMesh, "radius", 0.01);
+    ospSet1i(ospMesh, "offset_radius", -1);
+    ospSet1i(ospMesh, "offset_materialID", -1);
+    ospSet1i(ospMesh, "materialID", 0);
+    if (numColors)
+      {
+      ospSet1i(ospMesh, "offset_colorID", 6*sizeof(float));
+      ospSetData(ospMesh, "color", _colors);
+      }
+    ospAddGeometry(oModel, ospMesh);
+    ospSetMaterial(ospMesh, oMaterial);
+    ospCommit(ospMesh);
+    ospRelease(_colors);
+    delete[] mdata;
+    ospRelease(_mdata);
+
+    ospRelease(ospMesh);
+  }
+
+  //----------------------------------------------------------------------------
+  OSPGeometry RenderAsTriangles(OSPModel oModel,
+                                OSPData position,
+                                std::vector<unsigned int> &indexArray,
+                                int numNormals, ospray::vec3fa *normals,
+                                int numColors, ospray::vec4f *colors,
+                                OSPMaterial oMaterial, OSPData materialData)
+  {
+    OSPGeometry ospMesh = ospNewGeometry("trianglemesh");
+    ospSetData(ospMesh, "position", position);
+
+    size_t numTriangles = indexArray.size() / 3;
+    ospray::vec3i *triangles = (ospray::vec3i *)embree::alignedMalloc
+      (sizeof(ospray::vec3i) * numTriangles);
+    for (size_t i = 0, mi = 0; i < numTriangles; i++, mi += 3)
+      {
+      triangles[i] = embree::Vec3i(indexArray[mi + 0],
+                                   indexArray[mi + 1],
+                                   indexArray[mi + 2]);
+      }
+    OSPData index = ospNewData(numTriangles, OSP_INT3, &triangles[0]);
+    embree::alignedFree(triangles);
+    ospSetData(ospMesh, "index", index);
+
+    OSPData _normals = NULL;
+    if (numNormals)
+      {
+      _normals = ospNewData(numNormals, OSP_FLOAT3A, &normals[0]);
+      ospSetData(ospMesh, "vertex.normal", _normals);
+      }
+
+    OSPData _colors = NULL;
+    if (numColors)
+      {
+      _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
+      ospSetData(ospMesh, "vertex.color", _colors);
+      }
+
+    ospAddGeometry(oModel, ospMesh);
+    ospSetMaterial(ospMesh, oMaterial);
+    ospCommit(ospMesh);
+    ospCommit(oModel); //TODO: crashes without yet others don't, why?
+    ospRelease(index);
+    ospRelease(_normals);
+    ospRelease(_colors);
+
+    return ospMesh;
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -384,7 +557,8 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   ospSet1f(oMaterial,"d",float(this->Opacity));
   ospCommit(oMaterial);
   ospMaterials.push_back(oMaterial);
-  OSPData materialData = ospNewData(ospMaterials.size(), OSP_OBJECT, &ospMaterials[0]);
+  OSPData materialData =
+    ospNewData(ospMaterials.size(), OSP_OBJECT, &ospMaterials[0]);
 
   //normals
   ospray::vec3fa *normals = NULL;
@@ -414,8 +588,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   if (vColors)
     {
     numColors = vColors->GetNumberOfTuples();
-    colors = (ospray::vec4f *)malloc
-        (sizeof(ospray::vec4f) * numColors);
+    colors = new ospray::vec4f[numColors];
 
     for (int i = 0; i < numColors; i++)
       {
@@ -441,252 +614,64 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   OSPData position = ospNewData(numPositions, OSP_FLOAT3A, &vertices[0]);
   ospCommit(position);
 
+  //create an ospray mesh for the vertex cells
   if (pIndexArray.size())
     {
-    //draw vertices
-    OSPGeometry ospMesh = ospNewGeometry("spheres");
-    float *mdata = new float[4*pIndexArray.size()];
-    int *idata = (int*)mdata;
-    for (size_t i = 0; i < pIndexArray.size(); i++)
-      {
-      mdata[i*4+0] = (float)vertices[pIndexArray[i]].x;
-      mdata[i*4+1] = (float)vertices[pIndexArray[i]].y;
-      mdata[i*4+2] = (float)vertices[pIndexArray[i]].z;
-      int mat = 0;
-      if (numColors)
-        {
-        mat = i;
-        }
-      idata[i*4+3] = mat;
-      }
-    OSPData _colors = NULL;
-    if (numColors)
-      {
-      _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
-      }
-    OSPData _mdata = ospNewData(pIndexArray.size()*4, OSP_FLOAT, mdata);
-    ospSetObject(ospMesh, "spheres", _mdata);
-    ospSet1i(ospMesh, "bytes_per_sphere", 4*sizeof(float));
-    ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
-    ospSet1i(ospMesh, "offset_radius", -1);
-    ospSet1f(ospMesh, "radius", 0.01);
-    ospSet1i(ospMesh, "offset_materialID", -1);
-    ospSet1i(ospMesh, "materialID", 0);
-    if (numColors)
-      {
-      ospSet1i(ospMesh, "offset_colorID", 3*sizeof(float));
-      ospSetData(ospMesh, "color", _colors);
-      }
-    ospAddGeometry(oModel, ospMesh);
-    ospSetMaterial(ospMesh, oMaterial);
-    ospSetData(ospMesh, "materialList", materialData);
-    ospCommit(ospMesh);
-    ospRelease(ospMesh);
-    ospRelease(_mdata);
-    ospRelease(_colors);
+    RenderAsSpheres(oModel,
+                    pIndexArray, vertices,
+                    numColors, colors,
+                    oMaterial, materialData);
     }
 
+  //create an ospray mesh for the line cells
   if (lIndexArray.size())
     {
+    //format depends on representation style
     if (this->Representation == VTK_POINTS)
       {
-      OSPGeometry ospMesh = ospNewGeometry("spheres");
-      float *mdata = new float[4*lIndexArray.size()];
-      int *idata = (int*)mdata;
-      for (size_t i = 0; i < lIndexArray.size(); i++)
-        {
-        mdata[i*4+0] = (float)vertices[lIndexArray[i]].x;
-        mdata[i*4+1] = (float)vertices[lIndexArray[i]].y;
-        mdata[i*4+2] = (float)vertices[lIndexArray[i]].z;
-        int mat = 0;
-        if (numColors)
-          {
-          mat = i;
-          }
-        idata[i*4+3] = mat;
-        }
-      OSPData _colors = NULL;
-      if (numColors)
-        {
-        _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
-        }
-      OSPData _mdata = ospNewData(lIndexArray.size()*4, OSP_FLOAT, mdata);
-      free(mdata);
-      ospSetObject(ospMesh, "spheres", _mdata);
-      ospSet1i(ospMesh, "bytes_per_sphere", 4*sizeof(float));
-      ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
-      ospSet1i(ospMesh, "offset_radius", -1);
-      ospSet1f(ospMesh, "radius", 0.01);
-      ospSet1i(ospMesh, "offset_materialID", -1);
-      ospSet1i(ospMesh, "materialID", 0);
-      if (numColors)
-        {
-        ospSet1i(ospMesh, "offset_colorID", 3*sizeof(float));
-        ospSetData(ospMesh, "color", _colors);
-        }
-      ospAddGeometry(oModel, ospMesh);
-      ospSetMaterial(ospMesh, oMaterial);
-      ospSetData(ospMesh, "materialList", materialData);
-      ospCommit(ospMesh);
-      ospRelease(ospMesh);
-      ospRelease(_mdata);
-      ospRelease(_colors);
+      RenderAsSpheres(oModel,
+                      lIndexArray, vertices,
+                      numColors, colors,
+                      oMaterial, materialData);
       }
     else
       {
-      OSPGeometry ospMesh = ospNewGeometry("cylinders");
-      float *mdata = (float *)malloc
-        (sizeof(float)*(lIndexArray.size()/2*7));
-      int *idata = (int*)mdata;
-      for (size_t i = 0; i < lIndexArray.size()/2; i++)
-        {
-        mdata[i*7+0] = (float)vertices[lIndexArray[i*2+0]].x;
-        mdata[i*7+1] = (float)vertices[lIndexArray[i*2+0]].y;
-        mdata[i*7+2] = (float)vertices[lIndexArray[i*2+0]].z;
-        mdata[i*7+3] = (float)vertices[lIndexArray[i*2+1]].x;
-        mdata[i*7+4] = (float)vertices[lIndexArray[i*2+1]].y;
-        mdata[i*7+5] = (float)vertices[lIndexArray[i*2+1]].z;
-        int mat = 0;
-        if (numColors)
-          {
-          mat = i;
-          }
-        idata[i*7+6] = mat;
-        }
-      OSPData _colors = NULL;
-      if (numColors)
-        {
-        _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
-        }
-      OSPData _mdata = ospNewData(lIndexArray.size()/2*7, OSP_FLOAT, mdata);
-      free(mdata);
-      ospSetData(ospMesh, "cylinders", _mdata);
-      ospSet1i(ospMesh, "bytes_per_cylinder", 7*sizeof(float));
-      ospSet1i(ospMesh, "offset_v0", 0);
-      ospSet1i(ospMesh, "offset_v1", 3*sizeof(float));
-      ospSet1f(ospMesh, "radius", 0.01);
-      ospSet1i(ospMesh, "offset_radius", -1);
-      ospSet1i(ospMesh, "offset_materialID", -1);
-      ospSet1i(ospMesh, "materialID", 0);
-      if (numColors)
-        {
-        ospSet1i(ospMesh, "offset_colorID", 6*sizeof(float));
-        ospSetData(ospMesh, "color", _colors);
-        }
-      ospAddGeometry(oModel, ospMesh);
-      ospSetMaterial(ospMesh, oMaterial);
-      ospCommit(ospMesh);
-      ospRelease(ospMesh);
-      ospRelease(_mdata);
-      ospRelease(_colors);
+      RenderAsCylinders(oModel,
+                        lIndexArray, vertices,
+                        numColors, colors,
+                        oMaterial, materialData);
       }
     }
 
+  //create an ospray mesh for the polygon cells
   if (tIndexArray.size())
     {
+    //format depends on representation style
     switch (this->Representation)
       {
       case VTK_POINTS:
         {
-        OSPGeometry ospMesh = ospNewGeometry("spheres");
-        float *mdata = new float[3*tIndexArray.size()];
-        for (size_t i = 0; i < tIndexArray.size(); i++)
-          {
-          mdata[i*3+0] = (float)vertices[tIndexArray[i]].x;
-          mdata[i*3+1] = (float)vertices[tIndexArray[i]].y;
-          mdata[i*3+2] = (float)vertices[tIndexArray[i]].z;
-          }
-        OSPData _mdata = ospNewData(tIndexArray.size()*3, OSP_FLOAT, mdata);
-        ospSetObject(ospMesh, "spheres", _mdata);
-        ospSet1i(ospMesh, "bytes_per_sphere", 3*sizeof(float));
-        ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
-        ospSet1i(ospMesh, "offset_radius", -1);//3*sizeof(float));
-        ospSet1f(ospMesh, "radius", 0.02);
-        ospSet1i(ospMesh, "offset_materialID", -1);
-        ospSet1i(ospMesh, "materialID", 0);
-        ospRelease(_mdata);
-
-        ospAddGeometry(oModel, ospMesh);
-        ospSetMaterial(ospMesh, oMaterial);
-
-        ospCommit(ospMesh);
-        ospRelease(ospMesh);
+        RenderAsSpheres(oModel,
+                        tIndexArray, vertices,
+                        numColors, colors,
+                        oMaterial, materialData);
         break;
         }
       case VTK_WIREFRAME:
         {
-        OSPGeometry ospMesh = ospNewGeometry("cylinders");
-        float *mdata = (float *)malloc
-          (sizeof(float)*tIndexArray.size()*3);
-        for (size_t i = 0; i < tIndexArray.size(); i++)
-          {
-          mdata[i*3+0] = (float)vertices[tIndexArray[i]].x;
-          mdata[i*3+1] = (float)vertices[tIndexArray[i]].y;
-          mdata[i*3+2] = (float)vertices[tIndexArray[i]].z;
-          }
-        OSPData _mdata = ospNewData(tIndexArray.size()*3, OSP_FLOAT, &mdata[0]);
-        free(mdata);
-        //ospCommit(_mdata);
-        ospSetData(ospMesh, "cylinders", _mdata);
-        ospSet1i(ospMesh, "bytes_per_cylinder", 6*sizeof(float));
-        ospSet1i(ospMesh, "offset_v0", 0);
-        ospSet1i(ospMesh, "offset_v1", 3*sizeof(float));
-        ospSet1f(ospMesh, "radius", 0.01);
-        ospSet1i(ospMesh, "offset_radius", -1);
-        ospSet1i(ospMesh, "materialID", 0);
-        ospSet1i(ospMesh, "offset_materialID", -1);
-        ospRelease(_mdata);
-
-        ospSetMaterial(ospMesh, oMaterial);
-        ospAddGeometry(oModel, ospMesh);
-        ospCommit(ospMesh);
-        ospRelease(ospMesh);
+        RenderAsCylinders(oModel,
+                          tIndexArray, vertices,
+                          numColors, colors,
+                          oMaterial, materialData);
         break;
         }
       default:
         {
-        OSPGeometry ospMesh = ospNewGeometry("trianglemesh");
-        ospSetData(ospMesh, "position", position);
-
-        size_t numTriangles = tIndexArray.size() / 3;
-        ospray::vec3i *triangles = (ospray::vec3i *)embree::alignedMalloc
-          (sizeof(ospray::vec3i) * numTriangles);
-        for (size_t i = 0, mi = 0; i < numTriangles; i++, mi += 3)
-          {
-          triangles[i] = embree::Vec3i(tIndexArray[mi + 0],
-                                       tIndexArray[mi + 1],
-                                       tIndexArray[mi + 2]);
-          }
-        OSPData index = ospNewData(numTriangles, OSP_INT3, &triangles[0]);
-        embree::alignedFree(triangles);
-        ospSetData(ospMesh, "index", index);
-        ospCommit(index);
-        ospRelease(index);
-
-        OSPData _normals = NULL;
-        if (numNormals)
-          {
-          _normals = ospNewData(numNormals, OSP_FLOAT3A, &normals[0]);
-          ospSetData(ospMesh, "vertex.normal", _normals);
-          }
-
-        OSPData _colors = NULL;
-        if (numColors)
-          {
-          _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
-          ospSetData(ospMesh, "vertex.color", _colors);
-          }
-
-        ospAddGeometry(oModel, ospMesh);
-
-        ospSetMaterial(ospMesh, oMaterial);
-
-        ospCommit(ospMesh);
-        ospCommit(oModel);
-        ospRelease(index);
-        ospRelease(_normals);
-        ospRelease(_colors);
-        this->OSPMesh = ospMesh;
+        this->OSPMesh = RenderAsTriangles(oModel,
+                                          position, tIndexArray,
+                                          numNormals, normals,
+                                          numColors, colors,
+                                          oMaterial, materialData);
         }
       }
     }
@@ -697,105 +682,27 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
       {
       case VTK_POINTS:
         {
-        OSPGeometry ospMesh = ospNewGeometry("spheres");
-        float *mdata = new float[3*sIndexArray.size()];
-        for (size_t i = 0; i < sIndexArray.size(); i++)
-          {
-          mdata[i*3+0] = (float)vertices[sIndexArray[i]].x;
-          mdata[i*3+1] = (float)vertices[sIndexArray[i]].y;
-          mdata[i*3+2] = (float)vertices[sIndexArray[i]].z;
-          }
-        OSPData _mdata = ospNewData(sIndexArray.size()*3, OSP_FLOAT, mdata);
-        ospSetObject(ospMesh, "spheres", _mdata);
-        ospSet1i(ospMesh, "bytes_per_sphere", 3*sizeof(float));
-        ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
-        ospSet1i(ospMesh, "offset_radius", -1);//3*sizeof(float));
-        ospSet1f(ospMesh, "radius", 0.02);
-        ospSet1i(ospMesh, "offset_materialID", -1);
-        ospSet1i(ospMesh, "materialID", 0);
-        ospRelease(_mdata);
-
-        ospAddGeometry(oModel, ospMesh);
-        ospSetMaterial(ospMesh, oMaterial);
-
-        ospCommit(ospMesh);
-        ospRelease(ospMesh);
+        RenderAsSpheres(oModel,
+                        sIndexArray, vertices,
+                        numColors, colors,
+                        oMaterial, materialData);
         break;
         }
       case VTK_WIREFRAME:
         {
-        OSPGeometry ospMesh = ospNewGeometry("cylinders");
-        float *mdata = (float *)malloc
-          (sizeof(float)*sIndexArray.size()*3);
-        for (size_t i = 0; i < sIndexArray.size(); i++)
-          {
-          mdata[i*3+0] = (float)vertices[sIndexArray[i]].x;
-          mdata[i*3+1] = (float)vertices[sIndexArray[i]].y;
-          mdata[i*3+2] = (float)vertices[sIndexArray[i]].z;
-          }
-        OSPData _mdata = ospNewData(sIndexArray.size()*3, OSP_FLOAT, &mdata[0]);
-        free(mdata);
-        //ospCommit(_mdata);
-        ospSetData(ospMesh, "cylinders", _mdata);
-        ospSet1i(ospMesh, "bytes_per_cylinder", 6*sizeof(float));
-        ospSet1i(ospMesh, "offset_v0", 0);
-        ospSet1i(ospMesh, "offset_v1", 3*sizeof(float));
-        ospSet1f(ospMesh, "radius", 0.01);
-        ospSet1i(ospMesh, "offset_radius", -1);
-        ospSet1i(ospMesh, "materialID", 0);
-        ospSet1i(ospMesh, "offset_materialID", -1);
-        ospRelease(_mdata);
-
-        ospSetMaterial(ospMesh, oMaterial);
-        ospAddGeometry(oModel, ospMesh);
-        ospCommit(ospMesh);
-        ospRelease(ospMesh);
+        RenderAsCylinders(oModel,
+                          sIndexArray, vertices,
+                          numColors, colors,
+                          oMaterial, materialData);
         break;
         }
       default:
         {
-        OSPGeometry ospMesh = ospNewGeometry("trianglemesh");
-        ospSetData(ospMesh, "position", position);
-
-        size_t numTriangles = sIndexArray.size() / 3;
-        ospray::vec3i *triangles = (ospray::vec3i *)embree::alignedMalloc
-          (sizeof(ospray::vec3i) * numTriangles);
-        for (size_t i = 0, mi = 0; i < numTriangles; i++, mi += 3)
-          {
-          triangles[i] = embree::Vec3i(sIndexArray[mi + 0],
-                                       sIndexArray[mi + 1],
-                                       sIndexArray[mi + 2]);
-          }
-        OSPData index = ospNewData(numTriangles, OSP_INT3, &triangles[0]);
-        embree::alignedFree(triangles);
-        ospSetData(ospMesh, "index", index);
-        ospCommit(index);
-        ospRelease(index);
-
-        OSPData _normals = NULL;
-        if (numNormals)
-          {
-          _normals = ospNewData(numNormals, OSP_FLOAT3A, &normals[0]);
-          ospSetData(ospMesh, "vertex.normal", _normals);
-          }
-
-        OSPData _colors = NULL;
-        if (numColors)
-          {
-          _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
-          ospSetData(ospMesh, "vertex.color", _colors);
-          }
-
-        ospAddGeometry(oModel, ospMesh);
-
-        ospSetMaterial(ospMesh, oMaterial);
-
-        ospCommit(ospMesh);
-        ospCommit(oModel);
-        ospRelease(index);
-        ospRelease(_normals);
-        ospRelease(_colors);
-        this->OSPMesh = ospMesh;
+        this->OSPMesh = RenderAsTriangles(oModel,
+                                          position, sIndexArray,
+                                          numNormals, normals,
+                                          numColors, colors,
+                                          oMaterial, materialData);
         }
       }
     }
@@ -803,6 +710,6 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   ospRelease(position);
   ospRelease(position);
   embree::alignedFree(vertices);
-
+  delete[] colors;
   this->RenderTime.Modified();
 }
