@@ -307,8 +307,8 @@ renderable *MakeSphereAt(double x, double y, double z, int res,
     }
   ret->a=vtkActor::New();
   ret->a->SetMapper(ret->m);
-  ret->a->GetProperty()->SetPointSize(5);
-  ret->a->GetProperty()->SetLineWidth(5);
+  ret->a->GetProperty()->SetPointSize(20);
+  ret->a->GetProperty()->SetLineWidth(10);
   if (rep != -1)
     {
     ret->a->GetProperty()->SetRepresentation(rep);
@@ -347,11 +347,11 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
   renWin->AddRenderer(renderer);
   renderer->AutomaticLightCreationOn();
-  renderer->SetBackground(0.5,0.5,0.5);
-  renWin->SetSize(1500,1500);
+  renderer->SetBackground(0.75,0.75,0.75);
+  renWin->SetSize(1400,1300);
   vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-  camera->SetPosition(2,15,-2);
-  camera->SetFocalPoint(2,0,-2);
+  camera->SetPosition(2.5,11,-3);
+  camera->SetFocalPoint(2.5,0,-3);
   camera->SetViewUp(0,0,1);
   renderer->SetActiveCamera(camera);
   renWin->Render();

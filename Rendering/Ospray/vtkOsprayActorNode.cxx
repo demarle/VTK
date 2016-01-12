@@ -333,8 +333,8 @@ namespace {
     ospSetObject(ospMesh, "spheres", _mdata);
     ospSet1i(ospMesh, "bytes_per_sphere", 4*sizeof(float));
     ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
+    ospSet1f(ospMesh, "radius", 0.05);
     ospSet1i(ospMesh, "offset_radius", -1);
-    ospSet1f(ospMesh, "radius", 0.01);
     ospSet1i(ospMesh, "offset_materialID", -1);
     ospSet1i(ospMesh, "materialID", 0);
     if (numColors)
@@ -390,7 +390,7 @@ namespace {
     ospSet1i(ospMesh, "bytes_per_cylinder", 7*sizeof(float));
     ospSet1i(ospMesh, "offset_v0", 0);
     ospSet1i(ospMesh, "offset_v1", 3*sizeof(float));
-    ospSet1f(ospMesh, "radius", 0.01);
+    ospSet1f(ospMesh, "radius", 0.02);
     ospSet1i(ospMesh, "offset_radius", -1);
     ospSet1i(ospMesh, "offset_materialID", -1);
     ospSet1i(ospMesh, "materialID", 0);

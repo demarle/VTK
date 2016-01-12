@@ -70,9 +70,11 @@ int TestOsprayMultiBlock(int argc, char* argv[])
   ospray->SetSceneGraph(vtkOsprayWindowNode::SafeDownCast(vn));
 
   //TODO: segfault when uncommented
-  //renderer->SetPass(ospray);
+  renderer->SetPass(ospray);
 
   renWin->Render();
+
+  iren->Start();
 
   vn->Delete();
   return !retVal;

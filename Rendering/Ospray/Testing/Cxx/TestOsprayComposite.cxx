@@ -32,6 +32,9 @@
 #include "vtkMPIController.h"
 #include "vtkObjectFactory.h"
 #include "vtkOpenGLRenderWindow.h"
+#include "vtkOsprayPass.h"
+#include "vtkOsprayWindowNode.h"
+#include "vtkOsprayViewNodeFactory.h"
 #include "vtkPieceScalars.h"
 #include "vtkPolyDataMapper.h"
 #include "vtkProcess.h"
@@ -42,6 +45,7 @@
 #include "vtkSynchronizedRenderWindows.h"
 #include "vtkSynchronizedRenderers.h"
 #include "vtkTestUtilities.h"
+#include "vtkViewNode.h"
 
 class MyProcess : public vtkProcess
 {
@@ -112,6 +116,13 @@ void MyProcess::Execute()
   vtkRenderWindowInteractor* iren = vtkRenderWindowInteractor::New();
   iren->SetRenderWindow(renWin);
   renWin->Render();
+
+  vtkSmartPointer<vtkOsprayViewNodeFactory> vnf = vtkSmartPointer<vtkOsprayViewNodeFactory>::New();
+  vtkViewNode *vn = vnf->CreateNode(renWin);
+  vn->Build();
+  vtkSmartPointer<vtkOsprayPass> ospray=vtkSmartPointer<vtkOsprayPass>::New();
+  ospray->SetSceneGraph(vtkOsprayWindowNode::SafeDownCast(vn));
+  renderer->SetPass(ospray);
 
   this->CreatePipeline(renderer);
   prm->SetRenderWindow(renWin);
