@@ -24,6 +24,7 @@
 
 #include "ospray/ospray.h"
 
+#include <cmath>
 int vtkOsprayRendererNode::maxframes = 1;
 int vtkOsprayRendererNode::rtype=1;
 int vtkOsprayRendererNode::doshadows=0;
@@ -192,8 +193,9 @@ void vtkOsprayRendererNode::Render()
   it->Delete();
   ospCommit(oRenderer);
 
+  osp::vec2i ssize = {this->Size[0], this->Size[1]};
   OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer
-    (osp::vec2i(this->Size[0], this->Size[1]),
+    (ssize,
      OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH | OSP_FB_ACCUM);
   ospFrameBufferClear(osp_framebuffer, OSP_FB_COLOR|OSP_FB_DEPTH|OSP_FB_ACCUM);
   for (int i = 0; i < maxframes; i++)

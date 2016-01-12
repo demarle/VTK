@@ -20,7 +20,7 @@
 #include "vtkViewNodeCollection.h"
 
 #include "ospray/ospray.h"
-
+#include "vtkMath.h"
 //============================================================================
 vtkStandardNewMacro(vtkOsprayLightNode);
 
@@ -83,9 +83,8 @@ void vtkOsprayLightNode::ORender(void *renderer)
              this->DiffuseColor[0], //TODO: why 0.0..1.0 not 0..255?
              this->DiffuseColor[1],
              this->DiffuseColor[2]);
-    osp::vec3f dir(-direction[0],-direction[1],-direction[2]);
-    dir = normalize(dir);
-    ospSet3f(ospLight, "direction", dir.x,dir.y,dir.z);
+    vtkMath::Normalize(direction);
+    ospSet3f(ospLight, "direction", -direction[0],-direction[1],-direction[2]);
     ospCommit(ospLight);
     lights.push_back(ospLight);
     }

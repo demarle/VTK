@@ -708,7 +708,6 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
     }
   //ospRelease(oMaterial);
   ospRelease(position);
-  ospRelease(position);
   embree::alignedFree(vertices);
   delete[] colors;
   this->RenderTime.Modified();

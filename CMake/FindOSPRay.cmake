@@ -61,8 +61,8 @@ if (OSPRAY_BUILD_DIR)
     ${OSPRAY_BUILD_DIR}
     ${OSPRAY_DIR}
     ${OSPRAY_DIR}/ospray
-    ${OSPRAY_DIR}/ospray/embree/common
-    ${OSPRAY_DIR}/ospray/embree
+    ${OSPRAY_DIR}/ospray/embree-v2.7.1/common
+    ${OSPRAY_DIR}/ospray/embree-v2.7.1
     ${OSPRAY_DIR}/ospray/include
     )
 
