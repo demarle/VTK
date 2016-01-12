@@ -544,7 +544,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   OSPMaterial oMaterial;
   std::vector<OSPMaterial> ospMaterials;
   OSPRenderer oRenderer = (OSPRenderer) renderer;
-  oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+  oMaterial = ospNewMaterial(oRenderer,"RayTraceMaterial");
   float diffusef[] = {(float)this->DiffuseColor[0],
                       (float)this->DiffuseColor[1],
                       (float)this->DiffuseColor[2]};

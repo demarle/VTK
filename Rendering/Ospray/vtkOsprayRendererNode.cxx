@@ -26,7 +26,7 @@
 
 #include <cmath>
 int vtkOsprayRendererNode::maxframes = 1;
-int vtkOsprayRendererNode::rtype=1;
+int vtkOsprayRendererNode::rtype=2;
 int vtkOsprayRendererNode::doshadows=0;
 int vtkOsprayRendererNode::spp=1;
 //============================================================================
@@ -70,14 +70,7 @@ void vtkOsprayRendererNode::Render()
   if (!this->ORend)
     {
     ospRelease((osp::Renderer*)this->ORend);
-    if (rtype==0)
-      {
-      oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
-      }
-    else
-      {
-      oRenderer = (osp::Renderer*)ospNewRenderer("obj");
-      }
+
     //TODO: other options include {ao{1,2,4,8,16},obj,tachyon,pathtracer,raycast,volume...} - which to pick?
     //git grep OSP_REGISTER_RENDERER
     //ao - simple ambient occlusion (X semi-rand sample per hit) does not account for opacity
@@ -87,6 +80,17 @@ void vtkOsprayRendererNode::Render()
     //pathtracer - experimental code
     //raycast - 1 hit and done w color chosen from a few possibilities (normal, etc)
     //everything but raycast is a possibility, but none seem to be feature perfect right now
+    switch (rtype) {
+    case 0:
+      oRenderer = (osp::Renderer*)ospNewRenderer("ao16");
+      break;
+    case 1:
+      oRenderer = (osp::Renderer*)ospNewRenderer("obj");
+      break;
+    case 2:
+      oRenderer = (osp::Renderer*)ospNewRenderer("scivis");
+      break;
+    }
 
     this->ORend = oRenderer;
     }
