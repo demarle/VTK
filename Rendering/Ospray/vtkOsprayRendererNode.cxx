@@ -14,6 +14,7 @@
 =========================================================================*/
 #include "vtkOsprayRendererNode.h"
 
+#include "vtkCamera.h"
 #include "vtkCollectionIterator.h"
 #include "vtkObjectFactory.h"
 #include "vtkOsprayActorNode.h"
@@ -25,6 +26,16 @@
 #include "ospray/ospray.h"
 
 #include <cmath>
+
+#if 0
+//debug includes
+#include "vtkDataSetWriter.h"
+#include "vtkImageImport.h"
+#include "vtkSmartPointer.h"
+#include "vtkWindowToImageFilter.h"
+#include <unistd.h>
+#endif
+
 int vtkOsprayRendererNode::maxframes = 1;
 int vtkOsprayRendererNode::rtype=2;
 int vtkOsprayRendererNode::doshadows=0;
@@ -209,20 +220,82 @@ void vtkOsprayRendererNode::Render()
   const void* rgba = ospMapFrameBuffer(osp_framebuffer, OSP_FB_COLOR);
   delete[] this->Buffer;
   this->Buffer = new unsigned char[this->Size[0]*this->Size[1]*4];
-  memcpy((void*)this->Buffer, rgba, this->Size[0]*this->Size[1]*4);
+  memcpy((void*)this->Buffer, rgba, this->Size[0]*this->Size[1]*sizeof(char)*4);
   ospUnmapFrameBuffer(rgba, osp_framebuffer);
 
-  const void* Z = ospMapFrameBuffer(osp_framebuffer, OSP_FB_DEPTH);
+  vtkCamera *cam = vtkRenderer::SafeDownCast(this->Renderable)->
+    GetActiveCamera();
+  double *clipValues = cam->GetClippingRange();
+  double viewAngle = cam->GetViewAngle();
+  double clipMin = clipValues[0];
+  double clipMax = clipValues[1];
+  double clipDiv = 1.0 / (clipMax - clipMin);
+
+  const void *Z = ospMapFrameBuffer(osp_framebuffer, OSP_FB_DEPTH);
   delete[] this->ZBuffer;
-  this->ZBuffer = new float[this->Size[0]*this->Size[1]*1];
-  memcpy((void*)this->ZBuffer, Z, this->Size[0]*this->Size[1]*1*sizeof(float));
+  this->ZBuffer = new float[this->Size[0]*this->Size[1]];
+  float *s = (float *)Z;
+  float *d = this->ZBuffer;
+  /*
+  float minS = 1000.0;
+  float maxS = -1000.0;
+  float minD = 1000.0;
+  float maxD = -10000.0;
+  */
+  for (int i = 0; i < (this->Size[0]*this->Size[1]); i++, s++, d++)
+    {
+      *d = (*s<clipMin? 1.0 : (*s - clipMin) * clipDiv);
+      /*
+      if (*d < minD) minD = *d;
+      if (*d > maxD) maxD = *d;
+      if (*s < minS) minS = *s;
+      if (*s > maxS) maxS = *s;
+      */
+    }
+  /*
+  cerr << "CmM" << clipMin << "," << clipMax << "\t";
+  cerr << "SmM " << minS << "," << maxS << "\t";
+  cerr << "DmM " << minD << "," << maxD << endl;
+  */
   ospUnmapFrameBuffer(Z, osp_framebuffer);
 
   ospRelease(osp_framebuffer);
+
+  /*
+  int pid = getpid();
+  char fname[100];
+  vtkSmartPointer<vtkImageImport> wiff1 = vtkSmartPointer<vtkImageImport>::New();
+  wiff1->CopyImportVoidPointer(this->Buffer,(int)(this->Size[0]*this->Size[1]*sizeof(char)*4));
+  wiff1->SetDataScalarTypeToUnsignedChar();
+  wiff1->SetNumberOfScalarComponents(4);
+  wiff1->SetWholeExtent(0,this->Size[0]-1,0,this->Size[1]-1,0,0);
+  wiff1->SetDataExtentToWholeExtent();
+
+  vtkSmartPointer<vtkDataSetWriter> dw1 = vtkSmartPointer<vtkDataSetWriter>::New();
+  dw1->SetInputConnection(wiff1->GetOutputPort());
+  sprintf(fname, "color_%d.vtk", pid);
+  cerr << fname << endl;
+  dw1->SetFileName(fname);
+  dw1->Write();
+
+  vtkSmartPointer<vtkImageImport> wiff2 = vtkSmartPointer<vtkImageImport>::New();
+  wiff2->CopyImportVoidPointer(this->ZBuffer,(int)(this->Size[0]*this->Size[1]*sizeof(float)));
+  wiff2->SetDataScalarTypeToFloat();
+  wiff2->SetNumberOfScalarComponents(1);
+  wiff2->SetWholeExtent(0,this->Size[0]-1,0,this->Size[1]-1,0,0);
+  wiff2->SetDataExtentToWholeExtent();
+
+  vtkSmartPointer<vtkDataSetWriter> dw2 = vtkSmartPointer<vtkDataSetWriter>::New();
+  dw2->SetInputConnection(wiff2->GetOutputPort());
+  sprintf(fname, "depth_%d.vtk", pid);
+  cerr << fname << endl;
+  dw2->SetFileName(fname);
+  dw2->Write();
+  */
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer,
+void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer, float *Z,
                                        int buffx, int buffy)
 {
   //TODO: have to keep depth information around in VTK side for
@@ -230,6 +303,7 @@ void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer,
   unsigned char *iptr = this->Buffer;
   float *zptr = this->ZBuffer;
   unsigned char *optr = buffer;
+  float *ozptr = Z;
   if (this->Layer == 0)
     {
     for (int i = 0; i < buffx && i < this->Size[0]; i++)
@@ -240,6 +314,8 @@ void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer,
         *optr++ = *iptr++;
         *optr++ = *iptr++;
         *optr++ = *iptr++;
+        *ozptr++ = *zptr;
+        zptr++;
         }
       }
     }
@@ -255,12 +331,14 @@ void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer,
           *optr++ = *iptr++;
           *optr++ = *iptr++;
           *optr++ = *iptr++;
+          *ozptr = *zptr;
           }
         else
           {
           optr+=4;
           iptr+=4;
           }
+        ozptr++;
         zptr++;
         }
       }

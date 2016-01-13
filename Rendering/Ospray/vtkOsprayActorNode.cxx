@@ -517,7 +517,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
     }
 
   std::vector<vtkosp::Vec3> _vertices;
-  for (int i = 0; i < poly->GetPoints()->GetNumberOfPoints(); i++)
+  for (int i = 0; i < poly->GetNumberOfPoints(); i++)
     {
     double *pos = poly->GetPoints()->GetPoint(i);
     bool wasNan = false;

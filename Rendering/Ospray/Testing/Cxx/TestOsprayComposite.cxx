@@ -38,9 +38,12 @@
 #include "vtkPieceScalars.h"
 #include "vtkPolyDataMapper.h"
 #include "vtkProcess.h"
+#include "vtkProperty.h"
 #include "vtkRegressionTestImage.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRenderer.h"
+#include "vtkScalarsToColors.h"
+#include "vtkSphereSource.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkSynchronizedRenderWindows.h"
 #include "vtkSynchronizedRenderers.h"
@@ -66,10 +69,6 @@ public:
     int num_procs = this->Controller->GetNumberOfProcesses();
     int my_id = this->Controller->GetLocalProcessId();
 
-    vtkSmartPointer<vtkImageMandelbrotSource> src =
-      vtkSmartPointer<vtkImageMandelbrotSource>::New();
-    vtkSmartPointer<vtkContourFilter> vtkcontour =
-      vtkSmartPointer<vtkContourFilter>::New();
     vtkSmartPointer<vtkPieceScalars> piecescalars =
       vtkSmartPointer<vtkPieceScalars>::New();
     vtkSmartPointer<vtkPolyDataMapper> pdm =
@@ -77,15 +76,38 @@ public:
     vtkSmartPointer<vtkActor> actor =
       vtkSmartPointer<vtkActor>::New();
 
+#if 0
+    vtkSmartPointer<vtkImageMandelbrotSource> src =
+      vtkSmartPointer<vtkImageMandelbrotSource>::New();
+    vtkSmartPointer<vtkContourFilter> vtkcontour =
+      vtkSmartPointer<vtkContourFilter>::New();
+
     src->SetWholeExtent(0,40,0,40,0,40);
     vtkcontour->SetInputConnection(src->GetOutputPort());
     vtkcontour->SetNumberOfContours(1);
     vtkcontour->SetValue(0, 50.0);
-    pdm->SetInputConnection(vtkcontour->GetOutputPort());
+    piecescalars->SetInputConnection(vtkcontour->GetOutputPort());
+#else
+    vtkSmartPointer<vtkSphereSource> src =
+      vtkSmartPointer<vtkSphereSource>::New();
+    src->SetPhiResolution(100);
+    src->SetThetaResolution(100);
+    piecescalars->SetInputConnection(src->GetOutputPort());
+#endif
+#if 0
+    piecescalars->SetScalarModeToPointData();
+    pdm->SetScalarModeToUsePointFieldData();
+    pdm->SelectColorArray("Piece");
+    pdm->SetScalarRange(0,num_procs-1);
+#else
+    pdm->ScalarVisibilityOff();
+    float pFrac = (float)(my_id/(float)(num_procs-1));
+    actor->GetProperty()->SetColor(0,pFrac,1.0-pFrac);
+#endif
+    pdm->SetInputConnection(piecescalars->GetOutputPort());
     pdm->SetPiece(my_id);
     pdm->SetNumberOfPieces(num_procs);
     actor->SetMapper(pdm);
-
     renderer->AddActor(actor);
     }
 

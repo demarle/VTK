@@ -40,7 +40,8 @@ public:
 
   //Description:
   //Put my results into the correct place in the provided pixel buffer.
-  virtual void WriteLayer(unsigned char *buffer, int buffx, int buffy);
+  virtual void WriteLayer(unsigned char *buffer, float *zbuffer,
+                          int buffx, int buffy);
 
   static int maxframes;
   static int rtype;

@@ -70,6 +70,7 @@ void vtkOsprayWindowNode::PostRender()
 {
   //composite all renderers framebuffers together
   unsigned char *rgba = new unsigned char[this->Size[0]*this->Size[1]*4];
+  float *z = new float[this->Size[0]*this->Size[1]];
 
   vtkViewNodeCollection *renderers = this->GetChildren();
   vtkCollectionIterator *it = renderers->NewIterator();
@@ -78,16 +79,18 @@ void vtkOsprayWindowNode::PostRender()
     {
     vtkOsprayRendererNode *child =
       vtkOsprayRendererNode::SafeDownCast(it->GetCurrentObject());
-    child->WriteLayer(rgba, this->Size[0], this->Size[1]);
+    child->WriteLayer(rgba, z, this->Size[0], this->Size[1]);
     it->GoToNextItem();
     }
   it->Delete();
 
   //show the result
   vtkRenderWindow *rwin = vtkRenderWindow::SafeDownCast(this->Renderable);
+  rwin->SetZbufferData(0,  0, this->Size[0]-1, this->Size[1]-1, z);
   rwin->SetRGBACharPixelData( 0,  0, this->Size[0]-1, this->Size[1]-1,
                               rgba, 0, 0 );
-  rwin->Frame();//TODO: why twice?
+
   rwin->Frame();
   delete[] rgba;
+  delete[] z;
 }
