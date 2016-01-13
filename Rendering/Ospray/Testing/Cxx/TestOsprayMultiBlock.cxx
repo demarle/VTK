@@ -69,7 +69,6 @@ int TestOsprayMultiBlock(int argc, char* argv[])
   vtkSmartPointer<vtkOsprayPass> ospray=vtkSmartPointer<vtkOsprayPass>::New();
   ospray->SetSceneGraph(vtkOsprayWindowNode::SafeDownCast(vn));
 
-  //TODO: segfault when uncommented
   renderer->SetPass(ospray);
 
   renWin->Render();

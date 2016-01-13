@@ -17,6 +17,8 @@
 #include "vtkActor.h"
 #include "vtkCellArray.h"
 #include "vtkCollectionIterator.h"
+#include "vtkCompositeDataIterator.h"
+#include "vtkCompositeDataSet.h"
 #include "vtkMapper.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
@@ -460,17 +462,9 @@ namespace {
 }
 
 //----------------------------------------------------------------------------
-void vtkOsprayActorNode::ORender(void *renderer, void *model)
+void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
+                                     vtkActor *act, vtkPolyData * poly)
 {
-  if (this->Visibility == false)
-    {
-    ospRelease((OSPGeometry)this->OSPMesh);
-    return;
-    }
-
-  //TODO: not safe assumption, in general may not be actor or polydata.
-  vtkActor *act = (vtkActor*)this->GetRenderable();
-  vtkPolyData *poly = (vtkPolyData*)(act->GetMapper()->GetInput());
   OSPModel oModel = (OSPModel) model;
 
   if (this->RenderTime > act->GetMTime() &&
@@ -710,5 +704,44 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   ospRelease(position);
   embree::alignedFree(vertices);
   delete[] colors;
+}
+
+//----------------------------------------------------------------------------
+void vtkOsprayActorNode::ORender(void *renderer, void *model)
+{
+  if (this->Visibility == false)
+    {
+    ospRelease((OSPGeometry)this->OSPMesh);
+    return;
+    }
+
+  vtkActor *act = (vtkActor*)this->GetRenderable();
+  vtkPolyData *poly = (vtkPolyData*)(act->GetMapper()->GetInput());
+  if (poly)
+    {
+    this->ORenderPoly(renderer, model, act, poly);
+    }
+  else
+    {
+    vtkMapper *cpdm = act->GetMapper();
+    if (!cpdm)
+      {
+      return;
+      }
+    vtkCompositeDataSet *input = vtkCompositeDataSet::SafeDownCast
+      (cpdm->GetInputDataObject(0, 0));
+    vtkCompositeDataIterator*dit = input->NewIterator();
+    dit->SkipEmptyNodesOn();
+    while(!dit->IsDoneWithTraversal())
+      {
+      poly = vtkPolyData::SafeDownCast(input->GetDataSet(dit));
+      if (poly)
+        {
+        this->ORenderPoly(renderer, model, act, poly);
+        }
+      dit->GoToNextItem();
+      }
+    dit->Delete();
+    }
   this->RenderTime.Modified();
 }

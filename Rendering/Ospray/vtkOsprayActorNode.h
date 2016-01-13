@@ -22,6 +22,9 @@
 #include "vtkRenderingOsprayModule.h" // For export macro
 #include "vtkActorNode.h"
 
+class vtkActor;
+class vtkPolyData;
+
 class VTKRENDERINGOSPRAY_EXPORT vtkOsprayActorNode :
   public vtkActorNode
 {
@@ -33,8 +36,7 @@ public:
   //Description:
   //Make ospray calls to render me.
   virtual void RenderSelf();
-
-  virtual void ORender(void *oRenderer, void *oModel);
+  void ORender(void *oRenderer, void *oModel);
 
   vtkTimeStamp RenderTime;
 
@@ -42,11 +44,12 @@ protected:
   vtkOsprayActorNode();
   ~vtkOsprayActorNode();
 
+  void ORenderPoly(void *renderer, void *model,
+                   vtkActor *act, vtkPolyData * poly);
   void *OSPMesh;
 
 private:
   vtkOsprayActorNode(const vtkOsprayActorNode&); // Not implemented.
   void operator=(const vtkOsprayActorNode&); // Not implemented.
 };
-
 #endif
