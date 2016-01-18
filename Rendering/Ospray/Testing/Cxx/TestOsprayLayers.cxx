@@ -79,7 +79,7 @@ int TestOsprayLayers(int argc, char* argv[])
   renderer2->SetPass(ospray);
   renWin->Render();
 
-  //iren->Start();
+  iren->Start();
 
   vn->Delete();
 

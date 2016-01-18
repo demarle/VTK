@@ -42,6 +42,8 @@ public:
   //...
   virtual void RenderSelf() {};
 
+  int GetLayer() { return this->Layer; }
+
 protected:
   vtkRendererNode();
   ~vtkRendererNode();

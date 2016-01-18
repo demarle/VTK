@@ -75,12 +75,24 @@ void vtkOsprayWindowNode::PostRender()
   vtkViewNodeCollection *renderers = this->GetChildren();
   vtkCollectionIterator *it = renderers->NewIterator();
   it->InitTraversal();
-  while (!it->IsDoneWithTraversal())
+
+  int layer = 0;
+  int count = 0;
+  while (count < renderers->GetNumberOfItems())
     {
-    vtkOsprayRendererNode *child =
-      vtkOsprayRendererNode::SafeDownCast(it->GetCurrentObject());
-    child->WriteLayer(rgba, z, this->Size[0], this->Size[1]);
-    it->GoToNextItem();
+    it->InitTraversal();
+    while (!it->IsDoneWithTraversal())
+      {
+      vtkOsprayRendererNode *child =
+        vtkOsprayRendererNode::SafeDownCast(it->GetCurrentObject());
+      if (child->GetLayer() == layer)
+        {
+        child->WriteLayer(rgba, z, this->Size[0], this->Size[1]);
+        count++;
+        }
+      it->GoToNextItem();
+      }
+    layer++;
     }
   it->Delete();
 

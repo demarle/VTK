@@ -244,13 +244,13 @@ void vtkOsprayRendererNode::Render()
   */
   for (int i = 0; i < (this->Size[0]*this->Size[1]); i++, s++, d++)
     {
-      *d = (*s<clipMin? 1.0 : (*s - clipMin) * clipDiv);
-      /*
-      if (*d < minD) minD = *d;
-      if (*d > maxD) maxD = *d;
-      if (*s < minS) minS = *s;
-      if (*s > maxS) maxS = *s;
-      */
+    *d = (*s<clipMin? 1.0 : (*s - clipMin) * clipDiv);
+    /*
+    if (*d < minD) minD = *d;
+    if (*d > maxD) maxD = *d;
+    if (*s < minS) minS = *s;
+    if (*s > maxS) maxS = *s;
+    */
     }
   /*
   cerr << "CmM" << clipMin << "," << clipMax << "\t";
@@ -325,7 +325,7 @@ void vtkOsprayRendererNode::WriteLayer(unsigned char *buffer, float *Z,
       {
       for (int j = 0; j < buffy && i < this->Size[1]; j++)
         {
-        if (!std::isinf(*zptr))
+        if (*zptr<1.0)
           {
           *optr++ = *iptr++;
           *optr++ = *iptr++;
