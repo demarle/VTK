@@ -24,6 +24,7 @@
 #include "vtkViewNodeCollection.h"
 
 #include "ospray/ospray.h"
+#include "include/ospray/version.h"
 
 #include <cmath>
 
@@ -99,7 +100,11 @@ void vtkOsprayRendererNode::Render()
       oRenderer = (osp::Renderer*)ospNewRenderer("obj");
       break;
     case 2:
+#if  OSPRAY_VERSION_MAJOR == 0 && OSPRAY_VERSION_MINOR < 9
+      oRenderer = (osp::Renderer*)ospNewRenderer("obj");
+#else
       oRenderer = (osp::Renderer*)ospNewRenderer("scivis");
+#endif
       break;
     }
 
@@ -208,9 +213,13 @@ void vtkOsprayRendererNode::Render()
   it->Delete();
   ospCommit(oRenderer);
 
-  osp::vec2i ssize = {this->Size[0], this->Size[1]};
+#if OSPRAY_VERSION_MINOR < 9
+  osp::vec2i isize(this->Size[0], this->Size[1]);
+#else
+  osp::vec2i isize = {this->Size[0], this->Size[1]};
+#endif
   OSPFrameBuffer osp_framebuffer = ospNewFrameBuffer
-    (ssize,
+    (isize,
      OSP_RGBA_I8, OSP_FB_COLOR | OSP_FB_DEPTH | OSP_FB_ACCUM);
   ospFrameBufferClear(osp_framebuffer, OSP_FB_COLOR|OSP_FB_DEPTH|OSP_FB_ACCUM);
   for (int i = 0; i < maxframes; i++)

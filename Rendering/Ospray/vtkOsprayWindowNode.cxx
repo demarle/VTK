@@ -102,6 +102,7 @@ void vtkOsprayWindowNode::PostRender()
   rwin->SetRGBACharPixelData( 0,  0, this->Size[0]-1, this->Size[1]-1,
                               rgba, 0, 0 );
 
+  rwin->Frame(); //TODO: Why twice?
   rwin->Frame();
   delete[] rgba;
   delete[] z;

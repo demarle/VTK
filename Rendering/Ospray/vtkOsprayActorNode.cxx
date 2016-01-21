@@ -30,6 +30,7 @@
 #include "ospray/ospray.h"
 #include "ospray/api/Device.h"
 #include "ospray/common/OSPCommon.h"
+#include "include/ospray/version.h"
 
 #include <map>
 
@@ -538,7 +539,11 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
   OSPMaterial oMaterial;
   std::vector<OSPMaterial> ospMaterials;
   OSPRenderer oRenderer = (OSPRenderer) renderer;
+#if OSPRAY_VERSION_MAJOR == 0 && OSPRAY_VERSION_MINOR < 9
+  oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+#else
   oMaterial = ospNewMaterial(oRenderer,"RayTraceMaterial");
+#endif
   float diffusef[] = {(float)this->DiffuseColor[0],
                       (float)this->DiffuseColor[1],
                       (float)this->DiffuseColor[2]};
