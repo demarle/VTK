@@ -53,6 +53,35 @@ namespace vtkosp {
     float vals[3];
   };
 
+  class MyGeom {
+  public:
+    //TODO: Right now we make at most 4 if that is always true
+    //optimize by replacing this vector with a fixed size array
+    std::vector<OSPGeometry> geoms;
+    ~MyGeom()
+    {
+      std::vector<OSPGeometry>::iterator it = geoms.begin();
+      while (it != geoms.end())
+        {
+        ospRelease((OSPGeometry)*it);
+        it++;
+        }
+      geoms.clear();
+    }
+    void Add(OSPGeometry geo)
+    {
+      geoms.push_back(geo);
+    }
+    void AddMyselfTo(OSPModel oModel)
+    {
+      std::vector<OSPGeometry>::iterator it = geoms.begin();
+      while (it != geoms.end())
+        {
+        ospAddGeometry(oModel, *it);
+        it++;
+        }
+    }
+  };
 }
 
 //============================================================================
@@ -61,13 +90,13 @@ vtkStandardNewMacro(vtkOsprayActorNode);
 //----------------------------------------------------------------------------
 vtkOsprayActorNode::vtkOsprayActorNode()
 {
-  this->OSPMesh = NULL;
+  this->OSPMeshes = NULL;
 }
 
 //----------------------------------------------------------------------------
 vtkOsprayActorNode::~vtkOsprayActorNode()
 {
-  ospRelease((OSPGeometry)this->OSPMesh);
+  delete (vtkosp::MyGeom*)this->OSPMeshes;
 }
 
 //----------------------------------------------------------------------------
@@ -304,13 +333,13 @@ namespace {
   }
 
   //----------------------------------------------------------------------------
-  void RenderAsSpheres(OSPModel oModel,
-                       std::vector<unsigned int> &indexArray,
-                       ospray::vec3fa *vertices,
-                       int numColors,
-                       ospray::vec4f *colors,
-                       OSPMaterial oMaterial,
-                       OSPData materialData)
+  OSPGeometry RenderAsSpheres(OSPModel oModel,
+                              std::vector<unsigned int> &indexArray,
+                              ospray::vec3fa *vertices,
+                              int numColors,
+                              ospray::vec4f *colors,
+                              OSPMaterial oMaterial,
+                              OSPData materialData)
   {
     OSPGeometry ospMesh = ospNewGeometry("spheres");
     float *mdata = new float[4*indexArray.size()];
@@ -353,17 +382,17 @@ namespace {
     ospRelease(_mdata);
     delete[] mdata;
 
-    ospRelease(ospMesh);
+    return ospMesh;
   }
 
   //----------------------------------------------------------------------------
-  void RenderAsCylinders(OSPModel oModel,
-                         std::vector<unsigned int> &indexArray,
-                         ospray::vec3fa *vertices,
-                         int numColors,
-                         ospray::vec4f *colors,
-                         OSPMaterial oMaterial,
-                         OSPData materialData)
+  OSPGeometry RenderAsCylinders(OSPModel oModel,
+                                std::vector<unsigned int> &indexArray,
+                                ospray::vec3fa *vertices,
+                                int numColors,
+                                ospray::vec4f *colors,
+                                OSPMaterial oMaterial,
+                                OSPData materialData)
   {
     OSPGeometry ospMesh = ospNewGeometry("cylinders");
     float *mdata = new float[indexArray.size()/2*7];
@@ -409,7 +438,7 @@ namespace {
     delete[] mdata;
     ospRelease(_mdata);
 
-    ospRelease(ospMesh);
+    return ospMesh;
   }
 
   //----------------------------------------------------------------------------
@@ -466,15 +495,19 @@ namespace {
 void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
                                      vtkActor *act, vtkPolyData * poly)
 {
+  OSPRenderer oRenderer = (OSPRenderer) renderer;
   OSPModel oModel = (OSPModel) model;
+  vtkosp::MyGeom *myMeshes = (vtkosp::MyGeom*)this->OSPMeshes;
 
   if (this->RenderTime > act->GetMTime() &&
       this->RenderTime > poly->GetMTime())
     {
-    ospAddGeometry(oModel, (OSPGeometry)this->OSPMesh);
+    myMeshes->AddMyselfTo(oModel);
     return;
     }
-  ospRelease((OSPGeometry)this->OSPMesh);
+  delete myMeshes;
+  myMeshes = new vtkosp::MyGeom();
+  this->OSPMeshes = myMeshes;
 
   vtkCellArray *prims[4];
   prims[0] =  poly->GetVerts();
@@ -536,9 +569,8 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
     }
 
   //materials
-  OSPMaterial oMaterial;
   std::vector<OSPMaterial> ospMaterials;
-  OSPRenderer oRenderer = (OSPRenderer) renderer;
+  OSPMaterial oMaterial;
 #if OSPRAY_VERSION_MAJOR == 0 && OSPRAY_VERSION_MINOR < 9
   oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
 #else
@@ -616,11 +648,13 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
   //create an ospray mesh for the vertex cells
   if (pIndexArray.size())
     {
-    RenderAsSpheres(oModel,
-                    pIndexArray, vertices,
-                    numColors, colors,
-                    oMaterial, materialData);
+    myMeshes
+      ->Add(RenderAsSpheres(oModel,
+                            pIndexArray, vertices,
+                            numColors, colors,
+                            oMaterial, materialData));
     }
+
 
   //create an ospray mesh for the line cells
   if (lIndexArray.size())
@@ -628,17 +662,19 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
     //format depends on representation style
     if (this->Representation == VTK_POINTS)
       {
-      RenderAsSpheres(oModel,
-                      lIndexArray, vertices,
-                      numColors, colors,
-                      oMaterial, materialData);
+      myMeshes
+        ->Add(RenderAsSpheres(oModel,
+                          lIndexArray, vertices,
+                          numColors, colors,
+                          oMaterial, materialData));
       }
     else
       {
-      RenderAsCylinders(oModel,
-                        lIndexArray, vertices,
-                        numColors, colors,
-                        oMaterial, materialData);
+      myMeshes
+        ->Add(RenderAsCylinders(oModel,
+                                lIndexArray, vertices,
+                                numColors, colors,
+                                oMaterial, materialData));
       }
     }
 
@@ -650,27 +686,30 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
       {
       case VTK_POINTS:
         {
-        RenderAsSpheres(oModel,
-                        tIndexArray, vertices,
-                        numColors, colors,
-                        oMaterial, materialData);
+        myMeshes
+          ->Add(RenderAsSpheres(oModel,
+                                tIndexArray, vertices,
+                                numColors, colors,
+                                oMaterial, materialData));
         break;
         }
       case VTK_WIREFRAME:
         {
-        RenderAsCylinders(oModel,
-                          tIndexArray, vertices,
-                          numColors, colors,
-                          oMaterial, materialData);
+        myMeshes
+          ->Add(RenderAsCylinders(oModel,
+                                  tIndexArray, vertices,
+                                  numColors, colors,
+                                  oMaterial, materialData));
         break;
         }
       default:
         {
-        this->OSPMesh = RenderAsTriangles(oModel,
-                                          position, tIndexArray,
-                                          numNormals, normals,
-                                          numColors, colors,
-                                          oMaterial, materialData);
+        myMeshes
+          ->Add(RenderAsTriangles(oModel,
+                                  position, tIndexArray,
+                                  numNormals, normals,
+                                  numColors, colors,
+                                  oMaterial, materialData));
         }
       }
     }
@@ -681,27 +720,30 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
       {
       case VTK_POINTS:
         {
-        RenderAsSpheres(oModel,
-                        sIndexArray, vertices,
-                        numColors, colors,
-                        oMaterial, materialData);
+        myMeshes
+          ->Add(RenderAsSpheres(oModel,
+                                sIndexArray, vertices,
+                                numColors, colors,
+                                oMaterial, materialData));
         break;
         }
       case VTK_WIREFRAME:
         {
-        RenderAsCylinders(oModel,
-                          sIndexArray, vertices,
-                          numColors, colors,
-                          oMaterial, materialData);
+        myMeshes
+          ->Add(RenderAsCylinders(oModel,
+                                  sIndexArray, vertices,
+                                  numColors, colors,
+                                  oMaterial, materialData));
         break;
         }
       default:
         {
-        this->OSPMesh = RenderAsTriangles(oModel,
-                                          position, sIndexArray,
-                                          numNormals, normals,
-                                          numColors, colors,
-                                          oMaterial, materialData);
+        myMeshes
+          ->Add(RenderAsTriangles(oModel,
+                                  position, sIndexArray,
+                                  numNormals, normals,
+                                  numColors, colors,
+                                  oMaterial, materialData));
         }
       }
     }
@@ -716,7 +758,7 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
 {
   if (this->Visibility == false)
     {
-    ospRelease((OSPGeometry)this->OSPMesh);
+    delete (vtkosp::MyGeom*)this->OSPMeshes;
     return;
     }
 

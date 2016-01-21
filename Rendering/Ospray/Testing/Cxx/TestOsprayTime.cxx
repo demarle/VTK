@@ -92,7 +92,6 @@ int TestOsprayTime(int argc, char* argv[])
     outInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP(), updateTime);
     renderer->ResetCameraClippingRange();
     renWin->Render();
-    sleep(1);
     }
   iren->Start();
 

@@ -46,7 +46,7 @@ protected:
 
   void ORenderPoly(void *renderer, void *model,
                    vtkActor *act, vtkPolyData * poly);
-  void *OSPMesh;
+  void *OSPMeshes;
 
 private:
   vtkOsprayActorNode(const vtkOsprayActorNode&); // Not implemented.
