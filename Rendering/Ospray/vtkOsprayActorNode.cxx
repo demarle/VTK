@@ -82,6 +82,49 @@ namespace vtkosp {
         }
     }
   };
+
+  void PointNormalsOntoIndexes(
+    std::vector<unsigned int> &indexArray,
+    vtkDataArray *vNormals,
+    ospray::vec3fa *&normals)
+  {
+    int numNormals = vNormals->GetNumberOfTuples();
+    normals = new ospray::vec3fa[numNormals];
+    for (int i = 0; i < numNormals; i++)
+      {
+      double *vNormal = vNormals->GetTuple(i);
+      normals[i] = ospray::vec3fa(vNormal[0],vNormal[1],vNormal[2]);
+      }
+  }
+
+  void CellColorMaterials(
+    vtkUnsignedCharArray *vColors,
+    OSPRenderer oRenderer,
+    std::vector<OSPMaterial> &ospMaterials)
+  {
+    int numColors = vColors->GetNumberOfTuples();
+    for (int i = 0; i < numColors; i++)
+      {
+      double *color = vColors->GetTuple(i);
+      OSPMaterial oMaterial;
+#if OSPRAY_VERSION_MAJOR == 0 && OSPRAY_VERSION_MINOR < 9
+      oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+#else
+      oMaterial = ospNewMaterial(oRenderer,"RayTraceMaterial");
+#endif
+      float diffusef[] = {color[0]/255.0,
+                          color[1]/255.0,
+                          color[2]/255.0};
+      float specularf[] = {0,0,0};
+      ospSet3fv(oMaterial,"Kd",diffusef);
+      ospSet3fv(oMaterial,"Ks",specularf);
+      ospSet1f(oMaterial,"Ns",0);
+      ospSet1f(oMaterial,"d",1.0);
+      ospCommit(oMaterial);
+      ospMaterials.push_back(oMaterial);
+      }
+  }
+
 }
 
 //============================================================================
@@ -338,8 +381,11 @@ namespace {
                               ospray::vec3fa *vertices,
                               int numColors,
                               ospray::vec4f *colors,
-                              OSPMaterial oMaterial,
-                              OSPData materialData)
+                              int numMaterials,
+                              OSPData materialData,
+                              int primsize,
+                              OSPMaterial oMaterial
+                              )
   {
     OSPGeometry ospMesh = ospNewGeometry("spheres");
     float *mdata = new float[4*indexArray.size()];
@@ -350,7 +396,11 @@ namespace {
       mdata[i*4+1] = (float)vertices[indexArray[i]].y;
       mdata[i*4+2] = (float)vertices[indexArray[i]].z;
       int mat = 0;
-      if (numColors)
+      if (numMaterials && primsize>0)
+        {
+        mat = i/primsize;
+        }
+      else if (numColors)
         {
         mat = indexArray[i];
         }
@@ -369,18 +419,21 @@ namespace {
     ospSet1f(ospMesh, "radius", 0.05); //TODO: make a function of point size and mesh/camera bounds
     ospSet1i(ospMesh, "offset_radius", -1); //TODO: connect to an array
 
-    //CASE 1: per primitive full material - TODO
-    //ospSet1i(ospMesh, "offset_materialID", -1);
-    //ospSetData(ospMesh, "materialList", materialData);
-    //CASE 2: per primitive simple color
-    if (numColors)
+    if (numMaterials && primsize>0)
       {
+      //per cell color
+      ospSet1i(ospMesh, "offset_materialID", 3*sizeof(float));
+      ospSetData(ospMesh, "materialList", materialData);
+      }
+    else if (numColors)
+      {
+      //per point color
       ospSet1i(ospMesh, "offset_colorID", 3*sizeof(float));
       ospSetData(ospMesh, "color", _colors);
       }
     else
-    //CASE 3: actor level color
       {
+      //actor color
       ospSetMaterial(ospMesh, oMaterial);
       }
 
@@ -399,8 +452,10 @@ namespace {
                                 ospray::vec3fa *vertices,
                                 int numColors,
                                 ospray::vec4f *colors,
-                                OSPMaterial oMaterial,
-                                OSPData materialData)
+                                int numMaterials,
+                                OSPData materialData,
+                                int primsize,
+                                OSPMaterial oMaterial)
   {
     OSPGeometry ospMesh = ospNewGeometry("cylinders");
     float *mdata = new float[indexArray.size()/2*7];
@@ -414,7 +469,15 @@ namespace {
       mdata[i*7+4] = (float)vertices[indexArray[i*2+1]].y;
       mdata[i*7+5] = (float)vertices[indexArray[i*2+1]].z;
       int mat = 0;
-      if (numColors)
+      if (numMaterials && primsize>0)
+        {
+        mat = i;
+        if (primsize==3)
+          {
+          mat = i/3;
+          }
+        }
+      else if (numColors)
         {
         mat = indexArray[i*2];
         }
@@ -434,18 +497,21 @@ namespace {
     ospSet1f(ospMesh, "radius", 0.02); //TODO: make a function of line width and mesh/camera bounds
     ospSet1i(ospMesh, "offset_radius", -1); //TODO: connect to an array
 
-    //CASE 1: per primitive full material - TODO
-    //ospSet1i(ospMesh, "offset_materialID", -1);
-    //ospSetData(ospMesh, "materialList", materialData);
-    //CASE 2: per primitive simple color
-    if (numColors)
+    if (numMaterials && primsize > 0)
       {
+      //per cell color
+      ospSet1i(ospMesh, "offset_materialID", 6*sizeof(float));
+      ospSetData(ospMesh, "materialList", materialData);
+      }
+    else if (numColors)
+      {
+      //per point color
       ospSet1i(ospMesh, "offset_colorID", 6*sizeof(float));
       ospSetData(ospMesh, "color", _colors);
       }
     else
       {
-      //CASE 3: actor level color
+      //per actor color
       ospSetMaterial(ospMesh, oMaterial);
       }
 
@@ -462,9 +528,13 @@ namespace {
   OSPGeometry RenderAsTriangles(OSPModel oModel,
                                 OSPData position,
                                 std::vector<unsigned int> &indexArray,
-                                int numNormals, ospray::vec3fa *normals,
-                                int numColors, ospray::vec4f *colors,
-                                OSPMaterial oMaterial, OSPData materialData)
+                                int numNormals,
+                                ospray::vec3fa *normals,
+                                int numColors,
+                                ospray::vec4f *colors,
+                                int numMaterials,
+                                OSPData materialData,
+                                OSPMaterial oMaterial)
   {
     OSPGeometry ospMesh = ospNewGeometry("trianglemesh");
     ospSetData(ospMesh, "position", position);
@@ -489,21 +559,38 @@ namespace {
       ospSetData(ospMesh, "vertex.normal", _normals);
       }
 
+    OSPData _cmats = NULL;
     OSPData _colors = NULL;
-    if (numColors)
+    int *ids;
+    if (numMaterials)
+      {
+      ids = new int[numTriangles];
+      for (size_t i = 0; i < numTriangles; i++)
+        {
+        ids[i] = i;
+        }
+      _cmats = ospNewData(numTriangles, OSP_INT, &ids[0]);
+      ospSetData(ospMesh, "prim.materialID", _cmats);
+      ospSetData(ospMesh, "materialList", materialData);
+      }
+    else if (numColors)
       {
       _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
       ospSetData(ospMesh, "vertex.color", _colors);
       }
+    else
+      {
+      ospSetMaterial(ospMesh, oMaterial);
+      }
 
     ospAddGeometry(oModel, ospMesh);
-    ospSetMaterial(ospMesh, oMaterial);
     ospCommit(ospMesh);
     ospCommit(oModel); //TODO: crashes without yet others don't, why?
     ospRelease(index);
     ospRelease(_normals);
     ospRelease(_colors);
-
+    ospRelease(_cmats);
+    //delete[] ids;
     return ospMesh;
   }
 }
@@ -585,8 +672,6 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
     _vertices.push_back(vtkosp::Vec3(pos[0], pos[1], pos[2]));
     }
 
-  //materials
-  std::vector<OSPMaterial> ospMaterials;
   OSPMaterial oMaterial;
 #if OSPRAY_VERSION_MAJOR == 0 && OSPRAY_VERSION_MINOR < 9
   oMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
@@ -604,49 +689,41 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
   ospSet1f(oMaterial,"Ns",float(this->SpecularPower*.5));
   ospSet1f(oMaterial,"d",float(this->Opacity));
   ospCommit(oMaterial);
-  ospMaterials.push_back(oMaterial);
-  OSPData materialData =
-    ospNewData(ospMaterials.size(), OSP_OBJECT, &ospMaterials[0]);
 
-  //normals
-  ospray::vec3fa *normals = NULL;
-  int numNormals = 0;
-  if (this->Interpolation != VTK_FLAT)
-    {
-    vtkPointData *pointData = poly->GetPointData();
-    if (vtkDataArray *vNormals = pointData->GetNormals())
-      {
-      numNormals= vNormals->GetNumberOfTuples();
-      normals = (ospray::vec3fa *)embree::alignedMalloc
-        (sizeof(ospray::vec3fa) * numNormals);
-      for (int i = 0; i < numNormals; i++)
-        {
-        double *vNormal = vNormals->GetTuple(i);
-        normals[i] = ospray::vec3fa(vNormal[0],vNormal[1],vNormal[2]);
-        }
-      embree::alignedFree(normals);
-      }
-  }
+
 
   //direct colors
-  int numColors = 0;
-  ospray::vec4f *colors = NULL;
-  act->GetMapper()->MapScalars(1.0);
+  int cellFlag;
+  std::vector<OSPMaterial> ospMaterials;
+  int num_materials = 0;
+  ospray::vec4f *point_colors = NULL;
+  int num_colors = 0;
+  act->GetMapper()->MapScalars(1.0, cellFlag);
   vtkUnsignedCharArray *vColors = act->GetMapper()->Colors;
   if (vColors)
     {
-    numColors = vColors->GetNumberOfTuples();
-    colors = new ospray::vec4f[numColors];
-
-    for (int i = 0; i < numColors; i++)
+    if (cellFlag)
       {
-      unsigned char *color = vColors->GetPointer(4 * i);
-      colors[i] = ospray::vec4f(color[0] / 255.0,
-                                color[1] / 255.0,
-                                color[2] / 255.0,
-                                1);
+      vtkosp::CellColorMaterials(vColors, oRenderer, ospMaterials);
+      num_materials = ospMaterials.size();
+      }
+    else
+      {
+      num_colors = vColors->GetNumberOfTuples();
+      point_colors = new ospray::vec4f[num_colors];
+      for (int i = 0; i < num_colors; i++)
+        {
+        unsigned char *color = vColors->GetPointer(4 * i);
+        point_colors[i] = ospray::vec4f(color[0] / 255.0,
+                                  color[1] / 255.0,
+                                  color[2] / 255.0,
+                                  1);
+        }
       }
     }
+  OSPData materialData =
+    ospNewData(ospMaterials.size(), OSP_OBJECT, &ospMaterials[0]);
+  ospCommit(materialData);
 
   //points
   size_t numPositions = _vertices.size();
@@ -668,8 +745,9 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
     myMeshes
       ->Add(RenderAsSpheres(oModel,
                             pIndexArray, vertices,
-                            numColors, colors,
-                            oMaterial, materialData));
+                            num_colors, point_colors,
+                            num_materials, materialData, 1,
+                            oMaterial));
     }
 
 
@@ -681,17 +759,19 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
       {
       myMeshes
         ->Add(RenderAsSpheres(oModel,
-                          lIndexArray, vertices,
-                          numColors, colors,
-                          oMaterial, materialData));
+                              lIndexArray, vertices,
+                              num_colors, point_colors,
+                              num_materials, materialData, 2,
+                              oMaterial));
       }
     else
       {
       myMeshes
         ->Add(RenderAsCylinders(oModel,
                                 lIndexArray, vertices,
-                                numColors, colors,
-                                oMaterial, materialData));
+                                num_colors, point_colors,
+                                num_materials, materialData, 2,
+                                oMaterial));
       }
     }
 
@@ -706,8 +786,9 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
         myMeshes
           ->Add(RenderAsSpheres(oModel,
                                 tIndexArray, vertices,
-                                numColors, colors,
-                                oMaterial, materialData));
+                                num_colors, point_colors,
+                                num_materials, materialData, 3,
+                                oMaterial));
         break;
         }
       case VTK_WIREFRAME:
@@ -715,18 +796,33 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
         myMeshes
           ->Add(RenderAsCylinders(oModel,
                                   tIndexArray, vertices,
-                                  numColors, colors,
-                                  oMaterial, materialData));
+                                  num_colors, point_colors,
+                                  num_materials, materialData, 3,
+                                  oMaterial));
         break;
         }
       default:
         {
+        ospray::vec3fa *normals = NULL;
+        int numNormals = 0;
+        if (this->Interpolation != VTK_FLAT)
+          {
+          vtkDataArray *vNormals = poly->GetPointData()->GetNormals();
+          if (vNormals)
+            {
+            vtkosp::PointNormalsOntoIndexes
+              (tIndexArray, vNormals, normals);
+            numNormals = tIndexArray.size();
+            }
+          }
         myMeshes
           ->Add(RenderAsTriangles(oModel,
                                   position, tIndexArray,
                                   numNormals, normals,
-                                  numColors, colors,
-                                  oMaterial, materialData));
+                                  num_colors, point_colors,
+                                  num_materials, materialData,
+                                  oMaterial));
+        delete[] normals;
         }
       }
     }
@@ -740,8 +836,9 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
         myMeshes
           ->Add(RenderAsSpheres(oModel,
                                 sIndexArray, vertices,
-                                numColors, colors,
-                                oMaterial, materialData));
+                                num_colors, point_colors,
+                                num_materials, materialData, -1,
+                                oMaterial));
         break;
         }
       case VTK_WIREFRAME:
@@ -749,25 +846,40 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
         myMeshes
           ->Add(RenderAsCylinders(oModel,
                                   sIndexArray, vertices,
-                                  numColors, colors,
-                                  oMaterial, materialData));
+                                  num_colors, point_colors,
+                                  num_materials, materialData, -1,
+                                  oMaterial));
         break;
         }
       default:
         {
+        ospray::vec3fa *normals = NULL;
+        int numNormals = 0;
+        if (this->Interpolation != VTK_FLAT)
+          {
+          vtkDataArray *vNormals = poly->GetPointData()->GetNormals();
+          if (vNormals)
+            {
+            vtkosp::PointNormalsOntoIndexes
+              (sIndexArray, vNormals, normals);
+            numNormals = sIndexArray.size();
+            }
+          }
         myMeshes
           ->Add(RenderAsTriangles(oModel,
                                   position, sIndexArray,
                                   numNormals, normals,
-                                  numColors, colors,
-                                  oMaterial, materialData));
+                                  num_colors, point_colors,
+                                  num_materials, materialData,
+                                  oMaterial));
+        delete[] normals;
         }
       }
     }
-  //ospRelease(oMaterial);
   ospRelease(position);
   embree::alignedFree(vertices);
-  delete[] colors;
+  ospMaterials.clear();
+  delete[] point_colors;
 }
 
 //----------------------------------------------------------------------------
