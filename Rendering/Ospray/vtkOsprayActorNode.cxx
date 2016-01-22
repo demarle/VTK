@@ -352,7 +352,7 @@ namespace {
       int mat = 0;
       if (numColors)
         {
-        mat = i;
+        mat = indexArray[i];
         }
       idata[i*4+3] = mat;
       }
@@ -365,18 +365,26 @@ namespace {
     ospSetObject(ospMesh, "spheres", _mdata);
     ospSet1i(ospMesh, "bytes_per_sphere", 4*sizeof(float));
     ospSet1i(ospMesh, "offset_center", 0*sizeof(float));
-    ospSet1f(ospMesh, "radius", 0.05);
-    ospSet1i(ospMesh, "offset_radius", -1);
-    ospSet1i(ospMesh, "offset_materialID", -1);
-    ospSet1i(ospMesh, "materialID", 0);
+
+    ospSet1f(ospMesh, "radius", 0.05); //TODO: make a function of point size and mesh/camera bounds
+    ospSet1i(ospMesh, "offset_radius", -1); //TODO: connect to an array
+
+    //CASE 1: per primitive full material - TODO
+    //ospSet1i(ospMesh, "offset_materialID", -1);
+    //ospSetData(ospMesh, "materialList", materialData);
+    //CASE 2: per primitive simple color
     if (numColors)
       {
       ospSet1i(ospMesh, "offset_colorID", 3*sizeof(float));
       ospSetData(ospMesh, "color", _colors);
       }
+    else
+    //CASE 3: actor level color
+      {
+      ospSetMaterial(ospMesh, oMaterial);
+      }
+
     ospAddGeometry(oModel, ospMesh);
-    ospSetMaterial(ospMesh, oMaterial);
-    ospSetData(ospMesh, "materialList", materialData);
     ospCommit(ospMesh);
     ospRelease(_colors);
     ospRelease(_mdata);
@@ -408,7 +416,7 @@ namespace {
       int mat = 0;
       if (numColors)
         {
-        mat = i;
+        mat = indexArray[i*2];
         }
       idata[i*7+6] = mat;
       }
@@ -422,21 +430,30 @@ namespace {
     ospSet1i(ospMesh, "bytes_per_cylinder", 7*sizeof(float));
     ospSet1i(ospMesh, "offset_v0", 0);
     ospSet1i(ospMesh, "offset_v1", 3*sizeof(float));
-    ospSet1f(ospMesh, "radius", 0.02);
-    ospSet1i(ospMesh, "offset_radius", -1);
-    ospSet1i(ospMesh, "offset_materialID", -1);
-    ospSet1i(ospMesh, "materialID", 0);
+
+    ospSet1f(ospMesh, "radius", 0.02); //TODO: make a function of line width and mesh/camera bounds
+    ospSet1i(ospMesh, "offset_radius", -1); //TODO: connect to an array
+
+    //CASE 1: per primitive full material - TODO
+    //ospSet1i(ospMesh, "offset_materialID", -1);
+    //ospSetData(ospMesh, "materialList", materialData);
+    //CASE 2: per primitive simple color
     if (numColors)
       {
       ospSet1i(ospMesh, "offset_colorID", 6*sizeof(float));
       ospSetData(ospMesh, "color", _colors);
       }
+    else
+      {
+      //CASE 3: actor level color
+      ospSetMaterial(ospMesh, oMaterial);
+      }
+
     ospAddGeometry(oModel, ospMesh);
-    ospSetMaterial(ospMesh, oMaterial);
     ospCommit(ospMesh);
     ospRelease(_colors);
-    delete[] mdata;
     ospRelease(_mdata);
+    delete[] mdata;
 
     return ospMesh;
   }
