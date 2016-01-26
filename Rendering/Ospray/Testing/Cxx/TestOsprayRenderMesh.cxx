@@ -496,11 +496,6 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   renderer->AddActor(ren->a);
   delete(ren);
 
-  ren = MakeSphereAt(1,0,-2,7, type, rep, "phong");
-  ren->a->GetProperty()->SetInterpolationToPhong();
-  renderer->AddActor(ren->a);
-  delete(ren);
-
   //texture
   int maxi = 100;
   int maxj = 100;
@@ -537,14 +532,15 @@ int TestOsprayRenderMesh(int argc, char* argv[])
   ren->a->SetTexture(texture);
   delete(ren);
 
+  //imagespace positional transformations
+  ren = MakeSphereAt(0,0,-4,10, type, rep, "transform");
+  ren->a->SetScale(1.2,1.0,0.87);
+  renderer->AddActor(ren->a);
+  delete(ren);
+
   //TODO: lut manipulation and range effects
-
   //TODO: NaN colors
-
-  //TODO: imagespace positional transformations
-
   //TODO: mapper clipping planes
-
   //TODO: hierarchical actors
 
   renWin->Render();

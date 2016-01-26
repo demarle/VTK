@@ -20,11 +20,13 @@
 #include "vtkCompositeDataIterator.h"
 #include "vtkCompositeDataSet.h"
 #include "vtkMapper.h"
+#include "vtkMatrix4x4.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
 #include "vtkProperty.h"
+#include "vtkSmartPointer.h"
 #include "vtkViewNodeCollection.h"
 
 #include "ospray/ospray.h"
@@ -649,6 +651,26 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
     }
 
   std::vector<vtkosp::Vec3> _vertices;
+  vtkSmartPointer<vtkMatrix4x4> m = vtkSmartPointer<vtkMatrix4x4>::New();
+  act->GetMatrix(m);
+  //see if we can avoid some work
+  double Ident[4][4] = {{1.0,0.0,0.0,0.0},
+                        {0.0,1.0,0.0,0.0},
+                        {0.0,0.0,1.0,0.0},
+                        {0.0,0.0,0.0,1.0}};
+  bool ident = true;
+  double *iptr = &Ident[0][0];
+  double *mptr = &m->Element[0][0];
+  for (int i = 0; i < 16; i++)
+    {
+    if (*iptr != *mptr)
+      {
+      ident = false;
+      }
+    }
+  double inPos[4];
+  inPos[3] = 1.0;
+  double transPos[4];
   for (int i = 0; i < poly->GetNumberOfPoints(); i++)
     {
     double *pos = poly->GetPoints()->GetPoint(i);
@@ -669,7 +691,19 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
         pos = poly->GetPoints()->GetPoint(fixIndex--);
         }
       } while (wasNan == true && fixIndex >= 0);
-    _vertices.push_back(vtkosp::Vec3(pos[0], pos[1], pos[2]));
+    if (ident)
+      {
+      _vertices.push_back(vtkosp::Vec3(pos[0], pos[1], pos[2]));
+      }
+    else
+      {
+      inPos[0] = pos[0];
+      inPos[1] = pos[1];
+      inPos[2] = pos[2];
+      m->MultiplyPoint(inPos, transPos);
+      //alternatively use an OSPRay instance of something like that
+      _vertices.push_back(vtkosp::Vec3(transPos[0], transPos[1], transPos[2]));
+      }
     }
 
   OSPMaterial oMaterial;
