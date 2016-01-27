@@ -28,6 +28,7 @@
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
 #include "vtkProperty.h"
+#include "vtkTexture.h"
 #include "vtkSmartPointer.h"
 #include "vtkViewNodeCollection.h"
 
@@ -380,6 +381,50 @@ namespace {
   }
 
   //----------------------------------------------------------------------------
+  OSPMaterial VTKToOSPTexture(vtkImageData *vColorTextureMap,
+                              OSPRenderer oRenderer)
+  {
+    int xsize = vColorTextureMap->GetExtent()[1];
+    int ysize = vColorTextureMap->GetExtent()[3];
+    unsigned char *ichars =
+      (unsigned char *)vColorTextureMap->GetScalarPointer();
+    unsigned char *ochars = new unsigned char[(xsize+1)*(ysize+1)*3];
+    unsigned char *oc = ochars;
+    int comps = vColorTextureMap->GetNumberOfScalarComponents();
+    int tups = vColorTextureMap->GetPointData()->GetScalars()->GetNumberOfTuples();
+    int cntr=0;
+    for (int i = 0; i <= xsize; i++)
+      {
+      for (int j = 0; j <= ysize; j++)
+        {
+        oc[0] = ichars[0];
+        oc[1] = ichars[1];
+        oc[2] = ichars[2];
+        oc+=3;
+        ichars+=comps;
+        }
+      }
+    osp::Texture2D *t2d;
+    t2d = (osp::Texture2D*)ospNewTexture2D
+      (xsize+1,
+       ysize+1,
+       OSP_UCHAR3,
+       ochars,
+       OSP_TEXTURE_FILTER_NEAREST);
+
+    OSPMaterial ospMaterial;
+#if OSPRAY_VERSION_MAJOR == 0 && OSPRAY_VERSION_MINOR < 9
+    ospMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+#else
+    ospMaterial = ospNewMaterial(oRenderer,"RayTraceMaterial");
+#endif
+    ospSetObject(ospMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
+    ospCommit(t2d);
+    ospCommit(ospMaterial);
+    return ospMaterial;
+  }
+
+  //----------------------------------------------------------------------------
   OSPGeometry RenderAsSpheres(OSPModel oModel,
                               std::vector<unsigned int> &indexArray,
                               ospray::vec3fa *vertices,
@@ -539,6 +584,8 @@ namespace {
                                 ospray::vec4f *colors,
                                 int num_colorCoordinates,
                                 float *point_textureCoordinates,
+                                int num_textureCoordinates,
+                                float *textureCoordinates,
                                 vtkImageData *vColorTextureMap,
                                 int numMaterials,
                                 OSPData materialData,
@@ -568,52 +615,43 @@ namespace {
       }
 
     bool _hastm = false;
-    ospray::vec2f *tc = (ospray::vec2f *)embree::alignedMalloc
-      (sizeof(ospray::vec2f) * num_colorCoordinates);
-    if (num_colorCoordinates)
+    ospray::vec2f *tc = NULL;
+    if (num_colorCoordinates || num_textureCoordinates)
       {
       _hastm = true;
-      for (size_t i = 0; i < num_colorCoordinates; i++)
-        {
-        tc[i] = ospray::vec2f(point_textureCoordinates[i],0.5);
-        }
 
-      int xsize = vColorTextureMap->GetExtent()[1];
-      //cerr << " TRIS " << numTriangles
-      //     << " NORMALS " << numNormals
-      //     << " COLORCOORDS " << num_colorCoordinates
-      //     << " XSIZE " << xsize << endl;
-      unsigned char *ichars = (unsigned char *)vColorTextureMap->GetScalarPointer();
-      unsigned char *ochars = new unsigned char[xsize*3];
-      unsigned char *oc = ochars;
-      for (int c = 0; c < xsize; c++)
+      if (num_colorCoordinates)
         {
-        oc[0] = ichars[0];
-        oc[1] = ichars[1];
-        oc[2] = ichars[2];
-        oc+=3;
-        ichars+=4;
+        tc = (ospray::vec2f *)embree::alignedMalloc
+          (sizeof(ospray::vec2f) * num_colorCoordinates);
+        for (size_t i = 0; i < num_colorCoordinates; i++)
+          {
+          tc[i] = ospray::vec2f(point_textureCoordinates[i],0);
+          }
+        OSPData tcs = ospNewData(num_colorCoordinates, OSP_FLOAT2, &tc[0]);
+        ospSetData(ospMesh, "vertex.texcoord", tcs);
         }
-      osp::Texture2D *t2d = (osp::Texture2D*)ospNewTexture2D(xsize,
-                                                             1,
-                                                             OSP_UCHAR3,
-                                                             ochars,
-                                                             OSP_TEXTURE_FILTER_NEAREST);
-      OSPMaterial ospMaterial;
-#if OSPRAY_VERSION_MAJOR == 0 && OSPRAY_VERSION_MINOR < 9
-      ospMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
-#else
-      ospMaterial = ospNewMaterial(oRenderer,"RayTraceMaterial");
-#endif
-      //ospSet1f(ospMaterial,"d", 0.9);
-      ospSetObject(ospMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
-      ospCommit(t2d);
-      ospCommit(ospMaterial);
+      else if (num_textureCoordinates)
+        {
+        tc = (ospray::vec2f *)embree::alignedMalloc
+          (sizeof(ospray::vec2f) * num_textureCoordinates/2);
+        float *itc = textureCoordinates;
+        for (size_t i = 0; i < num_textureCoordinates; i+=2)
+          {
+          float t1,t2;
+          t1 = *itc;
+          itc++;
+          t2 = *itc;
+          itc++;
+          tc[i/2] = ospray::vec2f(t1,t2);
+          }
+        OSPData tcs = ospNewData(num_textureCoordinates/2, OSP_FLOAT2, &tc[0]);
+        ospSetData(ospMesh, "vertex.texcoord", tcs);
+        }
+      OSPMaterial ospMaterial = VTKToOSPTexture(vColorTextureMap,oRenderer);
       ospSetMaterial(ospMesh, ospMaterial);
       }
-    OSPData tcs = ospNewData(num_colorCoordinates, OSP_FLOAT2, &tc[0]);
     embree::alignedFree(tc);
-    ospSetData(ospMesh, "vertex.texcoord", tcs);
 
     OSPData _cmats = NULL;
     OSPData _colors = NULL;
@@ -781,8 +819,6 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
   ospSet1f(oMaterial,"d",float(this->Opacity));
   ospCommit(oMaterial);
 
-
-
   //direct colors
   int cellFlag;
   std::vector<OSPMaterial> ospMaterials;
@@ -834,6 +870,26 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
     ospNewData(ospMaterials.size(), OSP_OBJECT, &ospMaterials[0]);
   ospCommit(materialData);
 
+  vtkTexture *texture = act->GetTexture();
+  float *textureCoordinates = NULL;
+  int num_textureCoordinates = 0;
+  if (texture)
+    {
+    vtkDataArray *da = poly->GetPointData()->GetTCoords();
+    num_textureCoordinates = da->GetNumberOfTuples();
+    textureCoordinates = new float[num_textureCoordinates*2];
+    float *tp = textureCoordinates;
+    for (int i=0; i<num_textureCoordinates; i++)
+      {
+      *tp = (float)da->GetTuple(i)[0];
+      tp++;
+      *tp = (float)da->GetTuple(i)[1];
+      tp++;
+      }
+    vColorTextureMap = vtkImageData::SafeDownCast
+      (texture->GetInput());
+    num_textureCoordinates = num_textureCoordinates*2;
+    }
   //points
   size_t numPositions = _vertices.size();
   ospray::vec3fa *vertices = (ospray::vec3fa *)embree::alignedMalloc
@@ -929,7 +985,9 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
                                   position, tIndexArray,
                                   numNormals, normals,
                                   num_colors, point_colors,
-                                  num_colorCoordinates, point_textureCoordinates, vColorTextureMap,
+                                  num_colorCoordinates, point_textureCoordinates,
+                                  num_textureCoordinates, textureCoordinates,
+                                  vColorTextureMap,
                                   num_materials, materialData,
                                   oMaterial));
         delete[] normals;
@@ -980,7 +1038,9 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
                                   position, sIndexArray,
                                   numNormals, normals,
                                   num_colors, point_colors,
-                                  num_colorCoordinates, point_textureCoordinates, vColorTextureMap,
+                                  num_colorCoordinates, point_textureCoordinates,
+                                  num_textureCoordinates, textureCoordinates,
+                                  vColorTextureMap,
                                   num_materials, materialData,
                                   oMaterial));
         delete[] normals;
