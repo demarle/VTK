@@ -19,6 +19,8 @@
 #include "vtkCollectionIterator.h"
 #include "vtkCompositeDataIterator.h"
 #include "vtkCompositeDataSet.h"
+#include "vtkFloatArray.h"
+#include "vtkImageData.h"
 #include "vtkMapper.h"
 #include "vtkMatrix4x4.h"
 #include "vtkObjectFactory.h"
@@ -527,13 +529,17 @@ namespace {
   }
 
   //----------------------------------------------------------------------------
-  OSPGeometry RenderAsTriangles(OSPModel oModel,
+  OSPGeometry RenderAsTriangles(OSPRenderer oRenderer,
+                                OSPModel oModel,
                                 OSPData position,
                                 std::vector<unsigned int> &indexArray,
                                 int numNormals,
                                 ospray::vec3fa *normals,
                                 int numColors,
                                 ospray::vec4f *colors,
+                                int num_colorCoordinates,
+                                float *point_textureCoordinates,
+                                vtkImageData *vColorTextureMap,
                                 int numMaterials,
                                 OSPData materialData,
                                 OSPMaterial oMaterial)
@@ -561,28 +567,79 @@ namespace {
       ospSetData(ospMesh, "vertex.normal", _normals);
       }
 
+    bool _hastm = false;
+    ospray::vec2f *tc = (ospray::vec2f *)embree::alignedMalloc
+      (sizeof(ospray::vec2f) * num_colorCoordinates);
+    if (num_colorCoordinates)
+      {
+      _hastm = true;
+      for (size_t i = 0; i < num_colorCoordinates; i++)
+        {
+        tc[i] = ospray::vec2f(point_textureCoordinates[i],0.5);
+        }
+
+      int xsize = vColorTextureMap->GetExtent()[1];
+      //cerr << " TRIS " << numTriangles
+      //     << " NORMALS " << numNormals
+      //     << " COLORCOORDS " << num_colorCoordinates
+      //     << " XSIZE " << xsize << endl;
+      unsigned char *ichars = (unsigned char *)vColorTextureMap->GetScalarPointer();
+      unsigned char *ochars = new unsigned char[xsize*3];
+      unsigned char *oc = ochars;
+      for (int c = 0; c < xsize; c++)
+        {
+        oc[0] = ichars[0];
+        oc[1] = ichars[1];
+        oc[2] = ichars[2];
+        oc+=3;
+        ichars+=4;
+        }
+      osp::Texture2D *t2d = (osp::Texture2D*)ospNewTexture2D(xsize,
+                                                             1,
+                                                             OSP_UCHAR3,
+                                                             ochars,
+                                                             OSP_TEXTURE_FILTER_NEAREST);
+      OSPMaterial ospMaterial;
+#if OSPRAY_VERSION_MAJOR == 0 && OSPRAY_VERSION_MINOR < 9
+      ospMaterial = ospNewMaterial(oRenderer,"OBJMaterial");
+#else
+      ospMaterial = ospNewMaterial(oRenderer,"RayTraceMaterial");
+#endif
+      //ospSet1f(ospMaterial,"d", 0.9);
+      ospSetObject(ospMaterial, "map_Kd", ((OSPTexture2D)(t2d)));
+      ospCommit(t2d);
+      ospCommit(ospMaterial);
+      ospSetMaterial(ospMesh, ospMaterial);
+      }
+    OSPData tcs = ospNewData(num_colorCoordinates, OSP_FLOAT2, &tc[0]);
+    embree::alignedFree(tc);
+    ospSetData(ospMesh, "vertex.texcoord", tcs);
+
     OSPData _cmats = NULL;
     OSPData _colors = NULL;
-    int *ids;
-    if (numMaterials)
+    if (!_hastm)
       {
-      ids = new int[numTriangles];
-      for (size_t i = 0; i < numTriangles; i++)
+      int *ids;
+      if (numMaterials)
         {
-        ids[i] = i;
+        ids = new int[numTriangles];
+        for (size_t i = 0; i < numTriangles; i++)
+          {
+          ids[i] = i;
+          }
+        _cmats = ospNewData(numTriangles, OSP_INT, &ids[0]);
+        ospSetData(ospMesh, "prim.materialID", _cmats);
+        ospSetData(ospMesh, "materialList", materialData);
         }
-      _cmats = ospNewData(numTriangles, OSP_INT, &ids[0]);
-      ospSetData(ospMesh, "prim.materialID", _cmats);
-      ospSetData(ospMesh, "materialList", materialData);
-      }
-    else if (numColors)
-      {
-      _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
-      ospSetData(ospMesh, "vertex.color", _colors);
-      }
-    else
-      {
-      ospSetMaterial(ospMesh, oMaterial);
+      else if (numColors)
+        {
+        _colors = ospNewData(numColors, OSP_FLOAT4, &colors[0]);
+        ospSetData(ospMesh, "vertex.color", _colors);
+        }
+      else
+        {
+        ospSetMaterial(ospMesh, oMaterial);
+        }
       }
 
     ospAddGeometry(oModel, ospMesh);
@@ -732,8 +789,12 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
   int num_materials = 0;
   ospray::vec4f *point_colors = NULL;
   int num_colors = 0;
+  float *point_textureCoordinates = NULL;
+  int num_colorCoordinates = 0;
   act->GetMapper()->MapScalars(1.0, cellFlag);
   vtkUnsignedCharArray *vColors = act->GetMapper()->Colors;
+  vtkFloatArray *vColorCoordinates = act->GetMapper()->ColorCoordinates;
+  vtkImageData* vColorTextureMap = act->GetMapper()->ColorTextureMap;
   if (vColors)
     {
     if (cellFlag)
@@ -752,6 +813,20 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
                                   color[1] / 255.0,
                                   color[2] / 255.0,
                                   1);
+        }
+      }
+    }
+  else
+    {
+    if (vColorCoordinates && vColorTextureMap)
+      {
+      num_colorCoordinates = vColorCoordinates->GetNumberOfTuples();
+      point_textureCoordinates = new float[num_colorCoordinates];
+      float *tc = vColorCoordinates->GetPointer(0);
+      for (int i = 0; i < num_colorCoordinates; i++)
+        {
+        point_textureCoordinates[i] = *tc;
+        tc+=2;
         }
       }
     }
@@ -850,10 +925,11 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
             }
           }
         myMeshes
-          ->Add(RenderAsTriangles(oModel,
+          ->Add(RenderAsTriangles(oRenderer, oModel,
                                   position, tIndexArray,
                                   numNormals, normals,
                                   num_colors, point_colors,
+                                  num_colorCoordinates, point_textureCoordinates, vColorTextureMap,
                                   num_materials, materialData,
                                   oMaterial));
         delete[] normals;
@@ -900,10 +976,11 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
             }
           }
         myMeshes
-          ->Add(RenderAsTriangles(oModel,
+          ->Add(RenderAsTriangles(oRenderer, oModel,
                                   position, sIndexArray,
                                   numNormals, normals,
                                   num_colors, point_colors,
+                                  num_colorCoordinates, point_textureCoordinates, vColorTextureMap,
                                   num_materials, materialData,
                                   oMaterial));
         delete[] normals;
@@ -914,6 +991,7 @@ void vtkOsprayActorNode::ORenderPoly(void *renderer, void *model,
   embree::alignedFree(vertices);
   ospMaterials.clear();
   delete[] point_colors;
+  delete[] point_textureCoordinates;
 }
 
 //----------------------------------------------------------------------------
