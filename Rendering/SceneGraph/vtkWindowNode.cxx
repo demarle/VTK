@@ -84,8 +84,11 @@ void vtkWindowNode::BuildSelf()
     if (!nodes->IsRenderablePresent(obj))
       {
       vtkViewNode *node = this->CreateViewNode(obj);
-      nodes->AddItem(node);
-      node->Delete();
+      if (node)
+        {
+        nodes->AddItem(node);
+        node->Delete();
+        }
       }
     rit->GoToNextItem();
     }

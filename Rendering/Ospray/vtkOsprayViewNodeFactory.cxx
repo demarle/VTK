@@ -70,6 +70,7 @@ vtkOsprayViewNodeFactory::vtkOsprayViewNodeFactory()
   //see vtkRenderWindow::GetRenderLibrary
   this->RegisterOverride("vtkOpenGLRenderer", ren_maker);
   this->RegisterOverride("vtkOpenGLActor", act_maker);
+  this->RegisterOverride("vtkPVLODActor", act_maker);
   this->RegisterOverride("vtkOpenGLCamera", cam_maker);
   this->RegisterOverride("vtkOpenGLLight", light_maker);
 }

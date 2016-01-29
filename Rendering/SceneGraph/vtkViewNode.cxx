@@ -102,7 +102,10 @@ vtkViewNode *vtkViewNode::CreateViewNode(vtkObject *obj)
   else
     {
     ret = this->MyFactory->CreateNode(obj);
-    ret->Renderable = obj;
+    if (ret)
+      {
+      ret->Renderable = obj;
+      }
     }
   return ret;
 }

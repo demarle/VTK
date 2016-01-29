@@ -78,7 +78,7 @@ vtkViewNode *vtkViewNodeFactory::CreateNode(const char *forwhom)
   vtkViewNode *ret = NULL;
   if (this->Internals->Overrides.find(forwhom) == this->Internals->Overrides.end())
     {
-    vtkWarningMacro("no override found for " << forwhom);
+    //vtkWarningMacro("no override found for " << forwhom);
     ret = NULL;//vtkViewNode::New();
     }
   else

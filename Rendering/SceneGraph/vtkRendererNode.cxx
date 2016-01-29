@@ -83,13 +83,16 @@ void vtkRendererNode::BuildSelf()
   while (!nit->IsDoneWithTraversal())
     {
     vtkViewNode *node = vtkViewNode::SafeDownCast(nit->GetCurrentObject());
-    vtkObject *obj = node->GetRenderable();
-    if (!lights->IsItemPresent(obj) &&
-//        !volumes->IsItemPresent(obj) &&
-        !actors->IsItemPresent(obj) &&
-        obj != cam)
+    if (node)
       {
-      nodes->RemoveItem(node);
+      vtkObject *obj = node->GetRenderable();
+      if (!lights->IsItemPresent(obj) &&
+//        !volumes->IsItemPresent(obj) &&
+          !actors->IsItemPresent(obj) &&
+          obj != cam)
+        {
+        nodes->RemoveItem(node);
+        }
       }
     nit->GoToNextItem();
     }
@@ -105,8 +108,11 @@ void vtkRendererNode::BuildSelf()
     if (!nodes->IsRenderablePresent(obj))
       {
       vtkViewNode *node = this->CreateViewNode(obj);
-      nodes->AddItem(node);
-      node->Delete();
+      if (node)
+        {
+        nodes->AddItem(node);
+        node->Delete();
+        }
       }
     rit->GoToNextItem();
     }
@@ -139,20 +145,25 @@ void vtkRendererNode::BuildSelf()
     if (!nodes->IsRenderablePresent(obj))
       {
       vtkViewNode *node = this->CreateViewNode(obj);
-      nodes->AddItem(node);
-      node->Delete();
+      if (node)
+        {
+        nodes->AddItem(node);
+        node->Delete();
+        }
       }
     rit->GoToNextItem();
     }
   rit->Delete();
-
   //camera
   vtkCamera *obj = mine->GetActiveCamera();
   if (!nodes->IsRenderablePresent(obj))
     {
     vtkViewNode *node = this->CreateViewNode(obj);
-    nodes->AddItem(node);
-    node->Delete();
+    if (node)
+      {
+      nodes->AddItem(node);
+      node->Delete();
+      }
     }
 }
 

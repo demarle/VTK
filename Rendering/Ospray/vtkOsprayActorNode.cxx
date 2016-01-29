@@ -1072,24 +1072,27 @@ void vtkOsprayActorNode::ORender(void *renderer, void *model)
   else
     {
     vtkMapper *cpdm = act->GetMapper();
-    if (!cpdm)
+    vtkDataObject * dobj = cpdm->GetInputDataObject(0, 0);
+    if (dobj)
       {
-      return;
-      }
-    vtkCompositeDataSet *input = vtkCompositeDataSet::SafeDownCast
-      (cpdm->GetInputDataObject(0, 0));
-    vtkCompositeDataIterator*dit = input->NewIterator();
-    dit->SkipEmptyNodesOn();
-    while(!dit->IsDoneWithTraversal())
-      {
-      poly = vtkPolyData::SafeDownCast(input->GetDataSet(dit));
-      if (poly)
+      vtkCompositeDataSet *input = vtkCompositeDataSet::SafeDownCast
+        (cpdm->GetInputDataObject(0, 0));
+      if (input)
         {
-        this->ORenderPoly(renderer, model, act, poly);
+        vtkCompositeDataIterator*dit = input->NewIterator();
+        dit->SkipEmptyNodesOn();
+        while(!dit->IsDoneWithTraversal())
+          {
+          poly = vtkPolyData::SafeDownCast(input->GetDataSet(dit));
+          if (poly)
+            {
+            this->ORenderPoly(renderer, model, act, poly);
+            }
+          dit->GoToNextItem();
+          }
+        dit->Delete();
         }
-      dit->GoToNextItem();
       }
-    dit->Delete();
     }
   this->RenderTime.Modified();
 }
