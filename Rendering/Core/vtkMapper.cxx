@@ -488,7 +488,6 @@ vtkUnsignedCharArray *vtkMapper::MapScalars(vtkDataSet *input,
                                             double alpha,
                                             int &cellFlag)
 {
-  int cellFlag = 0;
   vtkAbstractArray *scalars = NULL;
   if (!this->UseInvertibleColors)
     {
