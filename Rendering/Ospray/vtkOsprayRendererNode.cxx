@@ -183,12 +183,9 @@ void vtkOsprayRendererNode::Render()
       }
     it->GoToNextItem();
     }
-  static int cnt = 0;
   if (recent > this->RenderTime || !this->Model)
     {
-    cnt = 0;
     ospRelease((OSPModel)this->Model);
-
     oModel = ospNewModel();
     it->InitTraversal();
     while (!it->IsDoneWithTraversal())

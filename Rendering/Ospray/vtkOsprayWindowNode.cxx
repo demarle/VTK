@@ -21,6 +21,7 @@
 #include "vtkViewNodeCollection.h"
 
 #include "ospray/ospray.h"
+#include <exception>
 
 //============================================================================
 vtkStandardNewMacro(vtkOsprayWindowNode);
@@ -30,7 +31,14 @@ vtkOsprayWindowNode::vtkOsprayWindowNode()
 {
   int ac = 2;
   const char* av[] = {"pvOSPRay\0","--osp:verbose\0"};
-  ospInit(&ac, av);
+  try
+    {
+    ospInit(&ac, av);
+    }
+  catch (std::runtime_error &e)
+    {
+    cerr << "warning: double init" << endl;
+    }
 }
 
 //----------------------------------------------------------------------------
